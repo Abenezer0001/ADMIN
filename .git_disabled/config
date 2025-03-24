@@ -1,0 +1,17 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[branch "staging"]
+	vscode-merge-base = origin/main
+[remote "origin"]
+	url = https://github.com/Achievengine/INSEAT-Admin.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "dev"]
+	remote = origin
+	merge = refs/heads/dev
+	vscode-merge-base = origin/dev
