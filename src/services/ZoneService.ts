@@ -1,11 +1,21 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/config';
 
+export interface Zone {
+  _id: string;
+  name: string;
+  description?: string;
+  venueId: string;
+  capacity: number;
+  isActive: boolean;
+  tables: string[];
+}
+
 class ZoneService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = API_BASE_URL;
+    this.baseUrl = `${API_BASE_URL}`;
   }
 
   /**
@@ -15,7 +25,7 @@ class ZoneService {
    */
   async getZones(venueId: string) {
     try {
-      const response = await axios.get(`${this.baseUrl}/zones/venue/${venueId}`);
+      const response = await axios.get(`${this.baseUrl}/api/zones/venue/${venueId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching zones:', error);
@@ -30,7 +40,7 @@ class ZoneService {
    */
   async getZone(zoneId: string) {
     try {
-      const response = await axios.get(`${this.baseUrl}/zones/${zoneId}`);
+      const response = await axios.get(`${this.baseUrl}/api/zones/${zoneId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching zone:', error);
@@ -40,13 +50,12 @@ class ZoneService {
 
   /**
    * Create a new zone
-   * @param venueId - The ID of the venue
    * @param zoneData - The zone data to create
    * @returns Promise with the created zone
    */
-  async createZone(venueId: string, zoneData: any) {
+  async createZone(zoneData: Omit<Zone, '_id'>) {
     try {
-      const response = await axios.post(`${this.baseUrl}/zones/venue/${venueId}`, zoneData);
+      const response = await axios.post(`${this.baseUrl}/api/zones`, zoneData);
       return response.data;
     } catch (error) {
       console.error('Error creating zone:', error);
@@ -60,9 +69,9 @@ class ZoneService {
    * @param zoneData - The updated zone data
    * @returns Promise with the updated zone
    */
-  async updateZone(zoneId: string, zoneData: any) {
+  async updateZone(zoneId: string, zoneData: Partial<Omit<Zone, '_id'>>) {
     try {
-      const response = await axios.put(`${this.baseUrl}/zones/${zoneId}`, zoneData);
+      const response = await axios.put(`${this.baseUrl}/api/zones/${zoneId}`, zoneData);
       return response.data;
     } catch (error) {
       console.error('Error updating zone:', error);
@@ -77,7 +86,7 @@ class ZoneService {
    */
   async deleteZone(zoneId: string) {
     try {
-      const response = await axios.delete(`${this.baseUrl}/zones/${zoneId}`);
+      const response = await axios.delete(`${this.baseUrl}/api/zones/${zoneId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting zone:', error);

@@ -38,9 +38,10 @@ import EventSeatIcon from '@mui/icons-material/EventSeat';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import CategoryIcon from '@mui/icons-material/Category';
 
-import { tableService } from '../../services/TableService';
-import type { Table as TableData } from '../../services/TableService';
+import { tableService, TableType, Table as TableData } from '../../services/TableService'; // Import TableData directly
+// import type { Table as TableData } from '../../services/TableService'; // Remove type import
 import { restaurantService, Restaurant } from '../../services/RestaurantService';
 import { venueService, Venue } from '../../services/VenueService';
 
@@ -60,21 +61,24 @@ const TablesList = () => {
   const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [tableTypes, setTableTypes] = useState<TableType[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   const [selectedVenueId, setSelectedVenueId] = useState<string>('');
   const [loadingRestaurants, setLoadingRestaurants] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
+  const [loadingTableTypes, setLoadingTableTypes] = useState(false);
+  const [showAllRestaurants, setShowAllRestaurants] = useState(false);
 
   // Fetch restaurants when component mounts
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true);
-        const data = await restaurantService.getRestaurants();
+        const data: Restaurant[] = await restaurantService.getRestaurants(); // Add type
         setRestaurants(data);
-        
+
         // If we have restaurants, select the first one
-        if (data.length > 0) {
+        if (data && data.length > 0) { // Check if data is not null/undefined
           setSelectedRestaurantId(data[0]._id);
         }
       } catch (err) {
@@ -90,16 +94,19 @@ const TablesList = () => {
   // Fetch venues when restaurant changes
   useEffect(() => {
     const fetchVenues = async () => {
-      if (!selectedRestaurantId) return;
+      if (!selectedRestaurantId || selectedRestaurantId === 'all') {
+        setVenues([]);
+        return;
+      }
       
       try {
         setLoadingVenues(true);
-        const data = await venueService.getVenues(selectedRestaurantId);
+        const data: Venue[] = await venueService.getVenues(selectedRestaurantId); // Add type
         setVenues(data);
-        
-        // If we have venues, select the first one
-        if (data.length > 0) {
-          setSelectedVenueId(data[0]._id);
+
+        // If we have venues, add an "All Venues" option and select it by default
+        if (data && data.length > 0) { // Check if data is not null/undefined
+          setSelectedVenueId('all');
         } else {
           setSelectedVenueId('');
         }
@@ -113,26 +120,75 @@ const TablesList = () => {
     fetchVenues();
   }, [selectedRestaurantId]);
 
+  // Fetch table types for all restaurants or a specific restaurant
+  useEffect(() => {
+    const fetchTableTypes = async () => {
+      try {
+        setLoadingTableTypes(true);
+        let allTableTypes: TableType[] = [];
+
+        if (selectedRestaurantId === 'all') {
+          // Fetch table types for all restaurants
+          for (const restaurant of restaurants) {
+            const data: TableType[] = await tableService.getTableTypes(restaurant._id); // Add type
+            if (data) { // Check if data is not null/undefined
+               allTableTypes = [...allTableTypes, ...data];
+            }
+          }
+        } else if (selectedRestaurantId) {
+          // Fetch table types for the selected restaurant
+          const data: TableType[] = await tableService.getTableTypes(selectedRestaurantId); // Add type
+          if (data) { // Check if data is not null/undefined
+             allTableTypes = data;
+          } else {
+             allTableTypes = [];
+          }
+        }
+        
+        setTableTypes(allTableTypes);
+      } catch (err) {
+        console.error('Error fetching table types:', err);
+      } finally {
+        setLoadingTableTypes(false);
+      }
+    };
+
+    fetchTableTypes();
+  }, [selectedRestaurantId, restaurants]);
+
   // Fetch tables when restaurant or venue changes
   useEffect(() => {
     const fetchTables = async () => {
-      if (!selectedRestaurantId || !selectedVenueId) return;
+      setLoading(true);
+      setError(null);
       
       try {
-        setLoading(true);
-        const data = await tableService.getTables(selectedRestaurantId, selectedVenueId);
-        console.log('Fetched tables:', data);
-        setTables(data);
-        setError(null);
+        if (selectedRestaurantId === 'all') {
+          // Get all tables from all restaurants
+          const allTables = await tableService.getAllTables();
+          setTables(allTables);
+        } else if (selectedRestaurantId && selectedVenueId === 'all') {
+          // Get all tables for a specific restaurant
+          const restaurantTables = await tableService.getAllTablesForRestaurant(selectedRestaurantId);
+          setTables(restaurantTables);
+        } else if (selectedRestaurantId && selectedVenueId) {
+          // Get tables for a specific venue
+          const venueTables = await tableService.getTables(selectedRestaurantId, selectedVenueId);
+          setTables(venueTables);
+        } else {
+          setTables([]);
+        }
       } catch (err) {
-        setError('Failed to fetch tables. Please try again later.');
         console.error('Error fetching tables:', err);
+        setError('Failed to fetch tables. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
+    if (selectedRestaurantId && (selectedVenueId || selectedRestaurantId === 'all')) {
     fetchTables();
+    }
   }, [selectedRestaurantId, selectedVenueId]);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -145,16 +201,28 @@ const TablesList = () => {
   };
 
   const handleRestaurantChange = (event: SelectChangeEvent) => {
-    setSelectedRestaurantId(event.target.value);
+    const value = event.target.value;
+    setSelectedRestaurantId(value);
+    setShowAllRestaurants(value === 'all');
+    
+    // Reset venue selection when switching restaurants
+    setSelectedVenueId('');
   };
 
   const handleVenueChange = (event: SelectChangeEvent) => {
     setSelectedVenueId(event.target.value);
   };
 
-  const filteredTables = tables.filter((table) =>
+  // Find table type name by id
+  const getTableTypeName = (tableTypeId?: string): string => { // Add return type
+    if (!tableTypeId) return 'Not Assigned';
+    const tableType = tableTypes.find((tt: TableType) => tt._id === tableTypeId); // Add type to tt
+    return tableType ? tableType.name : 'Unknown';
+  };
+
+  const filteredTables = tables.filter((table: TableData) => // Add type to table
     table.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.type.toLowerCase().includes(searchTerm.toLowerCase())
+    getTableTypeName(table.tableTypeId).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteTable = (table: TableData) => {
@@ -246,6 +314,7 @@ const TablesList = () => {
             onChange={handleRestaurantChange}
             disabled={loadingRestaurants}
           >
+            <MenuItem value="all">All Restaurants</MenuItem>
             {loadingRestaurants ? (
               <MenuItem value="">
                 <CircularProgress size={20} />
@@ -266,8 +335,9 @@ const TablesList = () => {
             value={selectedVenueId}
             label="Venue"
             onChange={handleVenueChange}
-            disabled={loadingVenues || !selectedRestaurantId}
+            disabled={loadingVenues || !selectedRestaurantId || selectedRestaurantId === 'all'}
           >
+            <MenuItem value="all">All Venues</MenuItem>
             {loadingVenues ? (
               <MenuItem value="">
                 <CircularProgress size={20} />
@@ -303,7 +373,7 @@ const TablesList = () => {
               <TableRow>
                 <TableCell>Number</TableCell>
                 <TableCell>Capacity</TableCell>
-                <TableCell>Type</TableCell>
+                <TableCell>Table Type</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>QR Code</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -322,7 +392,10 @@ const TablesList = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip label={table.type} size="small" />
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CategoryIcon sx={{ mr: 1, fontSize: 16 }} />
+                        {getTableTypeName(table.tableTypeId)}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -420,7 +493,7 @@ const TablesList = () => {
         onClose={() => setQrCodeModalOpen(false)}
         aria-labelledby="qr-code-modal"
       >
-        <Box sx={{
+        <Box sx={{ // Type assertion for sx prop if needed, but usually inferred
           position: 'absolute',
           top: '50%',
           left: '50%',

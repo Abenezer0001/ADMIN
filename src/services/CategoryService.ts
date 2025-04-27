@@ -5,6 +5,7 @@ export interface Category {
   _id: string;
   name: string;
   description?: string;
+  restaurantId: string; // Added restaurantId
   isActive: boolean;
   order: number;
   createdAt: string;
@@ -13,6 +14,7 @@ export interface Category {
 
 export interface CreateCategoryDto {
   name: string;
+  restaurantId: string; // Added required restaurantId
   description?: string;
   isActive?: boolean;
   order?: number;
@@ -23,9 +25,12 @@ export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
 class CategoryService {
   private baseUrl = `${API_BASE_URL}/categories`;
 
-  async getCategories() {
+  async getCategories(restaurantId?: string) {
     try {
-      const response = await axios.get(this.baseUrl);
+      const params = restaurantId ? { restaurantId } : {};
+      console.log('Fetching categories with params:', params);
+      const response = await axios.get(this.baseUrl, { params });
+      console.log('Categories response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching categories:', error);

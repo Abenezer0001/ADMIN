@@ -6,19 +6,26 @@ export interface Table {
   _id?: string; // MongoDB ObjectId
   number: string;
   capacity: number;
-  type: 'REGULAR' | 'VIP' | 'COUNTER' | 'LOUNGE';
   isActive: boolean;
   isOccupied: boolean;
   venueId: string;
   qrCode?: string;
+  tableTypeId: string; // Required tableTypeId
+}
+
+export interface TableType {
+  _id: string;
+  name: string;
+  description?: string;
+  restaurantId: string;
 }
 
 export interface CreateTableDto {
   number: string;
   capacity: number;
-  type: string;
   isActive: boolean;
   venueId: string;
+  tableTypeId: string; // Required tableTypeId
 }
 
 export interface UpdateTableDto extends Partial<CreateTableDto> {}
@@ -27,7 +34,7 @@ class TableService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = API_BASE_URL;
+    this.baseUrl = `${API_BASE_URL}`;
   }
 
   async getTables(restaurantId: string, venueId: string) {
@@ -38,6 +45,34 @@ class TableService {
       return response.data;
     } catch (error) {
       console.error('Error fetching tables:', error);
+      throw error;
+    }
+  }
+
+  // Method to get all tables from all venues of a restaurant
+  async getAllTablesForRestaurant(restaurantId: string) {
+    try {
+      console.log(`Fetching tables for restaurant: ${restaurantId}`);
+      const response = await axios.get(
+        `${this.baseUrl}/restaurants/${restaurantId}/tables`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all tables for restaurant:', error);
+      console.log('URL used:', `${this.baseUrl}/restaurants/${restaurantId}/tables`);
+      throw error;
+    }
+  }
+
+  // Method to get all tables from all restaurants
+  async getAllTables() {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/tables`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all tables:', error);
       throw error;
     }
   }
@@ -57,7 +92,7 @@ class TableService {
   async createTable(restaurantId: string, venueId: string, tableData: CreateTableDto) {
     try {
       const response = await axios.post(
-        `${this.baseUrl}/restaurant/${restaurantId}/venue/${venueId}/tables`,
+        `${this.baseUrl}/restaurant/${restaurantId}/venue/${venueId}`,
         tableData
       );
       return response.data;
@@ -112,9 +147,76 @@ class TableService {
       const response = await axios.get(
         `${this.baseUrl}/restaurant/${restaurantId}/venue/${venueId}/tables/${tableId}/qrcode`
       );
-      return response.data.qrCode;
+      return (response.data as { qrCode: string }).qrCode;
     } catch (error) {
       console.error('Error fetching table QR code:', error);
+      throw error;
+    }
+  }
+
+  // Table types methods
+  async getTableTypes(restaurantId: string) {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/table-types/${restaurantId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching table types:', error);
+      throw error;
+    }
+  }
+
+  async getTableType(restaurantId: string, tableTypeId: string) {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/table-types/${restaurantId}/${tableTypeId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching table type:', error);
+      throw error;
+    }
+  }
+
+  async createTableType(restaurantId: string, tableTypeData: { name: string, description?: string }) {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/table-types/${restaurantId}`,
+        tableTypeData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating table type:', error);
+      throw error;
+    }
+  }
+
+  async updateTableType(
+    restaurantId: string, 
+    tableTypeId: string, 
+    tableTypeData: { name?: string, description?: string }
+  ) {
+    try {
+      const response = await axios.put(
+        `${this.baseUrl}/table-types/${restaurantId}/${tableTypeId}`,
+        tableTypeData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating table type:', error);
+      throw error;
+    }
+  }
+
+  async deleteTableType(restaurantId: string, tableTypeId: string) {
+    try {
+      const response = await axios.delete(
+        `${this.baseUrl}/table-types/${restaurantId}/${tableTypeId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting table type:', error);
       throw error;
     }
   }

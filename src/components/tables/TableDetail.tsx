@@ -170,7 +170,7 @@ const TableDetail = () => {
                       if (tableId && tableId !== 'undefined') {
                         try {
                           // First generate a new QR code on the server
-                          await axios.post(`${API_BASE_URL}/tables/restaurant/${restaurantId}/venue/${venueId}/tables/${tableId}/qrcode`);
+                          await axios.post(`${API_BASE_URL}/api/tables/restaurant/${restaurantId}/venue/${venueId}/tables/${tableId}/qrcode`);
                           // Then fetch the new QR code
                           const newQrCode = await tableService.getTableQRCode(restaurantId, venueId, tableId);
                           setQrCode(newQrCode);

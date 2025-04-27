@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react'; // Use default import for JSX
+import { useState } from 'react'; // Use named imports for hooks
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -42,7 +43,8 @@ import {
   Settings as SettingsIcon,
   List as ListIcon,
   Edit as EditIcon,
-  Category as CategoryIcon,
+  Category as CategoryIcon, // Used for Categories, SubCategories
+  RestaurantMenu as RestaurantMenuIcon, // Use for Menus list
   History as HistoryIcon,
   AccountCircle as AccountCircleIcon,
   Tune as TuneIcon,
@@ -182,17 +184,17 @@ interface LayoutProps {
   themeMode: 'light' | 'dark';
 }
 
-interface MenuItem {
+interface MenuItemType { // Renamed to avoid conflict with MUI MenuItem
   key: string;
   icon: React.ReactElement;
   label: string;
-  children?: MenuItem[];
+  children?: MenuItemType[]; // Use renamed type
   path?: string;
 }
 
-interface Category {
+interface CategoryType { // Renamed to avoid conflict
   category: string;
-  items: MenuItem[];
+  items: MenuItemType[]; // Use renamed type
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => {
@@ -215,14 +217,14 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
     }
   };
 
-  const handleMenuClick = (item: MenuItem) => {
+  const handleMenuClick = (item: MenuItemType) => { // Use renamed type
     if (collapsed) {
       setOpen(true);
       setCollapsed(false);
     }
-    
+
     if (item.children) {
-      setExpandedMenus((prev) => ({ ...prev, [item.key]: !prev[item.key] }));
+      setExpandedMenus((prev: { [key: string]: boolean }) => ({ ...prev, [item.key]: !prev[item.key] })); // Add type for prev
     } else {
       navigate(item.path || '/' + item.key);
     }
@@ -233,7 +235,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
     logout();
   };
 
-  const categories: Category[] = [
+  const categories: CategoryType[] = [ // Use renamed type
     {
       category: 'Overview',
       items: [
@@ -284,11 +286,11 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           icon: <OrdersIcon sx={{ fontSize: 24 }} />,
           label: 'Tables',
         },
-        {
-          key: 'zones/list',
-          icon: <CategoryIcon sx={{ fontSize: 24 }} />,
-          label: 'Zones',
-        },
+        // {
+        //   key: 'zones/list',
+        //   icon: <CategoryIcon sx={{ fontSize: 24 }} />,
+        //   label: 'Zones',
+        // },
         
         {
           key: 'venues/list',
@@ -310,13 +312,31 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
               key: 'modifiers',
               icon: <TuneIcon sx={{ fontSize: 24 }} />,
               label: 'Modifiers',
-              path: '/modifiers'
+              path: '/menu/modifiers'
             },
             {
               key: 'categories',
               icon: <CategoryIcon sx={{ fontSize: 24 }} />,
               label: 'Categories',
               path: '/categories'
+            },
+             { // Added SubCategory Link
+              key: 'subcategories/list',
+              icon: <CategoryIcon sx={{ fontSize: 24 }} />, // Reuse CategoryIcon or choose another
+               label: 'Sub-Categories',
+               path: '/subcategories/list'
+            },
+            { // Added SubSubCategory Link
+              key: 'subsubcategories/list',
+              icon: <CategoryIcon sx={{ fontSize: 24 }} />, // Reusing icon for now
+              label: 'Sub-Subcategories',
+              path: '/subsubcategories/list'
+            },
+             { // Added Menus Link
+               key: 'menus/list',
+               icon: <RestaurantMenuIcon sx={{ fontSize: 24 }} />,
+              label: 'Menus',
+              path: '/menus/list'
             },
           ],
         },
@@ -450,14 +470,14 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
             <IconButton color="inherit">
               <LanguageIcon />
             </IconButton>
-            <IconButton 
-              color="inherit" 
+            <IconButton
+              color="inherit"
               onClick={toggleTheme}
             >
               {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
             <IconButton
-              onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+              onClick={(e: React.MouseEvent<HTMLElement>) => setMenuAnchorEl(e.currentTarget)} // Add type for event
               color="inherit"
             >
               <Avatar sx={{ width: 32, height: 32 }} />

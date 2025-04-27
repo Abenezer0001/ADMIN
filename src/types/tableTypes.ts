@@ -2,7 +2,11 @@ export interface Table {
   id: string;
   name: string;
   numberOfGuests?: number;
-  tableType: string;
+  tableType: {
+    id: string;
+    name: string;
+    description?: string;
+  };
   restaurant: string;
   zone: string;
 }
@@ -10,7 +14,7 @@ export interface Table {
 export interface TableFormData {
   name: string;
   numberOfGuests?: number;
-  tableType: string;
+  tableTypeId: string;
   restaurant: string;
   zone: string;
 }
@@ -18,4 +22,12 @@ export interface TableFormData {
 export interface TableListResponse {
   tables: Table[];
   total: number;
+}
+
+export interface TableType {
+  _id: string;
+  id?: string; // For compatibility
+  name: string;
+  description?: string;
+  restaurantId: string;
 }

@@ -1,7 +1,8 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react'; // Combined import
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
 
+// Lazy load components
 // Lazy load components
 const UserManagement = lazy(() => import('./components/UserManagement'));
 const InventoryManagement = lazy(() => import('./components/InventoryManagement'));
@@ -42,6 +43,7 @@ const ModifierGroupEdit = lazy(() => import('./components/menu/ModifierGroupEdit
 const Preferences = lazy(() => import('./components/settings/Preferences'));
 const Profile = lazy(() => import('./components/settings/Profile'));
 const ChangePassword = lazy(() => import('./components/settings/ChangePassword'));
+const MenuItemDetail = lazy(() => import('./pages/MenuItems/MenuItemDetail')); // Added import
 
 // Existing components
 const Items = lazy(() => import('./components/Items'));
@@ -76,6 +78,22 @@ const ModifierForm = lazy(() => import('./components/Modifier/ModifierForm'));
 const CategoryList = lazy(() => import('./components/Category/CategoryList'));
 const CategoryDetail = lazy(() => import('./components/Category/CategoryDetail'));
 const CategoryForm = lazy(() => import('./components/Category/CategoryForm'));
+
+// SubCategories
+const SubCategoryList = lazy(() => import('./components/subcategories/SubCategoryList'));
+const SubCategoryDetail = lazy(() => import('./components/subcategories/SubCategoryDetail'));
+const SubCategoryForm = lazy(() => import('./components/subcategories/SubCategoryForm'));
+
+// SubSubCategories
+const SubSubCategoryList = lazy(() => import('./components/subsubcategories/SubSubCategoryList'));
+const SubSubCategoryDetail = lazy(() => import('./components/subsubcategories/SubSubCategoryDetail'));
+const SubSubCategoryForm = lazy(() => import('./components/subsubcategories/SubSubCategoryForm'));
+
+// Menus
+const MenuList = lazy(() => import('./components/menus/MenuList'));
+const MenuDetail = lazy(() => import('./components/menus/MenuDetail'));
+const MenuForm = lazy(() => import('./components/menus/MenuForm'));
+
 
 const LoadingScreen = () => (
   <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -141,10 +159,18 @@ const AppRoutes = () => {
         <Route path="/menus" element={<MenusByRestaurant />} />
         <Route path="/menu/items" element={<MenuItemsList />} />
         <Route path="/menu/items/new" element={<MenuItems />} />
-        <Route path="/menu/items/:id" element={<MenuItems />} />
+        <Route path="/menu/items/edit/:id" element={<MenuItems />} /> {/* Changed path for clarity */}
+        <Route path="/menu-items/detail/:id" element={<MenuItemDetail />} /> {/* Added detail route */}
         <Route path="/menu/modifiers" element={<ModifierGroups />} />
         <Route path="/menu/modifiers/:id" element={<ModifierGroupEdit />} />
         <Route path="/menu/modifiers/new" element={<ModifierGroupEdit />} />
+
+        {/* Menus */}
+        <Route path="/menus/list" element={<MenuList />} />
+        <Route path="/menus/add" element={<MenuForm title="Add New Menu" />} />
+        <Route path="/menus/edit/:id" element={<MenuForm title="Edit Menu" />} />
+        <Route path="/menus/detail/:id" element={<MenuDetail />} />
+
 
         {/* Orders */}
         <Route path="/schedule" element={<Schedule />} />
@@ -169,6 +195,18 @@ const AppRoutes = () => {
         <Route path="/categories/add" element={<CategoryForm />} />
         <Route path="/categories/edit/:id" element={<CategoryForm />} />
         <Route path="/categories/detail/:id" element={<CategoryDetail />} />
+
+        {/* SubCategories */}
+        <Route path="/subcategories/list" element={<SubCategoryList />} />
+        <Route path="/subcategories/add" element={<SubCategoryForm title="Add New Sub-Category" />} />
+        <Route path="/subcategories/edit/:id" element={<SubCategoryForm title="Edit Sub-Category" />} />
+        <Route path="/subcategories/detail/:id" element={<SubCategoryDetail />} />
+
+        {/* SubSubCategories */}
+        <Route path="/subsubcategories/list" element={<SubSubCategoryList />} />
+        <Route path="/subsubcategories/add" element={<SubSubCategoryForm />} />
+        <Route path="/subsubcategories/edit/:id" element={<SubSubCategoryForm />} />
+        <Route path="/subsubcategories/detail/:id" element={<SubSubCategoryDetail />} />
 
         {/* Settings */}
         <Route path="/settings/preferences" element={<Preferences />} />
@@ -197,4 +235,4 @@ const AppRoutes = () => {
   );
 };
 
-export default AppRoutes; 
+export default AppRoutes;

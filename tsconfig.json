@@ -3,5 +3,9 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],"files.watcherExclude": {
+  "**/node_modules/**": true,
+  "**/.git/**": true
+},
+"typescript.tsserver.maxTsServerMemory": 3072
 }

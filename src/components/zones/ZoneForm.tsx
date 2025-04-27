@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   TextField, 
   Button, 
@@ -14,24 +14,18 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  SelectChangeEvent
 } from '@mui/material';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { venueService, Venue } from '../../services/VenueService';
-import { API_BASE_URL } from '../../utils/config';
+import { zoneService, Zone } from '../../services/ZoneService';
+import { restaurantService, Restaurant } from '../../services/RestaurantService';
 
-interface ZoneFormData {
-  name: string;
-  description: string;
-  venueId: string;
-  capacity: number;
-  isActive: boolean;
-  tables: string[];
-}
+type ZoneFormData = Omit<Zone, '_id'>;
 
 function ZoneForm() {
-  const [formData, setFormData] = useState<ZoneFormData>({
+  const [formData, setFormData] = React.useState<ZoneFormData>({
     name: '',
     description: '',
     venueId: '',
@@ -40,23 +34,23 @@ function ZoneForm() {
     tables: []
   });
   
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [restaurants, setRestaurants] = useState<any[]>([]);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [venues, setVenues] = React.useState<Venue[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [restaurants, setRestaurants] = React.useState<Restaurant[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = React.useState<string>('');
   const { id } = useParams();
   const navigate = useNavigate();
 
   // Fetch restaurants first
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/restaurants`);
-        setRestaurants(response.data);
-        if (response.data.length > 0) {
-          setSelectedRestaurantId(response.data[0]._id);
+        const response = await restaurantService.getRestaurants();
+        setRestaurants(response);
+        if (response.length > 0) {
+          setSelectedRestaurantId(response[0]._id);
         }
       } catch (error) {
         console.error('Error fetching restaurants:', error);
@@ -69,14 +63,14 @@ function ZoneForm() {
   }, []);
 
   // Fetch venues when restaurant changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedRestaurantId) {
       fetchVenues();
     }
   }, [selectedRestaurantId]);
 
   // Fetch zone data if editing
-  useEffect(() => {
+  React.useEffect(() => {
     if (id) {
       fetchZone();
     }
@@ -90,7 +84,7 @@ function ZoneForm() {
       
       // If we have venues and no venue is selected yet, select the first one
       if (response.length > 0 && !formData.venueId) {
-        setFormData(prev => ({ ...prev, venueId: response[0]._id }));
+        setFormData((prev: ZoneFormData) => ({ ...prev, venueId: response[0]._id }));
       }
     } catch (error) {
       console.error('Error fetching venues:', error);
@@ -101,18 +95,20 @@ function ZoneForm() {
   };
 
   const fetchZone = async () => {
+    if (!id) return;
+    
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/api/zones/${id}`);
-      setFormData(response.data);
+      const zoneData = await zoneService.getZone(id);
+      setFormData(zoneData);
       
       // If the zone has a venueId, find the associated restaurant
-      if (response.data.venueId) {
+      if (zoneData.venueId) {
         try {
-          const venueResponse = await axios.get(`${API_BASE_URL}/api/venues/${response.data.venueId}`);
-          if (venueResponse.data.restaurantId) {
-            setSelectedRestaurantId(venueResponse.data.restaurantId);
+          const venueData = await venueService.getVenue(zoneData.venueId);
+          if (venueData.restaurantId) {
+            setSelectedRestaurantId(venueData.restaurantId);
           }
         } catch (venueError) {
           console.error('Error fetching venue details:', venueError);
@@ -132,16 +128,10 @@ function ZoneForm() {
       setLoading(true);
       setError(null);
 
-      const payload = {
-        ...formData,
-        venueId: formData.venueId,
-        tables: formData.tables || []
-      };
-
       if (id) {
-        await axios.put(`${API_BASE_URL}/api/zones/${id}`, payload);
+        await zoneService.updateZone(id, formData);
       } else {
-        await axios.post(`${API_BASE_URL}/api/zones`, payload);
+        await zoneService.createZone(formData);
       }
       navigate('/zones/list');
     } catch (error: any) {
@@ -152,10 +142,10 @@ function ZoneForm() {
     }
   };
 
-  const handleRestaurantChange = (e: any) => {
+  const handleRestaurantChange = (e: SelectChangeEvent<string>) => {
     setSelectedRestaurantId(e.target.value);
     // Reset venue selection when restaurant changes
-    setFormData(prev => ({ ...prev, venueId: '' }));
+    setFormData((prev: ZoneFormData) => ({ ...prev, venueId: '' }));
   };
 
   if (loading && !venues.length) {
@@ -189,7 +179,7 @@ function ZoneForm() {
                   label="Restaurant"
                   onChange={handleRestaurantChange}
                 >
-                  {restaurants.map((restaurant) => (
+                  {restaurants.map((restaurant: Restaurant) => (
                     <MenuItem key={restaurant._id} value={restaurant._id}>
                       {restaurant.name}
                     </MenuItem>
@@ -204,7 +194,7 @@ function ZoneForm() {
                 fullWidth
                 label="Zone Name"
                 value={formData.name}
-                onChange={(e) => 
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   setFormData({ ...formData, name: e.target.value })}
               />
             </Grid>
@@ -216,7 +206,7 @@ function ZoneForm() {
                 multiline
                 rows={3}
                 value={formData.description}
-                onChange={(e) => 
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   setFormData({ ...formData, description: e.target.value })}
               />
             </Grid>
@@ -227,11 +217,11 @@ function ZoneForm() {
                 <Select
                   value={formData.venueId}
                   label="Venue"
-                  onChange={(e) => 
-                    setFormData({ ...formData, venueId: e.target.value as string })}
+                  onChange={(e: SelectChangeEvent<string>) => 
+                    setFormData({ ...formData, venueId: e.target.value })}
                   disabled={venues.length === 0}
                 >
-                  {venues.map((venue) => (
+                  {venues.map((venue: Venue) => (
                     <MenuItem key={venue._id} value={venue._id}>
                       {venue.name}
                     </MenuItem>
@@ -252,7 +242,7 @@ function ZoneForm() {
                 label="Capacity"
                 type="number"
                 value={formData.capacity}
-                onChange={(e) => 
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
                 inputProps={{ min: 0 }}
               />
@@ -263,7 +253,7 @@ function ZoneForm() {
                 control={
                   <Switch
                     checked={formData.isActive}
-                    onChange={(e) => 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                       setFormData({ ...formData, isActive: e.target.checked })}
                   />
                 }

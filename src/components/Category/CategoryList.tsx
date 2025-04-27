@@ -9,28 +9,30 @@ import {
   DialogActions,
   DialogContentText,
   IconButton,
+  Chip, // Added Chip import
+  Typography, // Added Typography import
+  Paper, // Added Paper import
+  TableContainer, // Added TableContainer import
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
+  Visibility as ViewIcon, // Removed DeleteIcon import
   Add as AddIcon,
+  Circle as CircleIcon,
 } from '@mui/icons-material';
-import DataTable from '../common/DataTable';
-import { ColumnDef } from '@tanstack/react-table';
+import DataTable from '../common/DataTable'; // Assuming this uses material-react-table
+import { MRT_ColumnDef, MRT_Cell, MRT_Row } from 'material-react-table'; // Import MRT types
 import { categoryService, Category } from '../../services/CategoryService';
 
 const CategoryList = () => {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  // Removed unused state for dialogs and selected category
+  const [categories, setCategories] = useState<Category[]>([]); // Revert to useState
+  const [loading, setLoading] = useState(true); // Revert to useState
+  const [error, setError] = useState<string | null>(null); // Revert to useState
+  // Removed unused state for delete dialog
 
-  useEffect(() => {
+  useEffect(() => { // Revert to useEffect
     fetchCategories();
   }, []);
 
@@ -74,30 +76,14 @@ const CategoryList = () => {
   };
 
   const handleView = (category: Category) => {
-    setSelectedCategory(category);
-    setDetailDialogOpen(true);
+    // Navigate to detail page instead of opening dialog
+    navigate(`/categories/detail/${category._id}`);
   };
 
-  const handleDelete = (category: Category) => {
-    setCategoryToDelete(category);
-    setDeleteDialogOpen(true);
-  };
+  // Removed confirmDelete function as delete functionality is removed from this component
 
-  const confirmDelete = async () => {
-    if (!categoryToDelete) return;
-
-    try {
-      await categoryService.deleteCategory(categoryToDelete._id);
-      setCategories(categories.filter(c => c._id !== categoryToDelete._id));
-      setDeleteDialogOpen(false);
-      setCategoryToDelete(null);
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      setError('Failed to delete category');
-    }
-  };
-
-  const columns: ColumnDef<Category>[] = [
+  const columns: MRT_ColumnDef<Category>[] = [ // Use MRT_ColumnDef
+    // Removed Image column
     {
       accessorKey: 'name',
       header: 'Name',
@@ -105,6 +91,12 @@ const CategoryList = () => {
     {
       accessorKey: 'description',
       header: 'Description',
+      Cell: ({ cell }: { cell: MRT_Cell<Category, unknown> }) => { // Add explicit type
+        const description = cell.getValue<string>();
+        return description && description.length > 50
+          ? `${description.substring(0, 50)}...`
+          : description;
+      },
     },
     {
       accessorKey: 'order',
@@ -113,31 +105,35 @@ const CategoryList = () => {
     {
       accessorKey: 'isActive',
       header: 'Status',
-      cell: info => info.getValue<boolean>() ? 'Active' : 'Inactive',
+      Cell: ({ row }: { row: MRT_Row<Category> }) => { // Add explicit type
+        const isActive = row.original.isActive;
+        return (
+          <Chip
+            icon={<CircleIcon sx={{ fontSize: 10 }} />}
+            label={isActive ? 'Active' : 'Inactive'}
+            color={isActive ? 'success' : 'default'}
+            size="small"
+            variant="outlined"
+            sx={{
+              '& .MuiChip-icon': { color: isActive ? 'success.main' : 'action.disabled' },
+              borderColor: isActive ? 'success.main' : 'action.disabled',
+              color: isActive ? 'success.main' : 'text.secondary',
+            }}
+          />
+        );
+      },
     },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton onClick={() => handleView(row.original)} size="small">
-            <ViewIcon />
-          </IconButton>
-          <IconButton onClick={() => handleEdit(row.original)} size="small">
-            <EditIcon />
-          </IconButton>
-          <IconButton onClick={() => handleDelete(row.original)} size="small">
-            <DeleteIcon />
-          </IconButton>
-        </Box>
-      ),
-    },
+    // Removed Created At column
+    // Removed Updated At column
+    // Removed custom actions column. Actions are handled by DataTable props.
   ];
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <h1>Categories</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}> {/* Added alignItems, adjusted mb */}
+        <Typography variant="h5" component="h2"> {/* Changed h1 to Typography */}
+          Categories
+        </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -147,44 +143,18 @@ const CategoryList = () => {
         </Button>
       </Box>
 
-      <DataTable
-        columns={columns}
-        data={categories}
-        loading={loading}
-        error={error}
-      />
-
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this category?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error">Delete</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)}>
-        <DialogTitle>Category Details</DialogTitle>
-        <DialogContent>
-          {selectedCategory && (
-            <Box>
-              <p><strong>Name:</strong> {selectedCategory.name}</p>
-              <p><strong>Description:</strong> {selectedCategory.description}</p>
-              <p><strong>Display Order:</strong> {selectedCategory.order}</p>
-              <p><strong>Status:</strong> {selectedCategory.isActive ? 'Active' : 'Inactive'}</p>
-              <p><strong>Created:</strong> {new Date(selectedCategory.createdAt).toLocaleString()}</p>
-              <p><strong>Updated:</strong> {new Date(selectedCategory.updatedAt).toLocaleString()}</p>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {error && <Box sx={{ color: 'error.main', mb: 2 }}>Error: {error}</Box>}
+      <TableContainer component={Paper}> {/* Added TableContainer with Paper */}
+        <DataTable
+          columns={columns}
+          data={categories}
+          onView={handleView} // Pass handleView to the onView prop
+          onEdit={handleEdit} // Pass handleEdit to the onEdit prop
+          // onDelete is omitted as we removed the delete functionality
+          // Loading state is not directly supported by this DataTable wrapper
+        />
+      </TableContainer>
+      {/* Removed Delete and Detail Dialogs */}
     </Box>
   );
 };

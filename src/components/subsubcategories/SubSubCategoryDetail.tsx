@@ -6,47 +6,47 @@ import {
   Typography,
   Grid,
   CircularProgress,
-  Alert, // Keep Alert for error display
-  Paper, // Use Paper instead of Card
-  Chip, // For status
-  IconButton, // For back button
+  Alert,
+  Paper,
+  Chip,
+  IconButton,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // Use specific import
-import EditIcon from '@mui/icons-material/Edit'; // For Edit button
-import CircleIcon from '@mui/icons-material/Circle'; // For status chip
-import ImageIcon from '@mui/icons-material/Image'; // Placeholder for image
-import { categoryService, Category } from '../../services/CategoryService';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
+import CircleIcon from '@mui/icons-material/Circle';
+import ImageIcon from '@mui/icons-material/Image';
+import { subSubCategoryService, SubSubCategory } from '../../services/SubSubCategoryService'; // Updated service and type
 
-const CategoryDetail = () => {
+const SubSubCategoryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [category, setCategory] = useState<Category | null>(null);
+  const [subSubCategory, setSubSubCategory] = useState<SubSubCategory | null>(null); // Updated state name
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCategory = async () => {
+    const fetchSubSubCategory = async () => { // Updated function name
       try {
         if (!id) {
-          setError('Category ID is missing.');
+          setError('Sub-Subcategory ID is missing.');
           setLoading(false);
           return;
         }
 
         setLoading(true);
-        setError(null); // Reset error before fetching
-        const data = await categoryService.getCategory(id);
-        setCategory(data);
+        setError(null);
+        const data = await subSubCategoryService.getSubSubCategory(id); // Updated service call
+        setSubSubCategory(data);
       } catch (error) {
-        console.error('Error fetching category:', error);
-        setError('Failed to fetch category details');
+        console.error('Error fetching sub-subcategory:', error);
+        setError('Failed to fetch sub-subcategory details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategory();
-  }, [id]); // Dependency array includes id
+    fetchSubSubCategory();
+  }, [id]);
 
   if (loading) {
     return (
@@ -57,53 +57,55 @@ const CategoryDetail = () => {
   }
 
   if (error) {
-    // Use Alert for better error visibility, consistent with potential existing patterns
     return <Alert severity="error" sx={{ m: 3 }}>{error}</Alert>;
   }
 
-  if (!category) {
-    return <Alert severity="info" sx={{ m: 3 }}>Category not found.</Alert>;
+  if (!subSubCategory) {
+    return <Alert severity="info" sx={{ m: 3 }}>Sub-Subcategory not found.</Alert>; // Updated message
   }
+
+  // Helper to get parent subcategory name
+  const getParentSubCategoryName = () => {
+    if (!subSubCategory.subCategory) return 'N/A';
+    return typeof subSubCategory.subCategory === 'object'
+      ? subSubCategory.subCategory.name
+      : subSubCategory.subCategory; // Display ID if not populated
+  };
+
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Top Bar: Back Button, Title, Edit Button */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
            <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
              <ArrowBackIcon />
            </IconButton>
            <Typography variant="h5" component="h1">
-             Category Details
+             Sub-Subcategory Details {/* Updated title */}
            </Typography>
         </Box>
         <Button
           startIcon={<EditIcon />}
           variant="outlined"
-          onClick={() => navigate(`/categories/edit/${category._id}`)}
+          onClick={() => navigate(`/subsubcategories/edit/${subSubCategory._id}`)} // Updated path
         >
           Edit
         </Button>
       </Box>
 
-      {/* Main Content Area */}
       <Paper sx={{ p: 3 }}>
-        {/* Optional: Display Category Name prominently inside Paper if needed */}
-        {/* <Typography variant="h6" sx={{ mb: 3 }}>{category.name}</Typography> */}
-
         <Grid container spacing={3}>
-          {/* Image Section */}
           <Grid item xs={12} md={4}>
-            {category.image ? (
+            {subSubCategory.image ? (
               <img
-                src={category.image}
-                alt={category.name}
+                src={subSubCategory.image}
+                alt={subSubCategory.name}
                 style={{
                   width: '100%',
                   height: 'auto',
                   maxHeight: 300,
                   objectFit: 'cover',
-                  borderRadius: '8px', // Consistent styling
+                  borderRadius: '8px',
                 }}
               />
             ) : (
@@ -112,7 +114,7 @@ const CategoryDetail = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: 200, // Match reference placeholder height
+                  height: 200,
                   bgcolor: 'grey.200',
                   borderRadius: '8px',
                 }}
@@ -122,26 +124,31 @@ const CategoryDetail = () => {
             )}
           </Grid>
 
-          {/* Details Section */}
           <Grid item xs={12} md={8}>
             <Grid container spacing={2}>
                <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">Name</Typography>
-                  <Typography variant="body1">{category.name}</Typography>
+                  <Typography variant="body1">{subSubCategory.name}</Typography>
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Description
                 </Typography>
                 <Typography variant="body1">
-                  {category.description || 'No description provided.'}
+                  {subSubCategory.description || 'No description provided.'}
                 </Typography>
+              </Grid>
+               <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Parent SubCategory
+                </Typography>
+                <Typography variant="body1">{getParentSubCategoryName()}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Display Order
                 </Typography>
-                <Typography variant="body1">{category.order}</Typography>
+                <Typography variant="body1">{subSubCategory.order}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
@@ -149,8 +156,8 @@ const CategoryDetail = () => {
                 </Typography>
                 <Chip
                   icon={<CircleIcon fontSize="small" />}
-                  label={category.isActive ? 'Active' : 'Inactive'}
-                  color={category.isActive ? 'success' : 'default'}
+                  label={subSubCategory.isActive ? 'Active' : 'Inactive'}
+                  color={subSubCategory.isActive ? 'success' : 'default'}
                   size="small"
                 />
               </Grid>
@@ -159,7 +166,7 @@ const CategoryDetail = () => {
                   Created At
                 </Typography>
                 <Typography variant="body1">
-                  {new Date(category.createdAt).toLocaleString()}
+                  {new Date(subSubCategory.createdAt).toLocaleString()}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -167,7 +174,7 @@ const CategoryDetail = () => {
                   Last Updated
                 </Typography>
                 <Typography variant="body1">
-                  {new Date(category.updatedAt).toLocaleString()}
+                  {new Date(subSubCategory.updatedAt).toLocaleString()}
                 </Typography>
               </Grid>
             </Grid>
@@ -178,4 +185,4 @@ const CategoryDetail = () => {
   );
 };
 
-export default CategoryDetail;
+export default SubSubCategoryDetail;

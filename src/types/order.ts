@@ -1,7 +1,11 @@
+import { User } from './user';
+import { Restaurant } from './restaurant';
+import { Table } from './table';
+import { MenuItem } from './menuItem';
+
 export enum OrderStatus {
   PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  IN_PREPARATION = 'IN_PREPARATION',
+  PREPARING = 'PREPARING',
   READY = 'READY',
   DELIVERED = 'DELIVERED',
   COMPLETED = 'COMPLETED',
@@ -10,48 +14,73 @@ export enum OrderStatus {
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
+  PAID = 'PAID',
   FAILED = 'FAILED',
   REFUNDED = 'REFUNDED'
 }
 
+export interface ModifierSelection {
+  _id?: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface OrderItemModifier {
+  _id?: string;
+  name: string;
+  selections: ModifierSelection[];
+}
+
 export interface OrderItem {
-  menuItem: string;
+  _id?: string;
+  menuItem: string | MenuItem;
   name: string;
   quantity: number;
   price: number;
-  modifiers?: {
-    groupId: string;
-    selections: {
-      optionId: string;
-      name: string;
-      quantity: number;
-      price: number;
-    }[];
-  }[];
-  specialInstructions?: string;
-  subtotal: number;
+  subtotal?: number;
+  notes?: string;
+  modifiers?: OrderItemModifier[];
 }
 
 export interface Order {
   _id: string;
   orderNumber: string;
-  restaurantId: string;
-  tableId: string;
+  restaurantId: string | Restaurant;
+  userId?: string | User;
+  tableId?: string | Table;
   tableNumber?: string;
-  seat?: string;
-  userId?: string;
+  orderType: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
   items: OrderItem[];
-  status: OrderStatus | string;
-  paymentStatus: PaymentStatus | string;
   subtotal: number;
   tax: number;
   tip?: number;
   total: number;
   specialInstructions?: string;
+  cancelledAt?: Date;
+  cancellationReason?: string;
   estimatedPreparationTime?: number;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderSummary {
+  totalOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  todayOrders: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+}
+
+export interface OrderFilters {
+  status?: OrderStatus;
+  orderType?: string;
+  paymentStatus?: PaymentStatus;
+  startDate?: string;
+  endDate?: string;
+  tableNumber?: string;
 }
