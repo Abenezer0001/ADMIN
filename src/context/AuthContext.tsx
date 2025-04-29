@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const checkAuthStatus = async () => {
       setIsLoading(true);
       try {
-        if (authService.isAuthenticated()) {
+        if (await authService.isAuthenticated()) {
           // Verify token and get user data
           const userData = await authService.getCurrentUser();
           setUser(userData);

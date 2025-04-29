@@ -52,8 +52,17 @@ export interface Order {
   tableNumber?: string;
   orderType: string;
   status: OrderStatus;
-  paymentStatus: PaymentStatus;
+  
   items: OrderItem[];
+  user?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+
+ 
+  paymentStatus: PaymentStatus;
   subtotal: number;
   tax: number;
   tip?: number;
@@ -83,4 +92,14 @@ export interface OrderFilters {
   startDate?: string;
   endDate?: string;
   tableNumber?: string;
+}
+
+export interface OrdersResponse {
+  data: Order[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 }

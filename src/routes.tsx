@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react'; // Combined import
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
 
@@ -44,6 +44,7 @@ const Preferences = lazy(() => import('./components/settings/Preferences'));
 const Profile = lazy(() => import('./components/settings/Profile'));
 const ChangePassword = lazy(() => import('./components/settings/ChangePassword'));
 const MenuItemDetail = lazy(() => import('./pages/MenuItems/MenuItemDetail')); // Added import
+const LoyaltySettings = lazy(() => import('./components/loyalty/LoyaltySettings'));
 
 // Existing components
 const Items = lazy(() => import('./components/Items'));
@@ -218,6 +219,7 @@ const AppRoutes = () => {
         <Route path="/settings/system" element={<SystemSettings />} />
         <Route path="/settings/integration" element={<Integration />} />
         <Route path="/settings/access-control" element={<AccessControl />} />
+        <Route path="/settings/loyalty" element={<LoyaltySettings />} />
 
         {/*  */}
         <Route path="/customers" element={<Customers />} />

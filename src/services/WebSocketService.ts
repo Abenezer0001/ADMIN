@@ -1,21 +1,20 @@
 import { io, Socket } from 'socket.io-client';
-import { Order } from '../types/order';
-import { config } from '../config';
+import { SOCKET_URL } from '../utils/config';
 
 export enum WebSocketEvents {
   CONNECT = 'connect',
   DISCONNECT = 'disconnect',
-  JOIN_ROOM = 'join_room',
-  LEAVE_ROOM = 'leave_room',
-  NEW_ORDER = 'new_order',
-  ORDER_UPDATED = 'order_updated',
-  ORDER_CANCELLED = 'order_cancelled',
-  ORDER_ALERT = 'order_alert',
-  ERROR = 'error'
+  ERROR = 'error',
+  JOIN_ROOM = 'joinRoom',
+  LEAVE_ROOM = 'leaveRoom',
+  NEW_ORDER = 'newOrder',
+  ORDER_UPDATED = 'orderUpdated',
+  ORDER_CANCELLED = 'orderCancelled',
+  ORDER_ALERT = 'orderAlert'
 }
 
 export interface OrderEventData {
-  order: Order;
+  order: any; // Replace 'any' with your Order type
 }
 
 export interface OrderAlert {
@@ -25,78 +24,61 @@ export interface OrderAlert {
   timestamp: Date;
 }
 
+type EventCallback = (data: any) => void;
+
 class WebSocketService {
-  private static instance: WebSocketService;
   private socket: Socket | null = null;
-  private restaurantId: string | null = null;
+  private eventListeners: Map<string, Set<EventCallback>> = new Map();
+  private reconnecting = false;
+  private rooms: Set<string> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
-  private listeners: { [key: string]: Function[] } = {};
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  private constructor() {}
-
-  /**
-   * Get the singleton instance
-   */
-  public static getInstance(): WebSocketService {
-    if (!WebSocketService.instance) {
-      WebSocketService.instance = new WebSocketService();
-    }
-    return WebSocketService.instance;
-  }
-
-  /**
-   * Initialize the WebSocket connection
-   */
-  public initialize(restaurantId: string): void {
-    if (this.socket) {
-      this.disconnect();
+  connect(restaurantId?: string) {
+    if (this.socket?.connected) {
+      console.log('Socket already connected');
+      return;
     }
 
-    this.restaurantId = restaurantId;
+    this.socket = io(SOCKET_URL, {
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      withCredentials: true
+    });
+
+    this.setupSocketListeners();
+    console.log('Connecting to WebSocket server...');
     
-    try {
-      // Initialize socket connection
-      this.socket = io(config.apiUrl, {
-        transports: ['websocket'],
-        reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: 1000,
-        timeout: 20000
-      });
-
-      // Setup event listeners
-      this.setupEventListeners();
-      
-      console.log('WebSocket service initialized');
-    } catch (error) {
-      console.error('Failed to initialize WebSocket service:', error);
+    // Join restaurant room if provided
+    if (restaurantId) {
+      this.joinRoom(`restaurant:${restaurantId}`);
     }
   }
 
-  /**
-   * Setup WebSocket event listeners
-   */
-  private setupEventListeners(): void {
+  private setupSocketListeners() {
     if (!this.socket) return;
 
-    // Connection events
     this.socket.on(WebSocketEvents.CONNECT, () => {
-      console.log('WebSocket connected');
+      console.log('Connected to WebSocket server');
       this.reconnectAttempts = 0;
       
-      // Join restaurant room upon connection
-      if (this.restaurantId) {
-        this.joinRoom(`restaurant:${this.restaurantId}`);
+      // Rejoin rooms on reconnection
+      if (this.reconnecting) {
+        this.rejoinRooms();
+        this.reconnecting = false;
       }
       
-      // Trigger stored listeners for connect event
-      this.triggerListeners(WebSocketEvents.CONNECT);
+      // Notify listeners
+      this.notifyEventListeners(WebSocketEvents.CONNECT, { connected: true });
     });
 
     this.socket.on(WebSocketEvents.DISCONNECT, (reason) => {
-      console.log(`WebSocket disconnected: ${reason}`);
+      console.log(`Disconnected from WebSocket server: ${reason}`);
+      this.reconnecting = true;
       
       // Try to reconnect if not explicitly disconnected
       if (reason === 'io server disconnect') {
@@ -111,116 +93,111 @@ class WebSocketService {
         }
       }
       
-      // Trigger stored listeners for disconnect event
-      this.triggerListeners(WebSocketEvents.DISCONNECT, reason);
+      this.notifyEventListeners(WebSocketEvents.DISCONNECT, { reason });
     });
 
     this.socket.on(WebSocketEvents.ERROR, (error) => {
       console.error('WebSocket error:', error);
-      // Trigger stored listeners for error event
-      this.triggerListeners(WebSocketEvents.ERROR, error);
+      this.notifyEventListeners(WebSocketEvents.ERROR, { error });
     });
 
-    // Order events
-    this.socket.on(WebSocketEvents.NEW_ORDER, (data: OrderEventData) => {
+    // Set up event listeners for order events
+    this.socket.on(WebSocketEvents.NEW_ORDER, (data) => {
       console.log('New order received:', data);
-      this.triggerListeners(WebSocketEvents.NEW_ORDER, data);
+      this.notifyEventListeners(WebSocketEvents.NEW_ORDER, data);
     });
 
-    this.socket.on(WebSocketEvents.ORDER_UPDATED, (data: OrderEventData) => {
+    this.socket.on(WebSocketEvents.ORDER_UPDATED, (data) => {
       console.log('Order updated:', data);
-      this.triggerListeners(WebSocketEvents.ORDER_UPDATED, data);
+      this.notifyEventListeners(WebSocketEvents.ORDER_UPDATED, data);
     });
 
-    this.socket.on(WebSocketEvents.ORDER_CANCELLED, (data: OrderEventData) => {
+    this.socket.on(WebSocketEvents.ORDER_CANCELLED, (data) => {
       console.log('Order cancelled:', data);
-      this.triggerListeners(WebSocketEvents.ORDER_CANCELLED, data);
+      this.notifyEventListeners(WebSocketEvents.ORDER_CANCELLED, data);
     });
     
-    this.socket.on(WebSocketEvents.ORDER_ALERT, (data: OrderAlert) => {
+    this.socket.on(WebSocketEvents.ORDER_ALERT, (data) => {
       console.log('Order alert received:', data);
-      this.triggerListeners(WebSocketEvents.ORDER_ALERT, data);
+      this.notifyEventListeners(WebSocketEvents.ORDER_ALERT, data);
     });
   }
 
-  /**
-   * Join a specific room to receive events
-   */
-  public joinRoom(room: string): void {
-    if (!this.socket) {
-      console.warn('Cannot join room: WebSocket not connected');
+  joinRoom(room: string) {
+    if (!this.socket?.connected) {
+      console.warn('Cannot join room: socket not connected');
+      this.rooms.add(room); // Store for later when connected
       return;
     }
 
     this.socket.emit(WebSocketEvents.JOIN_ROOM, room);
+    this.rooms.add(room);
     console.log(`Joined room: ${room}`);
   }
 
-  /**
-   * Leave a specific room
-   */
-  public leaveRoom(room: string): void {
-    if (!this.socket) {
-      console.warn('Cannot leave room: WebSocket not connected');
+  leaveRoom(room: string) {
+    if (!this.socket?.connected) {
+      console.warn('Cannot leave room: socket not connected');
+      this.rooms.delete(room);
       return;
     }
 
     this.socket.emit(WebSocketEvents.LEAVE_ROOM, room);
+    this.rooms.delete(room);
     console.log(`Left room: ${room}`);
   }
 
+  private rejoinRooms() {
+    if (!this.socket?.connected) return;
+    
+    this.rooms.forEach(room => {
+      this.socket!.emit(WebSocketEvents.JOIN_ROOM, room);
+      console.log(`Rejoined room: ${room}`);
+    });
+  }
+  
   /**
    * Join order-specific room
    */
-  public subscribeToOrder(orderId: string): void {
+  subscribeToOrder(orderId: string): void {
     this.joinRoom(`order:${orderId}`);
   }
 
   /**
    * Unsubscribe from order-specific events
    */
-  public unsubscribeFromOrder(orderId: string): void {
+  unsubscribeFromOrder(orderId: string): void {
     this.leaveRoom(`order:${orderId}`);
   }
 
-  /**
-   * Add event listener
-   */
-  public addEventListener(event: WebSocketEvents, callback: Function): void {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
+  addEventListener(event: string, callback: EventCallback) {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, new Set());
     }
-    this.listeners[event].push(callback);
+    this.eventListeners.get(event)!.add(callback);
   }
 
-  /**
-   * Remove event listener
-   */
-  public removeEventListener(event: WebSocketEvents, callback: Function): void {
-    if (this.listeners[event]) {
-      this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+  removeEventListener(event: string, callback: EventCallback) {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.delete(callback);
     }
   }
 
-  /**
-   * Trigger stored listeners for an event
-   */
-  private triggerListeners(event: string, ...args: any[]): void {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(callback => {
+  private notifyEventListeners(event: string, data: any) {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(callback => {
         try {
-          callback(...args);
+          callback(data);
         } catch (error) {
-          console.error(`Error in ${event} listener:`, error);
+          console.error(`Error in ${event} event listener:`, error);
         }
       });
     }
   }
 
-  /**
-   * Disconnect the WebSocket
-   */
-  public disconnect(): void {
+  disconnect() {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
@@ -229,16 +206,14 @@ class WebSocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      console.log('WebSocket disconnected');
+      this.rooms.clear();
+      console.log('Disconnected from WebSocket server');
     }
   }
 
-  /**
-   * Check if the socket is connected
-   */
-  public isConnected(): boolean {
-    return this.socket?.connected || false;
+  isConnected(): boolean {
+    return !!this.socket?.connected;
   }
 }
 
-export default WebSocketService; 
+export default new WebSocketService();

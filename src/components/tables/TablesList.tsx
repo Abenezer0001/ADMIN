@@ -1,4 +1,4 @@
-// rs
+// TablesList.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -40,12 +40,10 @@ import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CategoryIcon from '@mui/icons-material/Category';
 
-import { tableService, TableType, Table as TableData } from '../../services/TableService'; // Import TableData directly
-// import type { Table as TableData } from '../../services/TableService'; // Remove type import
+import { tableService, TableType, Table as TableData } from '../../services/TableService';
 import { restaurantService, Restaurant } from '../../services/RestaurantService';
 import { venueService, Venue } from '../../services/VenueService';
-
-
+import TableQRCode from './TableQRCode';
 
 const TablesList = () => {
   const navigate = useNavigate();
@@ -58,7 +56,7 @@ const TablesList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tableToDelete, setTableToDelete] = useState<TableData | null>(null);
   const [qrCodeModalOpen, setQrCodeModalOpen] = useState(false);
-  const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null);
+  const [tableForQR, setTableForQR] = useState<TableData | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [tableTypes, setTableTypes] = useState<TableType[]>([]);
@@ -67,18 +65,17 @@ const TablesList = () => {
   const [loadingRestaurants, setLoadingRestaurants] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
   const [loadingTableTypes, setLoadingTableTypes] = useState(false);
-  const [showAllRestaurants, setShowAllRestaurants] = useState(false);
 
   // Fetch restaurants when component mounts
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true);
-        const data: Restaurant[] = await restaurantService.getRestaurants(); // Add type
+        const data = await restaurantService.getRestaurants();
         setRestaurants(data);
 
         // If we have restaurants, select the first one
-        if (data && data.length > 0) { // Check if data is not null/undefined
+        if (data && data.length > 0) {
           setSelectedRestaurantId(data[0]._id);
         }
       } catch (err) {
@@ -101,11 +98,11 @@ const TablesList = () => {
       
       try {
         setLoadingVenues(true);
-        const data: Venue[] = await venueService.getVenues(selectedRestaurantId); // Add type
+        const data = await venueService.getVenues(selectedRestaurantId);
         setVenues(data);
 
         // If we have venues, add an "All Venues" option and select it by default
-        if (data && data.length > 0) { // Check if data is not null/undefined
+        if (data && data.length > 0) {
           setSelectedVenueId('all');
         } else {
           setSelectedVenueId('');
@@ -130,15 +127,15 @@ const TablesList = () => {
         if (selectedRestaurantId === 'all') {
           // Fetch table types for all restaurants
           for (const restaurant of restaurants) {
-            const data: TableType[] = await tableService.getTableTypes(restaurant._id); // Add type
-            if (data) { // Check if data is not null/undefined
+            const data = await tableService.getTableTypes(restaurant._id);
+            if (data) {
                allTableTypes = [...allTableTypes, ...data];
             }
           }
         } else if (selectedRestaurantId) {
           // Fetch table types for the selected restaurant
-          const data: TableType[] = await tableService.getTableTypes(selectedRestaurantId); // Add type
-          if (data) { // Check if data is not null/undefined
+          const data = await tableService.getTableTypes(selectedRestaurantId);
+          if (data) {
              allTableTypes = data;
           } else {
              allTableTypes = [];
@@ -187,7 +184,7 @@ const TablesList = () => {
     };
 
     if (selectedRestaurantId && (selectedVenueId || selectedRestaurantId === 'all')) {
-    fetchTables();
+      fetchTables();
     }
   }, [selectedRestaurantId, selectedVenueId]);
 
@@ -201,29 +198,12 @@ const TablesList = () => {
   };
 
   const handleRestaurantChange = (event: SelectChangeEvent) => {
-    const value = event.target.value;
-    setSelectedRestaurantId(value);
-    setShowAllRestaurants(value === 'all');
-    
-    // Reset venue selection when switching restaurants
-    setSelectedVenueId('');
+    setSelectedRestaurantId(event.target.value);
   };
 
   const handleVenueChange = (event: SelectChangeEvent) => {
     setSelectedVenueId(event.target.value);
   };
-
-  // Find table type name by id
-  const getTableTypeName = (tableTypeId?: string): string => { // Add return type
-    if (!tableTypeId) return 'Not Assigned';
-    const tableType = tableTypes.find((tt: TableType) => tt._id === tableTypeId); // Add type to tt
-    return tableType ? tableType.name : 'Unknown';
-  };
-
-  const filteredTables = tables.filter((table: TableData) => // Add type to table
-    table.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getTableTypeName(table.tableTypeId).toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleDeleteTable = (table: TableData) => {
     setTableToDelete(table);
@@ -234,13 +214,15 @@ const TablesList = () => {
     if (!tableToDelete) return;
     
     try {
-      await tableService.deleteTable(selectedRestaurantId, selectedVenueId, tableToDelete._id || tableToDelete.id);
-      setTables(tables.filter(table => (table._id || table.id) !== (tableToDelete._id || tableToDelete.id)));
+      await tableService.deleteTable(tableToDelete._id || tableToDelete.id);
+      // Remove the deleted table from the tables array
+      setTables(prevTables => prevTables.filter(table => 
+        (table._id || table.id) !== (tableToDelete._id || tableToDelete.id)
+      ));
       setDeleteDialogOpen(false);
       setTableToDelete(null);
-    } catch (err) {
-      console.error('Error deleting table:', err);
-      setError('Failed to delete table. Please try again.');
+    } catch (error) {
+      console.error('Error deleting table:', error);
     }
   };
 
@@ -249,56 +231,56 @@ const TablesList = () => {
     setTableToDelete(null);
   };
 
-  const handleShowQrCode = (qrCode: string) => {
-    setSelectedQrCode(qrCode);
+  const handleShowQrCode = (table: TableData) => {
+    setTableForQR(table);
     setQrCodeModalOpen(true);
   };
 
-  // Handle toggling table active status
-  const handleToggleStatus = async (tableId: string, currentStatus: boolean) => {
+  const handleToggleStatus = async (tableId: string, isActive: boolean) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Call the service to toggle the status
-      const updatedTable = await tableService.toggleTableStatus(
-        selectedRestaurantId,
-        selectedVenueId,
-        tableId,
-        !currentStatus
+      await tableService.updateTableStatus(tableId, !isActive);
+      // Update the table status in the tables array
+      setTables(prevTables => 
+        prevTables.map(table => 
+          (table._id || table.id) === tableId 
+            ? { ...table, isActive: !isActive } 
+            : table
+        )
       );
-      
-      // Update the tables state with the updated table
-      setTables(tables.map(table => {
-        if ((table._id || table.id) === tableId) {
-          return { ...table, isActive: !currentStatus };
-        }
-        return table;
-      }));
-      
-      // Show success message (optional)
-      console.log(`Table status updated successfully to ${!currentStatus ? 'active' : 'inactive'}`);
-    } catch (err) {
-      console.error('Error toggling table status:', err);
-      setError('Failed to update table status. Please try again.');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error toggling table status:', error);
     }
   };
 
-  if (loading && tables.length === 0) {
-    return <Typography>Loading...</Typography>;
-  }
+  const getTableTypeName = (tableTypeId: string) => {
+    const tableType = tableTypes.find(type => type._id === tableTypeId);
+    return tableType ? tableType.name : 'Unknown';
+  };
+
+  // Filter tables based on search term
+  const filteredTables = tables.filter(table => {
+    const searchString = searchTerm.toLowerCase();
+    const tableNumber = table.number?.toString().toLowerCase() || '';
+    const capacity = table.capacity?.toString().toLowerCase() || '';
+    const tableTypeName = getTableTypeName(table.tableTypeId).toLowerCase();
+    
+    return (
+      tableNumber.includes(searchString) ||
+      capacity.includes(searchString) ||
+      tableTypeName.includes(searchString)
+    );
+  });
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" component="h2">
+        <Typography variant="h4" component="h1">
           Tables
         </Typography>
         <Button
-          startIcon={<AddIcon />}
           variant="contained"
+          startIcon={<AddIcon />}
+          color="primary"
           onClick={() => navigate('/tables/new')}
         >
           Add Table
@@ -380,82 +362,94 @@ const TablesList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTables
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((table) => (
-                  <TableRow key={table._id || table.id}>
-                    <TableCell>{table.number}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <EventSeatIcon sx={{ mr: 1, fontSize: 16 }} />
-                        {table.capacity}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <CategoryIcon sx={{ mr: 1, fontSize: 16 }} />
-                        {getTableTypeName(table.tableTypeId)}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Chip
-                          icon={<CircleIcon />}
-                          label={table.isOccupied ? 'Occupied' : 'Available'}
-                          color={table.isOccupied ? 'error' : 'success'}
-                          size="small"
-                        />
-                        <Chip 
-                          label={table.isActive ? 'Active' : 'Inactive'} 
-                          color={table.isActive ? 'success' : 'default'} 
-                          size="small"
-                          onClick={() => handleToggleStatus(table._id || table.id, table.isActive)}
-                          sx={{ cursor: 'pointer' }}
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {table.qrCode ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleShowQrCode(table.qrCode as string)}
-                        >
-                          <QrCodeIcon color="primary" />
-                        </IconButton>
-                      ) : (
-                        <QrCodeIcon color="disabled" />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        <Tooltip title="View Details">
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : filteredTables.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body1">No tables found</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTables
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((table) => (
+                    <TableRow key={table._id || table.id}>
+                      <TableCell>{table.number}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <EventSeatIcon sx={{ mr: 1, fontSize: 16 }} />
+                          {table.capacity}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CategoryIcon sx={{ mr: 1, fontSize: 16 }} />
+                          {getTableTypeName(table.tableTypeId)}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Chip
+                            icon={<CircleIcon />}
+                            label={table.isOccupied ? 'Occupied' : 'Available'}
+                            color={table.isOccupied ? 'error' : 'success'}
+                            size="small"
+                          />
+                          <Chip 
+                            label={table.isActive ? 'Active' : 'Inactive'} 
+                            color={table.isActive ? 'success' : 'default'} 
+                            size="small"
+                            onClick={() => handleToggleStatus(table._id || table.id, table.isActive)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={table.qrCode ? "View/Edit QR Code" : "Generate QR Code"}>
                           <IconButton
                             size="small"
-                            onClick={() => navigate(`/tables/${table._id || table.id}`)}
+                            onClick={() => handleShowQrCode(table)}
                           >
-                            <VisibilityIcon />
+                            <QrCodeIcon color={table.qrCode ? "primary" : "action"} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            size="small"
-                            onClick={() => navigate(`/tables/edit/${table._id || table.id}`)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteTable(table)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/tables/${table._id || table.id}`)}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit">
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/tables/edit/${table._id || table.id}`)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteTable(table)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              )}
             </TableBody>
           </MUITable>
           <TablePagination
@@ -493,30 +487,39 @@ const TablesList = () => {
         onClose={() => setQrCodeModalOpen(false)}
         aria-labelledby="qr-code-modal"
       >
-        <Box sx={{ // Type assertion for sx prop if needed, but usually inferred
+        <Box sx={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 300,
+          width: 400,
           bgcolor: 'background.paper',
           boxShadow: 24,
           p: 4,
-          borderRadius: 2,
-          textAlign: 'center'
+          borderRadius: 2
         }}>
-          <Typography variant="h6" component="h2" mb={2}>
-            Table QR Code
-          </Typography>
-          {selectedQrCode && (
-            <img src={selectedQrCode} alt="Table QR Code" style={{ maxWidth: '100%' }} />
+          {tableForQR && (
+            <TableQRCode 
+              tableId={tableForQR._id || tableForQR.id || ''}
+              tableName={`Table ${tableForQR.number}`}
+              restaurantId={tableForQR.restaurantId || ''}
+              venueId={tableForQR.venueId || ''}
+              existingQrCode={tableForQR.qrCode}
+              onClose={() => setQrCodeModalOpen(false)}
+              onGenerate={() => {
+                // Refresh the table data after QR code generation
+                if (selectedRestaurantId && (selectedVenueId || selectedRestaurantId === 'all')) {
+                  if (selectedRestaurantId === 'all') {
+                    tableService.getAllTables().then(setTables);
+                  } else if (selectedVenueId === 'all') {
+                    tableService.getAllTablesForRestaurant(selectedRestaurantId).then(setTables);
+                  } else {
+                    tableService.getTables(selectedRestaurantId, selectedVenueId).then(setTables);
+                  }
+                }
+              }}
+            />
           )}
-          <Button
-            onClick={() => setQrCodeModalOpen(false)}
-            sx={{ mt: 2 }}
-          >
-            Close
-          </Button>
         </Box>
       </Modal>
     </Box>

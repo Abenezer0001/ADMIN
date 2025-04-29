@@ -51,7 +51,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
 } from 'recharts';
 
 // Type definitions

@@ -41,9 +41,11 @@ import {
   ShoppingCart as OrdersIcon,
   Restaurant as MenuIcon2,
   Settings as SettingsIcon,
-  List as ListIcon,
+  MenuBook as MenuBookIcon, // For Menu Items
   Edit as EditIcon,
-  Category as CategoryIcon, // Used for Categories, SubCategories
+  Category as CategoryIcon, // Used for Categories
+  AccountTree as AccountTreeIcon, // For SubCategories
+  SubdirectoryArrowRight as SubdirectoryArrowRightIcon, // For SubSubCategories
   RestaurantMenu as RestaurantMenuIcon, // Use for Menus list
   History as HistoryIcon,
   AccountCircle as AccountCircleIcon,
@@ -55,6 +57,8 @@ import {
   Logout as LogoutIcon,
   Search as SearchIcon,
   Notifications as NotificationsIcon,
+  NotificationsActive as NotificationsActiveIcon, // For Notifications settings
+  Sync as SyncIcon, // For Live Orders
   Apps as AppsIcon,
   Language as LanguageIcon,
 } from '@mui/icons-material';
@@ -305,7 +309,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           children: [
             {
               key: 'menu/items',
-              icon: <ListIcon sx={{ fontSize: 24 }} />,
+              icon: <MenuBookIcon sx={{ fontSize: 24 }} />,
               label: 'Menu Items',
             },
             {
@@ -322,13 +326,13 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
             },
              { // Added SubCategory Link
               key: 'subcategories/list',
-              icon: <CategoryIcon sx={{ fontSize: 24 }} />, // Reuse CategoryIcon or choose another
-               label: 'Sub-Categories',
+              icon: <AccountTreeIcon sx={{ fontSize: 24 }} />, // Better hierarchy representation
+              label: 'Sub-Categories',
                path: '/subcategories/list'
             },
             { // Added SubSubCategory Link
               key: 'subsubcategories/list',
-              icon: <CategoryIcon sx={{ fontSize: 24 }} />, // Reusing icon for now
+              icon: <SubdirectoryArrowRightIcon sx={{ fontSize: 24 }} />, // Shows deeper hierarchy
               label: 'Sub-Subcategories',
               path: '/subsubcategories/list'
             },
@@ -352,7 +356,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           children: [
             {
               key: 'orders/live',
-              icon: <OrdersIcon sx={{ fontSize: 24 }} />,
+              icon: <SyncIcon sx={{ fontSize: 24 }} />,
               label: 'Live Orders',
             },
             {
@@ -404,7 +408,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
         },
         {
           key: 'settings/notifications',
-          icon: <TuneIcon sx={{ fontSize: 24 }} />,
+          icon: <NotificationsActiveIcon sx={{ fontSize: 24 }} />,
           label: 'Notifications',
         },
       ],
