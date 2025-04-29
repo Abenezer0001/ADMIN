@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/config';
 import { Order, OrderStatus, PaymentStatus, OrdersResponse } from '../types/order';
-import WebSocketService, { WebSocketEvents, OrderEventData, OrderAlert } from './websocketService';
+import WebSocketService, { WebSocketEventType, OrderEventData, OrderAlert } from './websocketService';
 import { isDemoMode } from './AuthService';
 
 class OrderService {
