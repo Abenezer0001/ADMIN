@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+const { useState, useEffect } = React;
 import {
   Box,
   Button,
@@ -26,7 +27,7 @@ import { venueService, Venue } from '../../services/VenueService';
 interface TableFormData {
   number: string;
   capacity: number;
-  type: 'REGULAR' | 'VIP' | 'COUNTER' | 'LOUNGE';
+  tableTypeId: string; // Changed from type to tableTypeId
   isActive: boolean;
   isOccupied?: boolean;
   qrCode?: string;
@@ -45,36 +46,53 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
   const { id: urlTableId } = useParams<{ id: string }>();
   // Use the ID from URL params if available, otherwise use the prop
   const tableId = urlTableId;
+
   const [formData, setFormData] = useState<TableFormData>({
     number: '',
     capacity: 2,
-    type: 'REGULAR',
+    tableTypeId: '', 
     isActive: true,
-    isOccupied: false,
+    isOccupied: false as boolean,
     restaurantId: '',
     venueId: '',
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loadingRestaurants, setLoadingRestaurants] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
+  const [loadingTableTypes, setLoadingTableTypes] = useState(false);
+  const [tableTypes, setTableTypes] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Fetch restaurants when component mounts
+  type Restaurant = {
+    _id: string;
+    name: string;
+  };
+
+  type Venue = {
+    _id: string;
+    name: string;
+  };
+
+  type TableType = {
+    _id: string;
+    name: string;
+  };
+
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true);
         const data = await restaurantService.getRestaurants();
         setRestaurants(data);
-        
-        // If we don't have a selected restaurant yet and we have restaurants, select the first one
+
         if (!formData.restaurantId && data.length > 0) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            restaurantId: data[0]._id
+            restaurantId: data[0]._id,
           }));
         }
       } catch (err) {
@@ -87,21 +105,19 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
     fetchRestaurants();
   }, []);
 
-  // Fetch venues when restaurant changes
   useEffect(() => {
     const fetchVenues = async () => {
       if (!formData.restaurantId) return;
-      
+
       try {
         setLoadingVenues(true);
         const data = await venueService.getVenues(formData.restaurantId);
         setVenues(data);
-        
-        // If we don't have a selected venue yet and we have venues, select the first one
+
         if (!formData.venueId && data.length > 0) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            venueId: data[0]._id
+            venueId: data[0]._id,
           }));
         }
       } catch (err) {
@@ -114,37 +130,62 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
     fetchVenues();
   }, [formData.restaurantId]);
 
-  // When component mounts, check if we're in edit mode and fetch the table data
   useEffect(() => {
-    console.log('TableForm - tableId:', tableId);
-    
+    const fetchTableTypes = async () => {
+      if (!formData.restaurantId) return;
+
+      try {
+        setLoadingTableTypes(true);
+        const data = await tableService.getTableTypes(formData.restaurantId);
+        setTableTypes(data);
+
+        if (!formData.tableTypeId && data.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            tableTypeId: data[0]._id,
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching table types:', err);
+      } finally {
+        setLoadingTableTypes(false);
+      }
+    };
+
+    fetchTableTypes();
+  }, [formData.restaurantId]);
+
+  useEffect(() => {
     const fetchTable = async () => {
       if (!tableId || tableId === 'undefined') {
         console.log('TableForm - No valid tableId, skipping fetch');
         return;
       }
-      
-      // We need a restaurantId and venueId to fetch the table
-      if (!formData.restaurantId || !formData.venueId) {
-        return;
-      }
-      
+
       try {
         setLoading(true);
         console.log('TableForm - Fetching table with ID:', tableId);
-        const data = await tableService.getTable(formData.restaurantId, formData.venueId, tableId);
+        let data: any;
+
+        if (formData.restaurantId && formData.venueId) {
+          console.log('TableForm - Using contextual table fetch with restaurant/venue');
+          data = await tableService.getTable(formData.restaurantId, formData.venueId, tableId);
+        } else {
+          console.log('TableForm - Using direct table fetch without context');
+          data = await tableService.getTableById(tableId);
+        }
+
         console.log('TableForm - Fetched data:', data);
-        
-        // Make sure we have valid data before setting it
+
         if (data && (data.number || data.capacity)) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             number: data.number || '',
             capacity: data.capacity || 2,
-            type: data.type || 'REGULAR',
-            isActive: typeof data.isActive === 'boolean' ? data.isActive : true,
+            tableTypeId: data.tableTypeId || '',
+            isActive: false as boolean,
             isOccupied: typeof data.isOccupied === 'boolean' ? data.isOccupied : false,
-            qrCode: data.qrCode
+            qrCode: data.qrCode,
           }));
         }
         setError(null);
@@ -161,32 +202,28 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
     }
   }, [tableId, formData.restaurantId, formData.venueId]);
 
-  const handleChange = (field: keyof TableFormData) => (
-    event: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>
-  ) => {
-    const value = event.target.type === 'checkbox'
-      ? (event.target as HTMLInputElement).checked
-      : event.target.value;
-      
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    const fieldValue = type === 'checkbox' ? checked : value;
+
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [name]: fieldValue,
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setLoading(true);
       console.log('TableForm - Submit with tableId:', tableId);
-      
-      // Validate form data
+
       if (!formData.number || formData.number.trim() === '') {
         setError('Table number is required');
         setLoading(false);
         return;
       }
-      
+
       if (!formData.capacity || formData.capacity < 1) {
         setError('Capacity must be at least 1');
         setLoading(false);
@@ -204,19 +241,17 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
         setLoading(false);
         return;
       }
-      
+
       if (tableId && tableId !== 'undefined') {
-        // For update, only send the fields that are in UpdateTableDto
         const updateData: UpdateTableDto = {
           number: formData.number,
           capacity: formData.capacity,
-          type: formData.type,
+          tableTypeId: formData.tableTypeId,
           isActive: formData.isActive,
-          isOccupied: formData.isOccupied,
-          venueId: formData.venueId
+          venueId: formData.venueId,
         };
         console.log('Updating table:', tableId, updateData);
-        
+
         try {
           const updatedTable = await tableService.updateTable(
             formData.restaurantId,
@@ -237,16 +272,15 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
           return;
         }
       } else {
-        // For create, use the CreateTableDto structure
         const createData: CreateTableDto = {
           number: formData.number,
           capacity: formData.capacity,
-          type: formData.type,
+          tableTypeId: formData.tableTypeId,
           isActive: formData.isActive,
-          venueId: formData.venueId
+          venueId: formData.venueId,
         };
         console.log('Creating new table:', createData);
-        
+
         try {
           const result = await tableService.createTable(
             formData.restaurantId,
@@ -266,13 +300,6 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
           return;
         }
       }
-      
-      // Call onSubmit if provided, otherwise navigate back to tables list
-      if (onSubmit) {
-        onSubmit();
-      } else {
-        navigate('/tables/list');
-      }
     } catch (err) {
       setError('Failed to save table. Please try again later.');
       console.error('Error saving table:', err);
@@ -287,6 +314,7 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
 
   const confirmDelete = async () => {
     if (!tableId || !formData.restaurantId || !formData.venueId) return;
+
     
     try {
       setLoading(true);
@@ -301,7 +329,32 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
     }
   };
 
-  const tableTypes = ['REGULAR', 'VIP', 'COUNTER', 'LOUNGE'];
+  // Fetch table types when restaurant changes
+  useEffect(() => {
+    const fetchTableTypes = async () => {
+      if (!formData.restaurantId) return;
+      
+      try {
+        setLoadingTableTypes(true);
+        const data = await tableService.getTableTypes(formData.restaurantId);
+        setTableTypes(data);
+        
+        // If we don't have a selected table type yet and we have types, select the first one
+        if (!formData.tableTypeId && data.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            tableTypeId: data[0]._id
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching table types:', err);
+      } finally {
+        setLoadingTableTypes(false);
+      }
+    };
+
+    fetchTableTypes();
+  }, [formData.restaurantId]);
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
@@ -387,15 +440,25 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
           <FormControl fullWidth>
             <InputLabel>Table Type</InputLabel>
             <Select
-              value={formData.type}
+              value={formData.tableTypeId}
               label="Table Type"
-              onChange={handleChange('type')}
+              onChange={handleChange('tableTypeId')}
             >
-              {tableTypes.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
+              {loadingTableTypes ? (
+                <MenuItem value="">
+                  <CircularProgress size={20} />
                 </MenuItem>
-              ))}
+              ) : tableTypes.length > 0 ? (
+                tableTypes.map((tableType) => (
+                  <MenuItem key={tableType._id} value={tableType._id}>
+                    {tableType.name}
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem value="">
+                  No table types found
+                </MenuItem>
+              )}
             </Select>
           </FormControl>
 

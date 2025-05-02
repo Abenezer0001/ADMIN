@@ -28,7 +28,8 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -160,17 +161,26 @@ const TablesList = () => {
       setError(null);
       
       try {
-        if (selectedRestaurantId === 'all') {
+        // Use the filtered tables endpoint with appropriate parameters based on selection
+        console.log(`Fetching tables with restaurant=${selectedRestaurantId}, venue=${selectedVenueId}`);
+        
+        if (!selectedRestaurantId || selectedRestaurantId === '') {
+          // No restaurant selected yet
+          setTables([]);
+        } else if (selectedRestaurantId === 'all') {
           // Get all tables from all restaurants
-          const allTables = await tableService.getAllTables();
+          const allTables = await tableService.getFilteredTables();
+          console.log(`Found ${allTables.length} tables across all restaurants`);
           setTables(allTables);
-        } else if (selectedRestaurantId && selectedVenueId === 'all') {
+        } else if (selectedRestaurantId && (!selectedVenueId || selectedVenueId === 'all')) {
           // Get all tables for a specific restaurant
-          const restaurantTables = await tableService.getAllTablesForRestaurant(selectedRestaurantId);
+          const restaurantTables = await tableService.getFilteredTables(selectedRestaurantId);
+          console.log(`Found ${restaurantTables.length} tables for restaurant ${selectedRestaurantId}`);
           setTables(restaurantTables);
         } else if (selectedRestaurantId && selectedVenueId) {
-          // Get tables for a specific venue
-          const venueTables = await tableService.getTables(selectedRestaurantId, selectedVenueId);
+          // Get tables for a specific venue in a specific restaurant
+          const venueTables = await tableService.getFilteredTables(selectedRestaurantId, selectedVenueId);
+          console.log(`Found ${venueTables.length} tables for venue ${selectedVenueId} in restaurant ${selectedRestaurantId}`);
           setTables(venueTables);
         } else {
           setTables([]);
@@ -183,9 +193,8 @@ const TablesList = () => {
       }
     };
 
-    if (selectedRestaurantId && (selectedVenueId || selectedRestaurantId === 'all')) {
-      fetchTables();
-    }
+    // Fetch tables whenever restaurant or venue selection changes
+    fetchTables();
   }, [selectedRestaurantId, selectedVenueId]);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -214,10 +223,21 @@ const TablesList = () => {
     if (!tableToDelete) return;
     
     try {
-      await tableService.deleteTable(tableToDelete._id || tableToDelete.id);
+      const tableId = tableToDelete._id || tableToDelete.id;
+      
+      // Use restaurant and venue context if available, otherwise use direct approach
+      if (selectedRestaurantId !== 'all' && selectedVenueId !== 'all' && selectedVenueId) {
+        console.log(`Deleting table ${tableId} with restaurant/venue context`);
+        await tableService.deleteTable(selectedRestaurantId, selectedVenueId, tableId);
+      } else {
+        // Fallback to direct deletion if we don't have specific restaurant and venue
+        console.log(`Using direct table deletion endpoint for table ${tableId}`);
+        await tableService.deleteTableDirect(tableId);
+      }
+      
       // Remove the deleted table from the tables array
       setTables(prevTables => prevTables.filter(table => 
-        (table._id || table.id) !== (tableToDelete._id || tableToDelete.id)
+        (table._id || table.id) !== tableId
       ));
       setDeleteDialogOpen(false);
       setTableToDelete(null);
@@ -252,9 +272,20 @@ const TablesList = () => {
     }
   };
 
-  const getTableTypeName = (tableTypeId: string) => {
-    const tableType = tableTypes.find(type => type._id === tableTypeId);
-    return tableType ? tableType.name : 'Unknown';
+  const getTableTypeName = (tableTypeId: any) => {
+    // Case 1: tableTypeId is a TableType object with name property
+    if (tableTypeId && typeof tableTypeId === 'object' && tableTypeId.name) {
+      return tableTypeId.name;
+    }
+    
+    // Case 2: tableTypeId is a string ID, look it up in the tableTypes array
+    if (typeof tableTypeId === 'string') {
+      const tableType = tableTypes.find(type => type._id === tableTypeId);
+      return tableType ? tableType.name : 'Unknown';
+    }
+    
+    // Default case: can't determine table type
+    return 'Unknown';
   };
 
   // Filter tables based on search term
@@ -496,26 +527,34 @@ const TablesList = () => {
           bgcolor: 'background.paper',
           boxShadow: 24,
           p: 4,
-          borderRadius: 2
+          borderRadius: 2,
         }}>
           {tableForQR && (
-            <TableQRCode 
-              tableId={tableForQR._id || tableForQR.id || ''}
-              tableName={`Table ${tableForQR.number}`}
-              restaurantId={tableForQR.restaurantId || ''}
-              venueId={tableForQR.venueId || ''}
-              existingQrCode={tableForQR.qrCode}
+            <TableQRCode
+              table={tableForQR}
+              fallbackRestaurantId={selectedRestaurantId}
               onClose={() => setQrCodeModalOpen(false)}
               onGenerate={() => {
-                // Refresh the table data after QR code generation
-                if (selectedRestaurantId && (selectedVenueId || selectedRestaurantId === 'all')) {
-                  if (selectedRestaurantId === 'all') {
-                    tableService.getAllTables().then(setTables);
-                  } else if (selectedVenueId === 'all') {
-                    tableService.getAllTablesForRestaurant(selectedRestaurantId).then(setTables);
-                  } else {
-                    tableService.getTables(selectedRestaurantId, selectedVenueId).then(setTables);
-                  }
+                // Refresh the table data after QR code generation using the filtered endpoint
+                console.log('Refreshing tables after QR code generation');
+                if (!selectedRestaurantId || selectedRestaurantId === '') {
+                  // No restaurant selected yet
+                  setTables([]);
+                } else if (selectedRestaurantId === 'all') {
+                  tableService.getFilteredTables().then(data => {
+                    console.log(`Refreshed: found ${data.length} tables across all restaurants`);
+                    setTables(data);
+                  });
+                } else if (selectedRestaurantId && (!selectedVenueId || selectedVenueId === 'all')) {
+                  tableService.getFilteredTables(selectedRestaurantId).then(data => {
+                    console.log(`Refreshed: found ${data.length} tables for restaurant ${selectedRestaurantId}`);
+                    setTables(data);
+                  });
+                } else if (selectedRestaurantId && selectedVenueId) {
+                  tableService.getFilteredTables(selectedRestaurantId, selectedVenueId).then(data => {
+                    console.log(`Refreshed: found ${data.length} tables for venue ${selectedVenueId} in restaurant ${selectedRestaurantId}`);
+                    setTables(data);
+                  });
                 }
               }}
             />

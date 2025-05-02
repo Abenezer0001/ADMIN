@@ -17,9 +17,8 @@ import {
   Alert
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE_URL } from '../../utils/config';
 import { venueService } from '../../services/VenueService';
+import { restaurantService } from '../../services/RestaurantService';
 
 interface VenueFormData {
   name: string;
@@ -49,12 +48,12 @@ const VenueForm = () => {
     const fetchRestaurants = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/restaurants`);
-        setRestaurants(response.data);
+        const data = await restaurantService.getRestaurants();
+        setRestaurants(data);
         
         // Select the first restaurant by default
-        if (response.data.length > 0) {
-          setSelectedRestaurantId(response.data[0]._id);
+        if (data.length > 0) {
+          setSelectedRestaurantId(data[0]._id);
         }
       } catch (error) {
         console.error('Error fetching restaurants:', error);
@@ -73,17 +72,17 @@ const VenueForm = () => {
       const fetchVenue = async () => {
         try {
           setLoading(true);
-          const response = await axios.get(`${API_BASE_URL}/api/venues/${id}`);
+          const venueData = await venueService.getVenue(id);
           setFormData({
-            name: response.data.name,
-            description: response.data.description || '',
-            capacity: response.data.capacity,
-            isActive: response.data.isActive
+            name: venueData.name,
+            description: venueData.description || '',
+            capacity: venueData.capacity,
+            isActive: venueData.isActive
           });
           
           // If the venue has a restaurantId, select it
-          if (response.data.restaurantId) {
-            setSelectedRestaurantId(response.data.restaurantId);
+          if (venueData.restaurantId) {
+            setSelectedRestaurantId(venueData.restaurantId);
           }
         } catch (error) {
           console.error('Error fetching venue:', error);

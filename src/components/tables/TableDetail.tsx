@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -12,39 +12,48 @@ import {
   Tooltip,
   Card,
   CardContent,
+  Divider,
+  Stack,
+  Avatar,
+  CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
 import CircleIcon from '@mui/icons-material/Circle';
-import { tableService, Table } from '../../services/TableService';
+import TableRestaurantIcon from '@mui/icons-material/TableRestaurant';
+import CategoryIcon from '@mui/icons-material/Category';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+import PlaceIcon from '@mui/icons-material/Place';
+import DownloadIcon from '@mui/icons-material/Download';
+import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import { tableService, Table, TableType } from '../../services/TableService';
 import { API_BASE_URL } from '../../utils/config';
+import { venueService } from '../../services/VenueService';
+import { restaurantService } from '../../services/RestaurantService';
 
-interface TableData {
-  _id: string;
-  number: string;
-  capacity: number;
-  type: 'REGULAR' | 'VIP' | 'COUNTER' | 'LOUNGE';
-  qrCode: string;
-  isOccupied: boolean;
-  isActive: boolean;
-  venueId: string;
+interface TableDetailsData {
+  tableData: Table | null;
+  restaurantName: string;
+  venueName: string;
+  tableTypeName: string;
+  qrCode: string | null;
 }
 
 const TableDetail = () => {
   const { id: tableId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [table, setTable] = React.useState<Table | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [qrCode, setQrCode] = React.useState<string | null>(null);
+  const [table, setTable] = useState<Table | null>(null);
+  const [restaurantName, setRestaurantName] = useState<string>('');
+  const [venueName, setVenueName] = useState<string>('');
+  const [tableTypeName, setTableTypeName] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [generatingQR, setGeneratingQR] = useState(false);
 
-  // Using the same IDs as in TablesList for consistency
-  const restaurantId = '67bac80623b878785c79615e';
-  const venueId = '67c333cd6e8cd8c7c0b50bf1';
-
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchTableDetails = async () => {
       if (!tableId || tableId === 'undefined') {
         setError('Table ID is missing or invalid');
@@ -54,13 +63,50 @@ const TableDetail = () => {
 
       try {
         setLoading(true);
-        const tableData = await tableService.getTable(restaurantId, venueId, tableId);
+        
+        // First, try to get the table directly by ID
+        const tableData = await tableService.getTableById(tableId);
         setTable(tableData);
         
-        // Only fetch QR code if we have a valid table
+        // Then fetch related data
         if (tableData) {
+          // Get the restaurant name
+          if (tableData.restaurantId) {
+            try {
+              const restaurant = await restaurantService.getRestaurant(tableData.restaurantId);
+              setRestaurantName(restaurant.name);
+            } catch (err) {
+              console.error('Error fetching restaurant:', err);
+              setRestaurantName('Unknown Restaurant');
+            }
+          }
+          
+          // Get the venue name
+          if (tableData.venueId) {
+            try {
+              const venue = await venueService.getVenue(tableData.restaurantId, tableData.venueId);
+              setVenueName(venue.name);
+            } catch (err) {
+              console.error('Error fetching venue:', err);
+              setVenueName('Unknown Venue');
+            }
+          }
+          
+          // Get the table type name
+          if (tableData.tableTypeId) {
+            try {
+              const tableTypes = await tableService.getTableTypes(tableData.restaurantId);
+              const matchingType = tableTypes.find(type => type._id === tableData.tableTypeId);
+              setTableTypeName(matchingType ? matchingType.name : 'Unknown Type');
+            } catch (err) {
+              console.error('Error fetching table types:', err);
+              setTableTypeName('Unknown Type');
+            }
+          }
+          
+          // Fetch QR code if available
           try {
-            const qrCodeData = await tableService.getTableQRCode(restaurantId, venueId, tableId);
+            const qrCodeData = await tableService.getTableQRCode(tableData.restaurantId, tableData.venueId, tableId);
             setQrCode(qrCodeData);
           } catch (qrErr) {
             console.error('Error fetching QR code:', qrErr);
@@ -78,136 +124,194 @@ const TableDetail = () => {
     };
 
     fetchTableDetails();
-  }, [tableId, restaurantId, venueId]);
+  }, [tableId]);
+  
+  const generateQRCode = async () => {
+    if (!table) return;
+    
+    try {
+      setGeneratingQR(true);
+      // First generate a new QR code on the server
+      await tableService.generateQRCode(table.restaurantId, table.venueId, tableId);
+      // Then fetch the new QR code
+      const newQrCode = await tableService.getTableQRCode(table.restaurantId, table.venueId, tableId);
+      setQrCode(newQrCode);
+    } catch (err) {
+      console.error('Error generating QR code:', err);
+    } finally {
+      setGeneratingQR(false);
+    }
+  };
+  
+  const downloadQRCode = () => {
+    if (!qrCode || !table) return;
+    
+    // Create an anchor element and trigger download
+    const link = document.createElement('a');
+    link.href = qrCode;
+    link.download = `table-${table.number}-qrcode.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
   }
 
   if (error) {
-    return <Typography color="error">{error}</Typography>;
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error" variant="h6">{error}</Typography>
+        <Button 
+          variant="outlined" 
+          startIcon={<KeyboardBackspaceIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ mt: 2 }}
+        >
+          Go Back
+        </Button>
+      </Box>
+    );
   }
+
+  // Generate the customer-facing URL for this table
+  const customerUrl = table ? tableService.getCustomerTableUrl(table.id || table._id) : '';
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h5" component="h1">
-          Table Details
-        </Typography>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Button 
+            variant="outlined"
+            startIcon={<KeyboardBackspaceIcon />}
+            onClick={() => navigate('/tables')}
+          >
+            Back to Tables
+          </Button>
+          <Typography variant="h4">Table Details</Typography>
+        </Stack>
+        <Button
+          variant="contained"
+          startIcon={<EditIcon />}
+          onClick={() => navigate(`/tables/edit/${tableId}`)}
+        >
+          Edit Table
+        </Button>
       </Box>
 
+      {/* Main Content */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6">Table Information</Typography>
-              <Button
-                startIcon={<EditIcon />}
-                variant="outlined"
-                onClick={() => navigate(`/tables/edit/${table?._id || table?.id}`)}
-              >
-                Edit
-              </Button>
-            </Box>
+        {/* Table Info Card */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Table Information</Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TableRestaurantIcon />
+                  <Typography variant="subtitle1">
+                    Table Number: <strong>{table?.number}</strong>
+                  </Typography>
+                </Box>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Table Number
-                </Typography>
-                <Typography variant="body1">{table?.number}</Typography>
-              </Grid>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EventSeatIcon />
+                  <Typography variant="subtitle1">
+                    Capacity: <strong>{table?.capacity}</strong>
+                  </Typography>
+                </Box>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Capacity
-                </Typography>
-                <Typography variant="body1">
-                  <EventSeatIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  {table?.capacity} seats
-                </Typography>
-              </Grid>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CategoryIcon />
+                  <Typography variant="subtitle1">
+                    Type: <strong>{tableTypeName}</strong>
+                  </Typography>
+                </Box>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Type
-                </Typography>
-                <Chip label={table?.type} size="small" />
-              </Grid>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <RestaurantIcon />
+                  <Typography variant="subtitle1">
+                    Restaurant: <strong>{restaurantName}</strong>
+                  </Typography>
+                </Box>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Status
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PlaceIcon />
+                  <Typography variant="subtitle1">
+                    Venue: <strong>{venueName}</strong>
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
                   <Chip
-                    icon={<CircleIcon />}
+                    icon={<CircleIcon sx={{ fontSize: '16px' }} />}
+                    label={table?.isActive ? 'Active' : 'Inactive'}
+                    color={table?.isActive ? 'success' : 'default'}
+                  />
+                  <Chip
+                    icon={<CircleIcon sx={{ fontSize: '16px' }} />}
                     label={table?.isOccupied ? 'Occupied' : 'Available'}
                     color={table?.isOccupied ? 'error' : 'success'}
-                    size="small"
                   />
-                  {!table?.isActive && (
-                    <Chip label="Inactive" color="default" size="small" />
-                  )}
                 </Box>
-              </Grid>
-            </Grid>
-          </Paper>
+              </Stack>
+            </CardContent>
+          </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Card>
+        {/* QR Code Card */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">QR Code</Typography>
-                <Tooltip title="Regenerate QR Code">
-                  <IconButton
-                    size="small"
-                    onClick={async () => {
-                      if (tableId && tableId !== 'undefined') {
-                        try {
-                          // First generate a new QR code on the server
-                          await axios.post(`${API_BASE_URL}/api/tables/restaurant/${restaurantId}/venue/${venueId}/tables/${tableId}/qrcode`);
-                          // Then fetch the new QR code
-                          const newQrCode = await tableService.getTableQRCode(restaurantId, venueId, tableId);
-                          setQrCode(newQrCode);
-                        } catch (err) {
-                          console.error('Error regenerating QR code:', err);
-                        }
-                      }
-                    }}
-                  >
-                    <QrCodeIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-              {qrCode ? (
-                <Box sx={{ textAlign: 'center' }}>
-                  <img src={qrCode} alt="Table QR Code" style={{ maxWidth: '100%' }} />
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography color="text.secondary">No QR code available</Typography>
+                <Box>
                   <Button
                     variant="outlined"
                     startIcon={<QrCodeIcon />}
-                    sx={{ mt: 2 }}
-                    onClick={async () => {
-                      if (tableId && tableId !== 'undefined') {
-                        try {
-                          const newQrCode = await tableService.getTableQRCode(restaurantId, venueId, tableId);
-                          setQrCode(newQrCode);
-                        } catch (err) {
-                          console.error('Error generating QR code:', err);
-                        }
-                      }
-                    }}
+                    onClick={generateQRCode}
+                    disabled={generatingQR}
+                    sx={{ mr: 1 }}
                   >
-                    Generate QR Code
+                    {generatingQR ? 'Generating...' : 'Generate New'}
                   </Button>
+                  {qrCode && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<DownloadIcon />}
+                      onClick={downloadQRCode}
+                    >
+                      Download
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+              
+              <Divider sx={{ mb: 2 }} />
+              
+              {qrCode ? (
+                <Box sx={{ textAlign: 'center' }}>
+                  <img src={qrCode} alt="Table QR Code" style={{ maxWidth: '200px', margin: '20px auto' }} />
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                    Customer URL: <code>{customerUrl}</code>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Customers can scan this QR code to access the menu and place orders from this table.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography color="text.secondary">
+                    No QR code available. Generate one using the button above.
+                  </Typography>
                 </Box>
               )}
             </CardContent>

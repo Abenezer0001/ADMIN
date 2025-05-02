@@ -13,7 +13,8 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import axios from 'axios';
+import { API_BASE_URL } from '../../utils/config';
+import { venueService } from '../../services/VenueService';
 import ZoneList from '../zones/ZoneList';
 
 interface TabPanelProps {
@@ -69,8 +70,11 @@ const VenueDetail: React.FC = () => {
   const fetchVenueDetails = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:3000/api/venues/${id}`);
-      setVenue(response.data);
+      if (!id) {
+        throw new Error('Venue ID is required');
+      }
+      const venueData = await venueService.getVenue(id);
+      setVenue(venueData);
     } catch (error) {
       console.error('Error fetching venue details:', error);
       setError('Failed to fetch venue details');

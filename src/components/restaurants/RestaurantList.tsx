@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { restaurantService, Restaurant } from '../../services/RestaurantService';
 import {
   Box,
   Button,
@@ -21,17 +21,7 @@ import DataTable from '../common/DataTable';
 import RestaurantDetail from './RestaurantDetail';
 import { ColumnDef } from '@tanstack/react-table';
 
-interface Restaurant {
-  _id: string;
-  name: string;
-  locations: { address: string }[];
-  venues: string[];
-  tables: any[];
-  menu: any[];
-  schedule: any[];
-  createdAt: string;
-  updatedAt: string;
-}
+// Using the Restaurant interface from RestaurantService
 
 const RestaurantList: React.FC = () => {
   const navigate = useNavigate();
@@ -49,8 +39,8 @@ const RestaurantList: React.FC = () => {
 
   const fetchRestaurants = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/restaurants');
-      setRestaurants(response.data);
+      const data = await restaurantService.getRestaurants();
+      setRestaurants(data);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
       setError('Failed to fetch restaurants');
@@ -98,7 +88,7 @@ const RestaurantList: React.FC = () => {
     if (!restaurantToDelete) return;
     
     try {
-      await axios.delete(`http://localhost:3000/api/restaurants/${restaurantToDelete._id}`);
+      await restaurantService.deleteRestaurant(restaurantToDelete._id);
       setRestaurants(restaurants.filter(r => r._id !== restaurantToDelete._id));
       setDeleteDialogOpen(false);
       setRestaurantToDelete(null);
