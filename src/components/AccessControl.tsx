@@ -41,7 +41,7 @@ const AdminManagement: React.FC = () => {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/admins');
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/admins`);
       setAdmins(response.data);
     } catch (error) {
       console.error('Error fetching admins:', error);

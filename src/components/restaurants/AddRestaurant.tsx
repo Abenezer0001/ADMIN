@@ -53,7 +53,7 @@ function AddRestaurant() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`http://localhost:3000/api/restaurants/${id}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/restaurants/${id}`);
       setFormData(response.data);
     } catch (error) {
       console.error('Error fetching restaurant:', error);
@@ -70,9 +70,9 @@ function AddRestaurant() {
       setError(null);
       
       if (id) {
-        await axios.put(`http://localhost:3000/api/restaurants/${id}`, formData);
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/restaurants/${id}`, formData);
       } else {
-        await axios.post('http://localhost:3000/api/restaurants', formData);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/restaurants`, formData);
       }
       navigate('/restaurants/list');
     } catch (error) {

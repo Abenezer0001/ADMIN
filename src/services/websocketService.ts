@@ -27,7 +27,7 @@ class WebSocketService {
   private eventListeners: Map<string, WebSocketEventListener[]> = new Map();
   private url: string;
 
-  constructor(url: string = 'ws://localhost:5000') {
+  constructor(url: string = import.meta.env.VITE_SOCKET_URL?.replace('http', 'ws') || import.meta.env.VITE_API_BASE_URL?.replace('http', 'ws')) {
     this.url = url;
   }
 

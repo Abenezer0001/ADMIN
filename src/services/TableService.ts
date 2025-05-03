@@ -259,7 +259,7 @@ class TableService {
 
   // Get customer-facing URL for a table
   getCustomerTableUrl(tableId: string) {
-    const customerUrl = 'http://localhost:8080';
+    const customerUrl = import.meta.env.VITE_CUSTOMER_URL || import.meta.env.VITE_API_BASE_URL;
     return `${customerUrl}?table=${tableId}`;
   }
 
