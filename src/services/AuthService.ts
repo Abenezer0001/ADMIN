@@ -22,6 +22,16 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+  permissions?: string[];
+}
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  role: string;
+  permissions?: string[];
+  exp: number;
+  iat: number;
 }
 
 export interface AuthResponse {
@@ -62,62 +72,95 @@ class AuthService {
           password: credentials.password
         });
         
-        if (response.data.success) {
-          const demoData = response.data;
-          
+        // Type assertion for the response data
+        const data = response.data as {
+          success?: boolean;
+          user?: User;
+          restaurantId?: string;
+          restaurantName?: string;
+          message?: string;
+        };
+        
+        if (data.success) {
           // Store demo data in sessionStorage
           sessionStorage.setItem('demoToken', demoToken);
-          sessionStorage.setItem('demoRestaurantId', demoData.restaurantId);
-          sessionStorage.setItem('demoRestaurantName', demoData.restaurantName);
+          if (data.restaurantId) sessionStorage.setItem('demoRestaurantId', data.restaurantId);
+          if (data.restaurantName) sessionStorage.setItem('demoRestaurantName', data.restaurantName);
           sessionStorage.setItem('demoEmail', credentials.email);
           sessionStorage.setItem('isDemo', 'true');
           
           return {
             success: true,
-            user: demoData.user
+            user: data.user
+          };
+        } else {
+          // Demo login failed
+          const errorMessage = data?.message || 'Demo authentication failed';
+          console.error('Demo login failed:', errorMessage);
+          return {
+            success: false,
+            error: errorMessage
           };
         }
       } else {
         // Regular login
-        const response = await axios.post(`${API_URL}/auth/login`, credentials);
-        
-        // Only return success if the API explicitly returns success: true
-        if (response.data && typeof response.data === 'object' && 'success' in response.data && response.data.success === true) {
-          // All cookie handling is done on the server
-          if ('user' in response.data && response.data.user) {
+        console.log('Attempting regular login to:', `${API_URL}/auth/login`);
+        try {
+          const response = await axios.post(`${API_URL}/auth/login`, credentials);
+          
+          // Check the response structure and status code
+          console.log('Login response:', response.status, response.data);
+          
+          // Type assertion for the response data
+          const data = response.data as {
+            success?: boolean;
+            user?: User;
+            message?: string;
+          };
+          
+          // Only return success if both: 
+          // 1. Status is 200 (not 401/unauthorized)
+          // 2. API explicitly returns success: true with user data
+          if (response.status === 200 && data.success === true && data.user) {
+            // All cookie handling is done on the server
             return {
               success: true,
-              user: response.data.user as User
+              user: data.user
             };
           }
+          
+          // If API returns but without success flag or missing user data, treat as failure
+          const errorMessage = data.message || 'Authentication failed. Please check your credentials.';
+          console.error('Login failed despite 200 status:', errorMessage);
+          
+          // Return failure
+          return {
+            success: false,
+            error: errorMessage
+          };
+        } catch (error: any) {
+          // Handle response errors (e.g., 401 unauthorized)
+          console.error('Login request error:', error);
+          
+          if (error.response && error.response.status === 401) {
+            // Handle 401 Unauthorized errors specifically
+            const data = error.response.data as { message?: string };
+            return {
+              success: false,
+              error: data?.message || 'Invalid email or password. Please try again.'
+            };
+          }
+          
+          throw error; // Re-throw for outer catch block
         }
-        
-        // If API returns but without success flag or missing user data, treat as failure
-        const responseData = response.data && typeof response.data === 'object' ? response.data : {};
-        const errorMessage = 'message' in responseData ? String(responseData.message) : 'Authentication failed. Please check your credentials.';
-        
-        return { 
-          success: false, 
-          error: errorMessage
-        };
       }
-      
-      return { success: false, error: 'Login failed' };
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // If we get a 401 error, it means unauthorized
-      if (error.response && error.response.status === 401) {
-        return {
-          success: false,
-          error: 'Invalid email or password. Please try again.'
-        };
-      }
-      
-      // Handle other errors
+      // Handle generic errors
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed. Please try again.'
+        error: error.response?.data?.message || error.message || 'Login failed. Please try again.'
       };
     }
   }
@@ -126,16 +169,22 @@ class AuthService {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, credentials);
       
-      if (response.data.success) {
+      // Type assertion for the response data
+      const data = response.data as {
+        success?: boolean;
+        user?: User;
+        message?: string;
+      };
+      
+      if (data.success) {
         return {
           success: true,
-          user: response.data.user
+          user: data.user
         };
       }
       
       return { success: false, error: 'Registration failed' };
     } catch (error: any) {
-      console.error('Registration error:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Registration failed. Please try again.'
@@ -143,28 +192,31 @@ class AuthService {
     }
   }
 
-  async getCurrentUser(): Promise<User | null> {
-    if (isDemoMode()) {
-      // Return demo user information
-      return {
-        id: 'demo',
-        email: sessionStorage.getItem('demoEmail') || '',
-        firstName: 'Demo',
-        lastName: 'User',
-        role: 'restaurant_admin'
-      };
-    } else {
-      // For regular users, get from the /me endpoint
-      try {
-        const response = await axios.get(`${API_URL}/auth/me`);
-        if (response.data.success) {
-          return response.data.user;
-        }
-        return null;
-      } catch (error) {
-        console.error('Error getting current user:', error);
-        return null;
+  async getCurrentUser(isDemoMode = false): Promise<User | null> {
+    if (isDemoMode) {
+      const demoEmail = sessionStorage.getItem('demoEmail');
+      if (demoEmail) {
+        return {
+          id: 'demo-user',
+          email: demoEmail,
+          firstName: 'Demo',
+          lastName: 'User',
+          role: 'admin'
+        };
       }
+      return null;
+    }
+    
+    try {
+      const response = await axios.get(`${API_URL}/auth/me`);
+      const data = response.data as { success?: boolean; user?: User };
+      if (data.success) {
+        return data.user || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
     }
   }
 
@@ -178,26 +230,6 @@ class AuthService {
           console.error('Error calling logout API:', error);
           // Continue with local cleanup even if API fails
         }
-        
-        // Clear all cookies manually using document.cookie
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i];
-          const eqPos = cookie.indexOf('=');
-          const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-        }
-        
-        // Clear any localStorage items related to auth
-        localStorage.removeItem('currentRestaurantId');
-        localStorage.removeItem('user');
-      } else {
-        // Clear demo data from sessionStorage
-        sessionStorage.removeItem('demoToken');
-        sessionStorage.removeItem('demoRestaurantId');
-        sessionStorage.removeItem('demoRestaurantName');
-        sessionStorage.removeItem('demoEmail');
-        sessionStorage.removeItem('isDemo');
       }
       
       // Redirect to login page after a short delay to ensure cleanup completes
@@ -214,7 +246,8 @@ class AuthService {
   async refreshToken(): Promise<boolean> {
     try {
       const response = await axios.post(`${API_URL}/auth/refresh-token`);
-      return response.data.success;
+      const data = response.data as { success: boolean };
+      return data.success;
     } catch (error) {
       console.error('Token refresh error:', error);
       return false;
@@ -229,7 +262,8 @@ class AuthService {
       // Regular mode, check auth status with the server
       try {
         const response = await axios.get(`${API_URL}/auth/check`);
-        return response.data.isAuthenticated;
+        const data = response.data as { isAuthenticated: boolean };
+        return data.isAuthenticated;
       } catch (error) {
         console.error('Auth check error:', error);
         return false;

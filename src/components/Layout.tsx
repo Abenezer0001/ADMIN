@@ -387,6 +387,11 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
       category: 'Settings & Administration',
       items: [
         {
+          key: 'settings/admins',
+          icon: <PeopleIcon sx={{ fontSize: 24 }} />,
+          label: 'Administrator Management',
+        },
+        {
           key: 'settings/system',
           icon: <SettingsIcon sx={{ fontSize: 24 }} />,
           label: 'System Settings',

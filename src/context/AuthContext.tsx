@@ -2,13 +2,21 @@ import React from 'react';
 import AuthService from '../services/AuthService';
 import { useNavigate } from 'react-router-dom';
 
+// Define types for auth responses
+interface AuthResponse {
+  success: boolean;
+  user?: any;
+  error?: string;
+}
+
 // Define the shape of our auth context
 interface AuthContextType {
   user: any | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  setError: (error: string | null) => void;
+  login: (email: string, password: string) => Promise<AuthResponse>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -20,7 +28,8 @@ const AuthContext = React.createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: false,
   error: null,
-  login: async () => {},
+  setError: () => {},
+  login: async () => ({ success: false }),
   register: async () => {},
   logout: async () => {},
   clearError: () => {},
@@ -72,13 +81,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const response = await authService.login({ email, password });
       
-      // Update state
-      setUser(response.user);
-      setIsAuthenticated(true);
-      navigate('/dashboard');
+      // Check if login was successful
+      if (response && response.success === true && response.user) {
+        // Update state
+        setUser(response.user);
+        setIsAuthenticated(true);
+        return response; // Return the response for the Login component to handle navigation
+      } else {
+        // Authentication failed with a response
+        const errorMessage = response?.error || 'Authentication failed. Please check your credentials.';
+        setError(errorMessage);
+        return response; // Return the error response for handling
+      }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
-      throw err;
+      // Unexpected error
+      const errorMessage = err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }
@@ -125,20 +144,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
-  // Create the context value
-  const contextValue: AuthContextType = {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    login,
-    register,
-    logout,
-    clearError,
-  };
-
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isLoading,
+        error,
+        setError,
+        login,
+        register,
+        logout,
+        clearError
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

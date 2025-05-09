@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextField, Button, Typography, Box, Container, Paper, Alert, CircularProgress, Checkbox, FormControlLabel } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -49,7 +49,10 @@ const Login = () => {
   }, [slides.length]);
   
   // Auth context
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading, error, clearError, setError } = useAuth();
+  
+  // Navigation
+  const navigate = useNavigate();
   
   // Validate form
   const validateForm = () => {
@@ -78,25 +81,31 @@ const Login = () => {
   };
   
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear any previous errors
+    // Don't need to set loading state, AuthContext handles this
     clearError();
     
-    // Validate form
+    // Validate form inputs first
     if (!validateForm()) {
       return;
     }
     
-    // Login user
     try {
-      console.log('Submitting login with:', { email, password });
-      await login(email, password);
-    } catch (err) {
-      // Error is handled by the auth context
-      console.error('Login error:', err);
+      const result = await login(email, password);
+      console.log('Login result:', result);
+      
+      if (result && result.success === true) {
+        navigate('/');
+      } else {
+        // Make sure we display the error message from the response
+        setError(result?.error || 'Login failed. Please check your credentials.');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message || 'An error occurred during login. Please try again.');
     }
+    // Don't need to handle loading state here, AuthContext does this
   };
   
   const togglePasswordVisibility = () => {

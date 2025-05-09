@@ -1,6 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
+const { Suspense, lazy } = React;
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
+
+// Import the PasswordSetup component
+import PasswordSetup from './pages/PasswordSetup';
 
 // Lazy load components
 // Lazy load components
@@ -9,6 +13,7 @@ const InventoryManagement = lazy(() => import('./components/InventoryManagement'
 const InvoiceManagement = lazy(() => import('./components/InvoiceManagement'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const RbacDashboard = lazy(() => import('./pages/RbacDashboard'));
+const AdminManagement = lazy(() => import('./components/admin/AdminManagement'));
 
 // const RestaurantsPage = lazy(() => import('./components/restaurants/RestaurantsPage'));
 const AddRestaurant = lazy(() => import('./components/restaurants/AddRestaurant'));
@@ -108,11 +113,17 @@ const AppRoutes = () => {
       <Routes>
         {/* Default route */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Authentication Routes */}
+        <Route path="/password-setup" element={<PasswordSetup />} />
 
         {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/sales" element={<Sales />} />
+
+        {/* Admin Management */}
+        <Route path="/settings/admins" element={<AdminManagement />} />
 
         {/* RBAC Dashboard */}
         <Route path="/settings/rbac" element={<RbacDashboard />} />

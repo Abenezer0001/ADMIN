@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
+const { useState, useEffect, useMemo } = React;
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -14,6 +15,7 @@ import { AuthProvider } from './context/AuthContext';
 import { RbacProvider } from './context/RbacContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import PasswordSetup from './pages/PasswordSetup';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 const App: React.FC = () => {
@@ -81,6 +83,7 @@ const App: React.FC = () => {
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/password-setup" element={<PasswordSetup />} />
                   
                   {/* Protected routes */}
                   <Route element={<ProtectedRoute />}>
