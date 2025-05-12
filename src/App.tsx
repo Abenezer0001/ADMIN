@@ -24,7 +24,7 @@ const App: React.FC = () => {
     if (savedMode === 'light' || savedMode === 'dark') {
       return savedMode;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'dark';
   });
 
   const theme = useMemo(() => createAppTheme(mode), [mode]);
