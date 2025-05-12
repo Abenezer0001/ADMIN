@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
+import api from '../utils/axiosConfig';
+import { isDemoMode, getDemoToken, cleanupAuthState } from './authHelpers';
 
 // Use the environment variable for API URL
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -43,20 +44,7 @@ export interface AuthResponse {
 // Configure axios to include credentials
 axios.defaults.withCredentials = true;
 
-// Check if we're in demo mode (URL contains a demo token)
-const isDemoMode = (): boolean => {
-  const path = window.location.pathname;
-  return path.includes('/demo/') || path.match(/\/[a-f0-9]{12}/) !== null;
-};
-
-// Extract demo token from URL if in demo mode
-const getDemoToken = (): string | null => {
-  if (!isDemoMode()) return null;
-  
-  const path = window.location.pathname;
-  const match = path.match(/\/([a-f0-9]{12})/);
-  return match ? match[1] : null;
-};
+// Using the isDemoMode and getDemoToken functions from authHelpers.ts
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -104,9 +92,21 @@ class AuthService {
         }
       } else {
         // Regular login
-        console.log('Attempting regular login to:', `${API_URL}/auth/login`);
+        // Debug request details
+        console.log('Attempting regular login with details:', {
+          url: '/auth/login',
+          baseUrl: API_URL, 
+          configuredApi: 'Using pre-configured api instance with baseURL',
+          credentials: { 
+            email: credentials.email,
+            passwordProvided: !!credentials.password,
+            passwordLength: credentials.password?.length || 0
+          }
+        });
+        
         try {
-          const response = await axios.post(`${API_URL}/auth/login`, credentials);
+          // Fix: Don't prefix with API_URL again since api is already configured with baseURL
+          const response = await api.post('/auth/login', credentials);
           
           // Check the response structure and status code
           console.log('Login response:', response.status, response.data);
@@ -141,6 +141,22 @@ class AuthService {
         } catch (error: any) {
           // Handle response errors (e.g., 401 unauthorized)
           console.error('Login request error:', error);
+          // Add detailed error logging
+          console.error('Error details:', {
+            response: error.response ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              data: error.response.data
+            } : 'No response',
+            request: error.request ? 'Request was made but no response received' : 'No request',
+            message: error.message,
+            config: error.config ? {
+              url: error.config.url,
+              method: error.config.method,
+              baseURL: error.config.baseURL,
+              headers: error.config.headers
+            } : 'No config'
+          });
           
           if (error.response && error.response.status === 401) {
             // Handle 401 Unauthorized errors specifically
@@ -167,7 +183,8 @@ class AuthService {
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, credentials);
+      // Fix: Don't prefix with API_URL
+      const response = await api.post('/auth/register', credentials);
       
       // Type assertion for the response data
       const data = response.data as {
@@ -208,7 +225,8 @@ class AuthService {
     }
     
     try {
-      const response = await axios.get(`${API_URL}/auth/me`);
+      // Fix: Don't prefix with API_URL
+      const response = await api.get('/auth/me');
       const data = response.data as { success?: boolean; user?: User };
       if (data.success) {
         return data.user || null;
@@ -225,12 +243,16 @@ class AuthService {
       // Only attempt API logout if not in demo mode
       if (!isDemoMode()) {
         try {
-          await axios.post(`${API_URL}/auth/logout`);
+          // Fix: Don't prefix with API_URL
+          await api.post('/auth/logout');
         } catch (error) {
           console.error('Error calling logout API:', error);
           // Continue with local cleanup even if API fails
         }
       }
+      
+      // Clean up local state
+      cleanupAuthState();
       
       // Redirect to login page after a short delay to ensure cleanup completes
       setTimeout(() => {
@@ -245,7 +267,12 @@ class AuthService {
 
   async refreshToken(): Promise<boolean> {
     try {
-      const response = await axios.post(`${API_URL}/auth/refresh-token`);
+      if (isDemoMode()) {
+        return true; // Demo mode doesn't need token refresh
+      }
+      
+      // Fix: Don't prefix with API_URL
+      const response = await api.post('/auth/refresh-token');
       const data = response.data as { success: boolean };
       return data.success;
     } catch (error) {
@@ -261,7 +288,8 @@ class AuthService {
     } else {
       // Regular mode, check auth status with the server
       try {
-        const response = await axios.get(`${API_URL}/auth/check`);
+        // Fix: Don't prefix with API_URL
+        const response = await api.get('/auth/check');
         const data = response.data as { isAuthenticated: boolean };
         return data.isAuthenticated;
       } catch (error) {
@@ -286,7 +314,6 @@ class AuthService {
 // Export a singleton instance
 export default new AuthService();
 
-// Export utility functions for use in other services
-export { isDemoMode, getDemoToken };
+// Note: isDemoMode and getDemoToken should be imported from authHelpers.ts
 
 

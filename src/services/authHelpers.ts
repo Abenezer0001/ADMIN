@@ -1,25 +1,21 @@
 /**
- * Helper functions for authentication
+ * Helper functions for authentication using HTTP-only cookies
  */
 
 /**
- * Removes all authentication tokens and session data
+ * Cleans up authentication state and session data
+ * Note: HTTP-only cookies are cleared by the server during logout
  */
-export function removeTokens(): void {
-  // Clear any local storage items
+export function cleanupAuthState(): void {
+  // Clear any local storage items used for application state
   localStorage.removeItem('currentRestaurantId');
   localStorage.removeItem('user');
   
-  // Clear any session storage items
-  sessionStorage.removeItem('demoToken');
-  sessionStorage.removeItem('demoRestaurantId');
-  sessionStorage.removeItem('demoRestaurantName');
-  sessionStorage.removeItem('demoEmail');
-  sessionStorage.removeItem('isDemo');
+  // Clear all session storage (recommended for complete cleanup)
+  sessionStorage.clear();
   
-  // Clear auth cookies by setting expired date
-  document.cookie = 'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-  document.cookie = 'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+  // Note: HTTP-only cookies cannot be cleared via JavaScript
+  // They must be cleared by the server through the logout endpoint
 }
 
 /**
@@ -32,6 +28,8 @@ export function isDemoMode(): boolean {
 
 /**
  * Get the demo token from URL or session storage
+ * Note: Demo mode still uses sessionStorage as it's temporary and doesn't require
+ * the same security measures as real authentication
  */
 export function getDemoToken(): string | null {
   // First check sessionStorage
@@ -47,4 +45,19 @@ export function getDemoToken(): string | null {
   }
   
   return null;
+}
+
+/**
+ * Check if user has an active session
+ * This is a lightweight check that doesn't make a server request
+ * For a full auth check, use AuthService.isAuthenticated()
+ */
+export function hasActiveSession(): boolean {
+  if (isDemoMode()) {
+    return !!getDemoToken();
+  }
+  
+  // In regular mode, we rely on the server's session check
+  // through AuthService.isAuthenticated() which will verify the HTTP-only cookies
+  return true;
 }

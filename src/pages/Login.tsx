@@ -92,7 +92,7 @@ const Login = () => {
     }
     
     try {
-      const result = await login(email, password);
+      const result = await login({ email, password });
       console.log('Login result:', result);
       
       if (result && result.success === true) {

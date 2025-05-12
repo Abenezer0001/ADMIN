@@ -392,20 +392,20 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           label: 'Administrator Management',
         },
         {
+          key: 'settings/rbac',
+          icon: <SecurityIcon sx={{ fontSize: 24 }} />,
+          label: 'Access Control',
+        },
+        {
           key: 'settings/system',
           icon: <SettingsIcon sx={{ fontSize: 24 }} />,
           label: 'System Settings',
         },
-        {
-          key: 'settings/access-control',
-          icon: <KeyIcon sx={{ fontSize: 24 }} />,
-          label: 'Access Control',
-        },
-        {
-          key: 'settings/rbac',
-          icon: <SecurityIcon sx={{ fontSize: 24 }} />,
-          label: 'Role-Based Access',
-        },
+        // {
+        //   key: 'settings/access-control',
+        //   icon: <KeyIcon sx={{ fontSize: 24 }} />,
+        //   label: 'Access Control',
+        // },
         {
           key: 'settings/integration',
           icon: <PowerIcon sx={{ fontSize: 24 }} />,
