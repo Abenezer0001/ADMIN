@@ -8,6 +8,10 @@ import PasswordSetup from './pages/PasswordSetup';
 
 // Lazy load components
 // Lazy load components
+// User Management Components
+const UserList = lazy(() => import('./components/users/UserList'));
+const UserForm = lazy(() => import('./components/users/UserForm'));
+const UserDetail = lazy(() => import('./components/users/UserDetail'));
 const UserManagement = lazy(() => import('./components/UserManagement'));
 const InventoryManagement = lazy(() => import('./components/InventoryManagement'));
 const InvoiceManagement = lazy(() => import('./components/InvoiceManagement'));
@@ -242,6 +246,12 @@ const AppRoutes = () => {
 <Route path="/orders/live" element={<LiveOrders />} />
 <Route path="/orders/history/:id" element={<OrderDetail/>} />
 
+        {/* User Management */}
+        <Route path="/users" element={<UserList />} />
+        <Route path="/users/new" element={<UserForm />} />
+        <Route path="/users/edit/:id" element={<UserForm />} />
+        <Route path="/users/:id" element={<UserDetail />} />
+        <Route path="/users/roles/:id" element={<UserDetail />} /> {/* Redirects to user detail with roles tab active */}
      
       </Routes>
     </Suspense>
