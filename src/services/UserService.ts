@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { isDemoMode } from './AuthService';
+import { isDemoMode } from './authHelpers';
 import {
   User,
   UserListParams,
