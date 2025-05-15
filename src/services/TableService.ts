@@ -257,7 +257,7 @@ class TableService {
     }
   }
 
-  // Get customer-facing URL for a table
+  // Get customer-facing URL for a tables
   getCustomerTableUrl(tableId: string) {
     const customerUrl = import.meta.env.VITE_CUSTOMER_URL || import.meta.env.VITE_API_BASE_URL;
     return `${customerUrl}?table=${tableId}`;
