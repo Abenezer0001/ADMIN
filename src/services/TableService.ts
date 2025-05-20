@@ -259,17 +259,8 @@ class TableService {
 
   // Get customer-facing URL for a tables
   getCustomerTableUrl(tableId: string) {
-    // For production, use the production URL, otherwise use the VITE_CUSTOMER_URL from env or fallback to localhost
-    const isProd = import.meta.env.PROD;
-    let customerUrl;
-
-    if (isProd) {
-      // In production, always use the production URL
-      customerUrl = "https://menu.inseat.achievengine.com";
-    } else {
-      // In development, use the configured URL from environment or fallback
-      customerUrl = import.meta.env.VITE_CUSTOMER_URL || "http://localhost:8080";
-    }
+    // Always use the production URL regardless of environment
+    const customerUrl = "https://menu.inseat.achievengine.com";
 
     // Ensure the URL doesn't have a trailing slash before adding the query parameter
     const formattedUrl = customerUrl.endsWith('/') ? customerUrl.slice(0, -1) : customerUrl;
