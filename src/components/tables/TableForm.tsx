@@ -202,13 +202,24 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
     }
   }, [tableId, formData.restaurantId, formData.venueId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // For input elements that provide their own name in the event
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     const fieldValue = type === 'checkbox' ? checked : value;
 
     setFormData((prev) => ({
       ...prev,
       [name]: fieldValue,
+    }));
+  };
+
+  // For select elements where we need to specify the field name
+  const handleSelectChange = (fieldName: string) => (e: any) => {
+    const value = e.target.value;
+    
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: value,
     }));
   };
 
@@ -380,7 +391,7 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
             <Select
               value={formData.restaurantId}
               label="Restaurant"
-              onChange={handleChange('restaurantId')}
+              onChange={handleSelectChange('restaurantId')}
               disabled={loadingRestaurants || !!tableId}
             >
               {loadingRestaurants ? (
@@ -402,7 +413,7 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
             <Select
               value={formData.venueId}
               label="Venue"
-              onChange={handleChange('venueId')}
+              onChange={handleSelectChange('venueId')}
               disabled={loadingVenues || !formData.restaurantId || !!tableId}
             >
               {loadingVenues ? (
@@ -422,8 +433,9 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
           <TextField
             required
             label="Table Number"
+            name="number"
             value={formData.number}
-            onChange={handleChange('number')}
+            onChange={handleInputChange}
             fullWidth
           />
 
@@ -431,8 +443,9 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
             required
             type="number"
             label="Capacity"
+            name="capacity"
             value={formData.capacity}
-            onChange={handleChange('capacity')}
+            onChange={handleInputChange}
             fullWidth
             inputProps={{ min: 1 }}
           />
@@ -442,7 +455,7 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
             <Select
               value={formData.tableTypeId}
               label="Table Type"
-              onChange={handleChange('tableTypeId')}
+              onChange={handleSelectChange('tableTypeId')}
             >
               {loadingTableTypes ? (
                 <MenuItem value="">
@@ -466,7 +479,8 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
             control={
               <Switch
                 checked={formData.isActive}
-                onChange={handleChange('isActive')}
+                onChange={handleInputChange}
+                name="isActive"
               />
             }
             label="Active"
@@ -477,7 +491,8 @@ const TableForm = ({ onSubmit, title }: TableFormProps) => {
               control={
                 <Switch
                   checked={formData.isOccupied}
-                  onChange={handleChange('isOccupied')}
+                  onChange={handleInputChange}
+                  name="isOccupied"
                 />
               }
               label="Occupied"

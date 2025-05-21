@@ -113,6 +113,8 @@ const TableQRCode: React.FC<TableQRCodeProps> = ({
 
   // Calculate the customer-facing menu URL based on table ID
   const menuUrl = tableService.getCustomerTableUrl(tableId);
+  // Log the menu URL to verify the production URL is being used
+  console.log('QR Code URL:', menuUrl);
 
   useEffect(() => {
     fetchQRCode();

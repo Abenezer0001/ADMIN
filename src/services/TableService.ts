@@ -259,18 +259,9 @@ class TableService {
 
   // Get customer-facing URL for a tables
   getCustomerTableUrl(tableId: string) {
-    // For production, use the production URL, otherwise use the VITE_CUSTOMER_URL from env or fallback to localhost
-    const isProd = import.meta.env.PROD;
-    let customerUrl;
-
-    if (isProd) {
-      // In production, always use the production URL
-      customerUrl = "https://menu.inseat.achievengine.com";
-    } else {
-      // In development, use the configured URL from environment or fallback
-      customerUrl = import.meta.env.VITE_CUSTOMER_URL || "http://localhost:8080";
-    }
-
+    // Always use the production URL for QR codes as requested
+    const customerUrl = "https://menu.inseat.achievengine.com";
+    
     // Ensure the URL doesn't have a trailing slash before adding the query parameter
     const formattedUrl = customerUrl.endsWith('/') ? customerUrl.slice(0, -1) : customerUrl;
     return `${formattedUrl}?table=${tableId}`;
@@ -318,11 +309,53 @@ class TableService {
   // Get table directly by ID - helpful when restaurant/venue context isn't available
   async getTableById(tableId: string) {
     try {
+      // First try direct access using the pattern that works in deleteTableDirect
       const response = await axios.get(`${this.baseUrl}/restaurant-service/tables/${tableId}`);
-      return response.data;
+      const table = response.data;
+      
+      if (!table) {
+        throw new Error('Table not found');
+      }
+
+      // If we have restaurant and venue context, get the full details
+      if (table.restaurantId && table.venueId) {
+        try {
+          // Use the proven getTable method
+          return await this.getTable(table.restaurantId, table.venueId, tableId);
+        } catch (detailError) {
+          console.warn('Could not get full table details, returning basic info:', detailError);
+          return table;
+        }
+      }
+      
+      return table;
     } catch (error) {
-      console.error('Error fetching table by ID:', error);
-      throw error;
+      // If direct access fails, try getting all tables as fallback
+      try {
+        console.warn('Direct access failed, trying filtered tables...', error);
+        const allTablesResponse = await axios.get(`${this.baseUrl}/tables/filtered`);
+        const allTables = allTablesResponse.data;
+        
+        const table = allTables.find((t: Table) => t._id === tableId || t.id === tableId);
+        if (!table) {
+          throw new Error('Table not found');
+        }
+
+        // If we found the table and have context, get full details
+        if (table.restaurantId && table.venueId) {
+          try {
+            return await this.getTable(table.restaurantId, table.venueId, tableId);
+          } catch (detailError) {
+            console.warn('Could not get full table details, returning basic info:', detailError);
+            return table;
+          }
+        }
+        
+        return table;
+      } catch (fallbackError) {
+        console.error('All attempts to fetch table failed:', fallbackError);
+        throw fallbackError;
+      }
     }
   }
 }
