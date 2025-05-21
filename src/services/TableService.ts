@@ -259,9 +259,9 @@ class TableService {
 
   // Get customer-facing URL for a tables
   getCustomerTableUrl(tableId: string) {
-    // Always use the production URL for QR codes as requested
+    // Always use the production URL regardless of environment
     const customerUrl = "https://menu.inseat.achievengine.com";
-    
+
     // Ensure the URL doesn't have a trailing slash before adding the query parameter
     const formattedUrl = customerUrl.endsWith('/') ? customerUrl.slice(0, -1) : customerUrl;
     return `${formattedUrl}?table=${tableId}`;
