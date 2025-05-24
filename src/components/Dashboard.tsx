@@ -1,4 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
+import { TooltipProps } from 'recharts';
+import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+const { useState, useMemo } = React;
 import {
   Box,
   Typography,
@@ -160,7 +163,12 @@ const popularItems = [
   { name: 'Item 5', orders: 50, revenue: 500 },
 ];
 
-const CircularProgressIndicator = ({ percentage, color }) => {
+interface CircularProgressProps {
+  percentage: number;
+  color: string;
+}
+
+const CircularProgressIndicator = ({ percentage, color }: CircularProgressProps) => {
   const circleSize = 150;
   const strokeWidth = 15;
   const radius = (circleSize - strokeWidth) / 2;
@@ -276,7 +284,7 @@ function Dashboard() {
     }
   ], [theme]);
 
-  const handleNavigate = (path) => {
+  const handleNavigate = (path: string) => {
     navigate(path);
   };
 
@@ -293,57 +301,7 @@ function Dashboard() {
       color: theme.palette.text.primary,
       minHeight: '100vh'
     }}>
-      {/* Top Navigation Bar */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        p: 2,
-        borderBottom: `1px solid ${theme.palette.divider}`
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', mr: 4 }}>Dashboard</Typography>
-          <Button
-            onClick={() => setActiveTab('dashboard')}
-            variant={activeTab === 'dashboard' ? 'contained' : 'text'}
-            sx={{ 
-              mr: 1,
-              bgcolor: activeTab === 'dashboard' ? theme.palette.action.selected : 'transparent',
-              '&:hover': { bgcolor: activeTab === 'dashboard' ? theme.palette.action.selected : theme.palette.action.hover }
-            }}
-            startIcon={<Box sx={{ 
-              width: 16, 
-              height: 16, 
-              borderRadius: '2px',
-              bgcolor: theme.palette.text.primary
-            }} />}
-          >
-            Dashboard
-          </Button>
-          <Button
-            onClick={() => setActiveTab('analysis')}
-            variant={activeTab === 'analysis' ? 'contained' : 'text'}
-            sx={{ 
-              bgcolor: activeTab === 'analysis' ? theme.palette.action.selected : 'transparent',
-              '&:hover': { bgcolor: activeTab === 'analysis' ? theme.palette.action.selected : theme.palette.action.hover }
-            }}
-            startIcon={<AnalyticsIcon />}
-          >
-            Analysis
-          </Button>
-        </Box>
-        <Button
-          variant="outlined"
-          startIcon={<SettingsIcon />}
-          sx={{ 
-            borderColor: theme.palette.divider,
-            '&:hover': { borderColor: theme.palette.text.primary, bgcolor: theme.palette.action.hover }
-          }}
-          onClick={() => navigate('/settings/system')}
-        >
-          Settings
-        </Button>
-      </Box>
+      {/* Top Navigation Bar Removed as per request */}
 
       {/* Content */}
       <Box sx={{ p: 3, flex: 1 }}>
@@ -917,7 +875,21 @@ function Dashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <CartesianGrid strokeDasharray="3 3" />
-                <Tooltip />
+                <RechartsTooltip content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <Box sx={{ p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                        <Typography variant="body2">{`${label}`}</Typography>
+                        {payload.map((entry, index) => (
+                          <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+                            {`${entry.name}: ${entry.value}`}
+                          </Typography>
+                        ))}
+                      </Box>
+                    );
+                  }
+                  return null;
+                }} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" stroke={theme.palette.primary.main} fillOpacity={1} fill="url(#colorRevenue)" />
                 <Area type="monotone" dataKey="orders" stroke={theme.palette.success.main} fillOpacity={1} fill="url(#colorOrders)" />
@@ -991,10 +963,24 @@ function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis dataKey="name" type="category" scale="band" />
-                    <Tooltip />
+                    <RechartsTooltip content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <Box sx={{ p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                            <Typography variant="body2">{`${label}`}</Typography>
+                            {payload.map((entry, index) => (
+                              <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+                                {`${entry.name}: ${entry.value}`}
+                              </Typography>
+                            ))}
+                          </Box>
+                        );
+                      }
+                      return null;
+                    }} />
                     <Legend />
-                    <Bar dataKey="orders" fill={theme.palette.primary.main} />
-                    <Bar dataKey="revenue" fill={theme.palette.success.main} />
+                    <Bar dataKey="orders" fill={theme.palette.primary.main} name="Orders" />
+                    <Bar dataKey="revenue" fill={theme.palette.success.main} name="Revenue" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>

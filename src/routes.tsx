@@ -54,6 +54,7 @@ const Profile = lazy(() => import('./components/settings/Profile'));
 const ChangePassword = lazy(() => import('./components/settings/ChangePassword'));
 const MenuItemDetail = lazy(() => import('./pages/MenuItems/MenuItemDetail')); // Added import
 const LoyaltySettings = lazy(() => import('./components/loyalty/LoyaltySettings'));
+import Notifications from './components/settings/Notifications';
 
 // Existing components
 const Items = lazy(() => import('./components/Items'));
@@ -235,6 +236,7 @@ const AppRoutes = () => {
         <Route path="/settings/integration" element={<Integration />} />
         <Route path="/settings/access-control" element={<AccessControl />} />
         <Route path="/settings/loyalty" element={<LoyaltySettings />} />
+        <Route path="/settings/notifications" element={<Notifications />} />
 
         {/*  */}
         <Route path="/customers" element={<Customers />} />

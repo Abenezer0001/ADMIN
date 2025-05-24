@@ -6,9 +6,9 @@ export const COLOR_PALETTE = {
     secondary: '#64748b',
     background: '#ffffff',
     backgroundSecondary: '#f8fafc',
-    backgroundActive: '#f1f5f9',
-    text: '#0f172a',
-    textSecondary: '#64748b',
+    backgroundActive: '#e2e8f0',
+    text: '#1e293b',
+    textSecondary: '#475569',
     border: '#e2e8f0',
     hover: '#f1f5f9',
   },
@@ -53,6 +53,19 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
           body: {
             backgroundColor: COLOR_PALETTE[mode].background,
             color: COLOR_PALETTE[mode].text,
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: COLOR_PALETTE[mode].backgroundSecondary,
+            background: COLOR_PALETTE[mode].backgroundSecondary,
+            '&.MuiTableContainer-root': {
+              backgroundColor: COLOR_PALETTE[mode].backgroundSecondary,
+              background: COLOR_PALETTE[mode].backgroundSecondary,
+            }
           },
         },
       },

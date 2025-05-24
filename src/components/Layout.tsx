@@ -1,66 +1,68 @@
-import React from 'react'; // Use default import for JSX
-import { useState } from 'react'; // Use named imports for hooks
+import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
-import {
+import { 
+  useTheme, 
+  alpha, 
+  styled,
+  Badge,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Typography,
+  Tooltip,
+  IconButton,
+  Avatar,
   Box,
   Drawer,
   AppBar,
   Toolbar,
   List,
-  Typography,
-  Divider,
-  IconButton,
   ListItem,
-  ListItemIcon,
-  ListItemText,
   ListItemButton,
   Collapse,
-  Avatar,
-  Menu,
-  MenuItem,
   InputBase,
-  alpha,
-  styled,
-  Tooltip,
 } from '@mui/material';
-import PowerIcon from '@mui/icons-material/Power';
-import InsightsIcon from '@mui/icons-material/Insights';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import KeyIcon from '@mui/icons-material/Key';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import PeopleIcon from '@mui/icons-material/People';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import DescriptionIcon from '@mui/icons-material/Description';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
 import {
+  Notifications as NotificationsIcon,
+  Apps as AppsIcon,
+  Language as LanguageIcon,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon,
+  Check as CheckIcon,
+  Translate as TranslateIcon,
+  Power as PowerIcon,
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
   Dashboard as DashboardIcon,
   ShoppingCart as OrdersIcon,
   Restaurant as MenuIcon2,
   Settings as SettingsIcon,
-  MenuBook as MenuBookIcon, // For Menu Items
+  MenuBook as MenuBookIcon,
   Edit as EditIcon,
-  Category as CategoryIcon, // Used for Categories
-  AccountTree as AccountTreeIcon, // For SubCategories
-  SubdirectoryArrowRight as SubdirectoryArrowRightIcon, // For SubSubCategories
-  RestaurantMenu as RestaurantMenuIcon, // Use for Menus list
+  Category as CategoryIcon,
+  AccountTree as AccountTreeIcon,
+  SubdirectoryArrowRight as SubdirectoryArrowRightIcon,
+  RestaurantMenu as RestaurantMenuIcon,
   History as HistoryIcon,
   AccountCircle as AccountCircleIcon,
   Tune as TuneIcon,
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
   ExpandLess,
   ExpandMore,
   Logout as LogoutIcon,
   Search as SearchIcon,
-  Notifications as NotificationsIcon,
-  NotificationsActive as NotificationsActiveIcon, // For Notifications settings
-  Sync as SyncIcon, // For Live Orders
-  Apps as AppsIcon,
-  Language as LanguageIcon,
+  NotificationsActive as NotificationsActiveIcon,
+  Sync as SyncIcon,
+  Insights as InsightsIcon,
+  Receipt as ReceiptIcon,
+  VpnKey as KeyIcon,
+  Assessment as AssessmentIcon,
+  BarChart as BarChartIcon,
+  People as PeopleIcon,
+  Inventory as InventoryIcon,
+  Description as DescriptionIcon,
+  Restaurant as RestaurantIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
@@ -136,7 +138,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && pr
   ...(collapsed && {
     marginLeft: `${collapsedDrawerWidth}px`,
   }),
-  backgroundColor: theme.palette.mode === 'dark' ? '#111827' : '#F5F5F5',
+  backgroundColor: theme.palette.mode === 'dark' ? '#111827' : '#F5F7FA',
   minHeight: '100vh',
   width: '100%',
   maxWidth: '100%',
@@ -148,7 +150,7 @@ const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'ope
   collapsed?: boolean;
 }>(({ theme, open, collapsed }) => ({
   height: '90px',
-  backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#ffffff',
+  backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f0f4f8',
   color: theme.palette.mode === 'dark' ? '#ffffff' : '#1e293b',
   boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
   transition: theme.transitions.create(['margin', 'width'], {
@@ -202,10 +204,16 @@ interface CategoryType { // Renamed to avoid conflict
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => {
-  const [open, setOpen] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
+  const [open, setOpen] = React.useState(true);
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [expandedMenus, setExpandedMenus] = React.useState<{ [key: string]: boolean }>({});
+  const [notifications, setNotifications] = React.useState<Array<{id: string, message: string, read: boolean, date: Date}>>([{id: '1', message: 'New order received', read: false, date: new Date()}]);
+  const [language, setLanguage] = React.useState('en');
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [appsAnchorEl, setAppsAnchorEl] = React.useState<null | HTMLElement>(null);
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -237,6 +245,40 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
   const handleLogout = () => {
     setMenuAnchorEl(null);
     logout();
+  };
+
+  // Notification handlers
+  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+    // Mark notifications as read when opening the menu
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
+
+  // Language handlers
+  const handleLanguageClick = (event: React.MouseEvent<HTMLElement>) => {
+    setLanguageAnchorEl(event.currentTarget);
+  };
+
+  const handleLanguageClose = () => {
+    setLanguageAnchorEl(null);
+  };
+
+  const handleLanguageSelect = (lang: string) => {
+    setLanguage(lang);
+    handleLanguageClose();
+  };
+
+  // Apps menu handlers
+  const handleAppsClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAppsAnchorEl(event.currentTarget);
+  };
+
+  const handleAppsClose = () => {
+    setAppsAnchorEl(null);
   };
 
   const categories: CategoryType[] = [ // Use renamed type
@@ -470,30 +512,171 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
             alignItems: 'center',
             gap: 1
           }}>
-            <IconButton color="inherit">
-              <NotificationsIcon />
-            </IconButton>
-            <IconButton color="inherit">
-              <AppsIcon />
-            </IconButton>
-            <IconButton color="inherit">
-              <LanguageIcon />
-            </IconButton>
-            <IconButton
-              color="inherit"
-              onClick={toggleTheme}
-            >
-              {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-            <IconButton
-              onClick={(e: React.MouseEvent<HTMLElement>) => setMenuAnchorEl(e.currentTarget)} // Add type for event
-              color="inherit"
-            >
-              <Avatar sx={{ width: 32, height: 32 }} />
-            </IconButton>
+            {/* Theme Toggle */}
+            <Tooltip title={theme.palette.mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              <IconButton onClick={toggleTheme} color="inherit">
+                {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Notifications Button */}
+            <Tooltip title="Notifications">
+              <IconButton 
+                color="inherit"
+                onClick={handleNotificationClick}
+              >
+                <Badge badgeContent={notifications.filter(n => !n.read).length} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Apps Menu Button */}
+            <Tooltip title="Apps">
+              <IconButton 
+                color="inherit"
+                onClick={handleAppsClick}
+              >
+                <AppsIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* Language Selector */}
+            <Tooltip title="Change language">
+              <IconButton 
+                color="inherit"
+                onClick={handleLanguageClick}
+              >
+                <LanguageIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* User Menu */}
+            <Tooltip title="Account">
+              <IconButton
+                onClick={(e: React.MouseEvent<HTMLElement>) => setMenuAnchorEl(e.currentTarget)}
+                color="inherit"
+              >
+                <Avatar sx={{ width: 32, height: 32 }} />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBarStyled>
+
+      {/* Notifications Menu */}
+      <Menu
+        anchorEl={notificationAnchorEl}
+        open={Boolean(notificationAnchorEl)}
+        onClose={handleNotificationClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            width: 320,
+            maxHeight: 400,
+            overflowY: 'auto',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+          },
+        }}
+      >
+        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            Notifications
+          </Typography>
+        </Box>
+        {notifications.length > 0 ? (
+          notifications.map((notification) => (
+            <MenuItem key={notification.id} onClick={handleNotificationClose}>
+              <ListItemIcon>
+                <NotificationsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText 
+                primary={notification.message} 
+                secondary={new Date(notification.date).toLocaleString()}
+                primaryTypographyProps={{
+                  color: notification.read ? 'textSecondary' : 'textPrimary',
+                  fontWeight: notification.read ? 'normal' : 'bold'
+                }}
+              />
+            </MenuItem>
+          ))
+        ) : (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="textSecondary">
+              No new notifications
+            </Typography>
+          </Box>
+        )}
+      </Menu>
+
+      {/* Language Menu */}
+      <Menu
+        anchorEl={languageAnchorEl}
+        open={Boolean(languageAnchorEl)}
+        onClose={handleLanguageClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            minWidth: 120,
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+          },
+        }}
+      >
+        {[
+          { code: 'en', name: 'English' },
+          { code: 'am', name: 'አማርኛ' },
+          { code: 'or', name: 'Oromiffa' },
+        ].map((lang) => (
+          <MenuItem 
+            key={lang.code} 
+            onClick={() => handleLanguageSelect(lang.code)}
+            selected={language === lang.code}
+          >
+            <ListItemText>{lang.name}</ListItemText>
+            {language === lang.code && (
+              <CheckIcon fontSize="small" sx={{ ml: 1 }} />
+            )}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Apps Menu */}
+      <Menu
+        anchorEl={appsAnchorEl}
+        open={Boolean(appsAnchorEl)}
+        onClose={handleAppsClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            minWidth: 200,
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+          },
+        }}
+      >
+        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            Apps
+          </Typography>
+        </Box>
+        <MenuItem onClick={handleAppsClose}>
+          <ListItemIcon>
+            <DashboardIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Dashboard</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleAppsClose}>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Settings</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleAppsClose}>
+          <ListItemIcon>
+            <PeopleIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Users</ListItemText>
+        </MenuItem>
+      </Menu>
 
       <Drawer
         sx={{
@@ -502,7 +685,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           '& .MuiDrawer-paper': {
             width: open ? drawerWidth : collapsedDrawerWidth,
             boxSizing: 'border-box',
-            background: theme.palette.mode === 'dark' ? '#1e293b' : '#ffffff',
+            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : (collapsed ? '#F5F7FA' : '#ffffff'),
             borderRight: '1px solid',
             borderColor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
             overflowX: 'hidden',
