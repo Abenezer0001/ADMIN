@@ -1,22 +1,30 @@
 import axios from 'axios';
-
-// Use the environment variable for API URL
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../utils/config';
 
 export interface AdminUser {
-  id: string;
+  _id: string;
   email: string;
   firstName: string;
   lastName: string;
   role: string;
-  isActive?: boolean;
-  createdAt?: string;
+  roles: string[];
+  permissions: string[];
+  directPermissions: string[];
+  isActive: boolean;
+  isPasswordSet: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminCreateResponse {
   success: boolean;
   message?: string;
   admin?: AdminUser;
+}
+
+interface AdminListResponse {
+  message: string;
+  admins: AdminUser[];
 }
 
 // Configure axios to include credentials
@@ -28,8 +36,10 @@ class AdminService {
    */
   async createAdmin(adminData: { email: string; firstName: string; lastName: string }): Promise<AdminCreateResponse> {
     try {
+      const url = `${API_BASE_URL}/admin/admins`;
       console.log('Creating admin user:', adminData);
-      const response = await axios.post(`${API_URL}/admin/admins`, adminData);
+      console.log('Sending request to:', url);
+      const response = await axios.post(url, adminData);
       
       console.log('Create admin response:', response.status, response.data);
       
@@ -64,18 +74,27 @@ class AdminService {
   /**
    * Get list of admin users (system admin privilege required)
    */
-  async listAdmins(): Promise<AdminUser[]> {
+  async listAdmins(): Promise<AdminListResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/admins`);
-      const data = response.data as { success?: boolean; admins?: AdminUser[]; message?: string };
-      if (data?.success && Array.isArray(data.admins)) {
-        return data.admins;
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('Error listing admins:', error);
-      return [];
+      const url = `${API_BASE_URL}/admin/admins`;
+      console.log('Fetching admins from:', url);
+      const response = await axios.get<AdminListResponse>(url);
+      console.log('API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error listing admins:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      return { 
+        message: error.response?.data?.message || 'Failed to fetch admins', 
+        admins: [] 
+      };
     }
   }
 }

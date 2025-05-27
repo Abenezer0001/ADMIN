@@ -1,16 +1,9 @@
-import React from 'react';
-const { useState, useEffect } = React;
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
   Button,
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow,
+  Container,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -18,21 +11,26 @@ import {
   TextField,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
+import { format } from 'date-fns';
 import AddIcon from '@mui/icons-material/Add';
-import adminService, { AdminUser } from '../../services/AdminService';
+import AdminService, { AdminUser } from '../../services/AdminService';
+import DataTable from '../common/DataTable';
+import { MRT_ColumnDef } from 'material-react-table';
+
+interface AdminListResponse {
+  message: string;
+  admins: AdminUser[];
+}
+
+
 
 interface AdminFormData {
   email: string;
   firstName: string;
   lastName: string;
-}
-
-interface FormErrors {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
 }
 
 interface SnackbarState {
@@ -46,20 +44,20 @@ const AdminManagement: React.FC = () => {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AdminFormData>({
     email: '',
     firstName: '',
     lastName: ''
   });
-  const [formErrors, setFormErrors] = useState({
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({
     email: '',
     firstName: '',
     lastName: ''
   });
-  const [snackbar, setSnackbar] = useState({
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
-    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+    severity: 'success'
   });
 
   // Fetch admins on component mount
@@ -70,8 +68,19 @@ const AdminManagement: React.FC = () => {
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const adminsList = await adminService.listAdmins();
-      setAdmins(adminsList);
+      const response = await AdminService.listAdmins();
+      console.log('Fetched admins:', response);
+      if (response?.admins && Array.isArray(response.admins)) {
+        setAdmins(response.admins);
+      } else {
+        console.error('No admins data found or invalid format', response);
+        setAdmins([]);
+        setSnackbar({
+          open: true,
+          message: 'No admin users found',
+          severity: 'info'
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch admins:', error);
       setSnackbar({
@@ -84,9 +93,43 @@ const AdminManagement: React.FC = () => {
     }
   };
 
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    // Reset form data and errors
+    setFormData({
+      email: '',
+      firstName: '',
+      lastName: ''
+    });
+    setFormErrors({
+      email: '',
+      firstName: '',
+      lastName: ''
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+    // Clear error when user types
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: ''
+      });
+    }
+  };
+
   const validateForm = () => {
     let isValid = true;
-    const errors = {
+    const errors: Record<string, string> = {
       email: '',
       firstName: '',
       lastName: ''
@@ -122,35 +165,52 @@ const AdminManagement: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await adminService.createAdmin(formData);
+      console.log('Creating admin with data:', formData);
+      const response = await AdminService.createAdmin(formData);
+      console.log('Create admin response:', response);
       
       if (response.success) {
-        setSnackbar({
-          open: true,
-          message: 'Administrator created successfully! A setup email has been sent to their email address.',
-          severity: 'success'
-        });
+        // First update state to close the dialog
         setOpenDialog(false);
-        fetchAdmins(); // Refresh admin list
         
-        // Reset form
+        // Reset form data
         setFormData({
           email: '',
           firstName: '',
           lastName: ''
         });
+        
+        // Reset form errors
+        setFormErrors({
+          email: '',
+          firstName: '',
+          lastName: ''
+        });
+        
+        // Then show success toast
+        setTimeout(() => {
+          setSnackbar({
+            open: true,
+            message: 'Administrator created successfully! A setup email has been sent to their email address.',
+            severity: 'success'
+          });
+        }, 100);
+        
+        // Refresh admin list
+        fetchAdmins();
       } else {
+        // Show error toast but don't close dialog
         setSnackbar({
           open: true,
           message: response.message || 'Failed to create administrator',
           severity: 'error'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating admin:', error);
       setSnackbar({
         open: true,
-        message: 'An error occurred while creating the administrator',
+        message: error.message || 'An error occurred while creating the administrator',
         severity: 'error'
       });
     } finally {
@@ -158,109 +218,137 @@ const AdminManagement: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: AdminFormData) => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error when user types
-    if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors((prev: FormErrors) => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev: SnackbarState) => ({
-      ...prev,
-      open: false
-    }));
-  };
+  // Define columns for DataTable
+  const columns: MRT_ColumnDef<AdminUser>[] = [
+    { 
+      accessorKey: 'email', 
+      header: 'Email',
+      size: 200,
+    },
+    { 
+      accessorKey: 'firstName', 
+      header: 'First Name',
+      size: 150,
+    },
+    { 
+      accessorKey: 'lastName', 
+      header: 'Last Name',
+      size: 150,
+    },
+    { 
+      accessorKey: 'role', 
+      header: 'Role',
+      size: 150,
+    },
+    { 
+      accessorKey: 'isActive', 
+      header: 'Status',
+      size: 100,
+      Cell: ({ cell }) => {
+        const isActive = cell.getValue<boolean>();
+        return (
+          <Chip 
+            label={isActive ? 'Active' : 'Inactive'} 
+            color={isActive ? 'success' : 'default'} 
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      id: 'permissions',
+      header: 'Permissions',
+      size: 120,
+      accessorFn: (row) => {
+        const totalPermissions = [
+          ...(row.permissions || []),
+          ...(row.directPermissions || [])
+        ].length;
+        return totalPermissions;
+      },
+      Cell: ({ cell }) => (
+        <Chip 
+          label={`${cell.getValue<number>()} permissions`} 
+          color="primary" 
+          size="small"
+        />
+      ),
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created At',
+      size: 180,
+      Cell: ({ cell }) => {
+        const date = cell.getValue<string>();
+        return date ? format(new Date(date), 'MMM dd, yyyy HH:mm') : '-';
+      },
+    }
+  ] as MRT_ColumnDef<AdminUser>[];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Administrator Management
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-        >
-          Add Administrator
-        </Button>
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Admin Users
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<AddIcon />}
+            onClick={handleOpenDialog}
+          >
+            Add New Admin
+          </Button>
+        </Box>
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : admins.length === 0 ? (
+          <Box sx={{ textAlign: 'center', my: 4 }}>
+            <Typography variant="body1" color="textSecondary">
+              No admin users found. Click the button above to add a new admin.
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ mt: 2, height: 'calc(100vh - 300px)', overflow: 'auto' }}>
+            <DataTable 
+              columns={columns}
+              data={admins}
+              enableColumnFilters={true}
+              enableColumnOrdering={true}
+              enablePinning={true}
+              enableGrouping={false}
+            />
+          </Box>
+        )}
       </Box>
 
-      {loading && !openDialog ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Created</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {admins.length > 0 ? (
-                admins.map((admin: AdminUser) => (
-                  <TableRow key={admin.id}>
-                    <TableCell>{`${admin.firstName} ${admin.lastName}`}</TableCell>
-                    <TableCell>{admin.email}</TableCell>
-                    <TableCell>{admin.role}</TableCell>
-                    <TableCell>{admin.isActive ? 'Active' : 'Pending Setup'}</TableCell>
-                    <TableCell>{admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell sx={{ py: 2 }}>
-                    <Box sx={{ width: '100%', textAlign: 'center' }}>
-                      <Typography variant="body1">
-                        No administrators found. Add one to get started.
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      {/* Create Admin Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+      {/* Add Admin Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Add New Administrator</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Create a new administrator who will receive an email with a magic link to set up their account.
-            </Typography>
-            
             <TextField
               fullWidth
               margin="normal"
-              label="Email Address"
+              label="Email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
               error={!!formErrors.email}
               helperText={formErrors.email}
-              disabled={loading}
+              autoFocus
             />
-            
             <TextField
               fullWidth
               margin="normal"
@@ -270,9 +358,7 @@ const AdminManagement: React.FC = () => {
               onChange={handleInputChange}
               error={!!formErrors.firstName}
               helperText={formErrors.firstName}
-              disabled={loading}
             />
-            
             <TextField
               fullWidth
               margin="normal"
@@ -282,22 +368,35 @@ const AdminManagement: React.FC = () => {
               onChange={handleInputChange}
               error={!!formErrors.lastName}
               helperText={formErrors.lastName}
-              disabled={loading}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} disabled={loading}>
+          <Button onClick={handleCloseDialog} color="inherit">
             Cancel
           </Button>
-          <Button 
-            onClick={handleCreateAdmin} 
-            variant="contained" 
-            color="primary"
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Create Administrator'}
-          </Button>
+          <Box sx={{ position: 'relative' }}>
+            <Button 
+              onClick={handleCreateAdmin} 
+              color="primary" 
+              variant="contained"
+              disabled={loading}
+            >
+              Create
+            </Button>
+            {loading && (
+              <CircularProgress
+                size={24}
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  marginTop: '-12px',
+                  marginLeft: '-12px',
+                }}
+              />
+            )}
+          </Box>
         </DialogActions>
       </Dialog>
 
@@ -306,17 +405,34 @@ const AdminManagement: React.FC = () => {
         open={snackbar.open} 
         autoHideDuration={6000} 
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ 
+          '& .MuiAlert-root': { 
+            width: '100%',
+            maxWidth: '600px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          } 
+        }}
       >
         <Alert 
           onClose={handleCloseSnackbar} 
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          variant="filled"
+          color={snackbar.severity}
+          sx={{ 
+            width: '100%',
+            fontSize: '1rem',
+            alignItems: 'center',
+            ...(snackbar.severity === 'success' && {
+              backgroundColor: '#4caf50',
+              color: '#fff'
+            })
+          }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Container>
   );
 };
 

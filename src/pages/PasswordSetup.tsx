@@ -7,8 +7,8 @@ import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
-// Use the environment variable for API URL
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+// Use the centralized API URL from config
+import { API_BASE_URL } from '../utils/config';
 
 const PasswordSetup: React.FC = () => {
   const navigate = useNavigate();
@@ -43,28 +43,40 @@ const PasswordSetup: React.FC = () => {
 
       setIsLoading(true);
       try {
-        const response = await axios.post(`${API_URL}/admin/verify-setup-token`, { token });
+        console.log('Verifying token:', token);
+        // The correct endpoint is /api/admin/verify-setup-token (GET request)
+        const url = `${API_BASE_URL}/admin/verify-setup-token?token=${token}`;
+        console.log('Verification URL:', url);
+        
+        const response = await axios.get(url);
+        console.log('Token verification response:', response.data);
         
         // Type assertion for the response data
         const data = response.data as { 
-          valid: boolean; 
-          email?: string; 
-          firstName?: string; 
-          isAdmin?: boolean;
+          message: string;
+          user?: {
+            email: string;
+            firstName: string;
+            lastName: string;
+          }
         };
         
-        if (data.valid) {
+        console.log('Parsed response data:', data);
+        
+        if (data.message === 'Token is valid' && data.user) {
+          console.log('Token is valid, setting token info:', data.user);
           setTokenValid(true);
           setTokenInfo({
-            email: data.email,
-            firstName: data.firstName,
-            isAdmin: data.isAdmin
+            email: data.user.email,
+            firstName: data.user.firstName
           });
         } else {
+          console.log('Token validation failed');
           setTokenValid(false);
           setError('The setup link is invalid or has expired. Please request a new one.');
         }
       } catch (err: any) {
+        console.error('Token verification error:', err.response?.data || err.message);
         setTokenValid(false);
         setError(err.response?.data?.message || 'Failed to verify setup token. Please try again or request a new link.');
       } finally {
@@ -108,10 +120,16 @@ const PasswordSetup: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/admin/setup-password`, {
+      // The correct endpoint for password setup
+      const url = `${API_BASE_URL}/admin/setup-password`;
+      console.log('Setting up password, sending request to:', url);
+      
+      const response = await axios.post(url, {
         token,
         password
       });
+      
+      console.log('Password setup response:', response.status);
 
       // Type assertion for the response data
       const data = response.data as {
