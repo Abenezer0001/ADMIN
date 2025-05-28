@@ -5,9 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import GoogleIcon from '@mui/icons-material/Google';
-import AppleIcon from '@mui/icons-material/Apple';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const Login = () => {
   // Form state
@@ -272,25 +269,87 @@ const Login = () => {
         position: 'relative',
         bgcolor: 'background.paper'
       }}>
-        <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-          <Button 
-            startIcon={<ArrowBackIcon />} 
-            variant="outlined" 
-            size="small" 
-            sx={{ borderRadius: 2, textTransform: 'none' }}
-          >
-            Back to website
-          </Button>
-        </Box>
         
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 400, mx: 'auto', width: '100%' }}>
-          <Typography component="h1" variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Sign In
-          </Typography>
+
+        
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center', 
+          maxWidth: 400, 
+          mx: 'auto', 
+          width: '100%',
+          textAlign: 'center'
+        }}>
+          {/* Main Branding */}
+          <Box sx={{ mb: 6 }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 'bold',
+                background: 'linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1,
+                letterSpacing: '-0.5px',
+                lineHeight: 1.2,
+                color: 'primary.main',
+              }}
+            >
+              INSEAT
+            </Typography>
+            {/* <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'primary.main',
+                fontWeight: 600,
+                letterSpacing: '1px',
+                mb: 1,
+                textTransform: 'uppercase',
+                fontSize: '1.1rem'
+              }}
+            >
+              Admin Panel
+            </Typography> */}
+            <Box 
+              sx={{ 
+                width: 60, 
+                height: 4, 
+                background: 'linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%)',
+                mx: 'auto',
+                borderRadius: 2,
+                opacity: 0.8
+              }}
+            />
+          </Box>
           
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Welcome back! Please login to your account
-          </Typography>
+          {/* Sign In Section */}
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              component="h1" 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 600, 
+                mb: 1,
+                color: 'text.primary',
+                fontSize: '1.5rem'
+              }}
+            >
+              Sign In
+            </Typography>
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: '0.95rem'
+              }}
+            >
+              Welcome back! Please login to your account
+            </Typography>
+          </Box>
+          
+  
           
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -379,69 +438,9 @@ const Login = () => {
               {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
             
-            <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-              <Box sx={{ flex: 1, height: 1, bgcolor: 'divider' }} />
-              <Typography variant="body2" color="text.secondary" sx={{ mx: 2 }}>
-                Or sign in with
-              </Typography>
-              <Box sx={{ flex: 1, height: 1, bgcolor: 'divider' }} />
-            </Box>
+
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={<GoogleIcon />}
-                sx={{ 
-                  borderRadius: 2, 
-                  py: 1, 
-                  textTransform: 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(66, 133, 244, 0.04)',
-                    borderColor: '#4285F4',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                  }
-                }}
-              >
-                Google
-              </Button>
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={<AppleIcon />}
-                sx={{ 
-                  borderRadius: 2, 
-                  py: 1, 
-                  textTransform: 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    borderColor: '#000',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                  }
-                }}
-              >
-                Apple
-              </Button>
-            </Box>
-            
-            <Box sx={{ textAlign: 'center', mt: 3 }}>
-              <Typography variant="body2">
-                Don't have an account?{' '}
-                <Link to="/register" style={{ 
-                  textDecoration: 'none', 
-                  fontWeight: 'bold', 
-                  color: 'primary.main',
-                  transition: 'color 0.2s ease',
-                  '&:hover': {
-                    color: 'primary.dark',
-                  }
-                }}>
-                  Create account
-                </Link>
-              </Typography>
-            </Box>
+
           </Box>
         </Box>
       </Box>
