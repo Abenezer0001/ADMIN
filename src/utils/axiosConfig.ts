@@ -16,13 +16,20 @@ if (!API_BASE_URL) {
 // No need for API connection testing on each load as it's redundant
 // and could cause confusion in logs
 
+// Log the actual API URL being used
+console.log('Creating axios instance with baseURL:', API_BASE_URL);
+
 // Create axios instance with withCredentials to support cookies
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Enable sending cookies with every request
   headers: {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+    'X-Requested-With': 'XMLHttpRequest',
   },
+  // Increase timeout for requests
+  timeout: 30000, // 30 seconds
 });
 
 // Track authentication state
@@ -48,7 +55,9 @@ const pageLoadState = {
 // Check for initial auth state indicators
 const checkInitialAuthState = () => {
   // Check for authentication indicators
-  const hasAuthCookie = document.cookie.includes('token') || 
+  const hasAuthCookie = document.cookie.includes('access_token') || 
+                        document.cookie.includes('refresh_token') || 
+                        document.cookie.includes('token') || 
                         document.cookie.includes('refresh') || 
                         document.cookie.includes('auth');
   const hasAuthSession = sessionStorage.getItem('lastSuccessfulAuth') !== null;
@@ -105,7 +114,7 @@ const getPageLoadState = () => {
     timeSinceStart,
     readyState: document.readyState,
     isReady: document.readyState === 'complete',
-    hasTokens: document.cookie.includes('token') || document.cookie.includes('refresh'),
+    hasTokens: document.cookie.includes('access_token') || document.cookie.includes('refresh_token') || document.cookie.includes('token') || document.cookie.includes('refresh'),
     hasSuccessfulRefresh: lastSuccessfulRefresh > 0,
     timeSinceRefresh: lastSuccessfulRefresh ? now - lastSuccessfulRefresh : null,
     // Include enhanced page load state

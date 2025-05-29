@@ -494,63 +494,90 @@ const LiveOrders: React.FC = () => {
     },
   ];
 
-  return (
-    <div className="live-orders-container">
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Title level={2}>
-            Live Orders
-            {newOrdersCount > 0 && (
-              <Badge count={newOrdersCount} style={{ marginLeft: 10 }} />
-            )}
-          </Title>
+              />
+            </div>
+          ),
+        }}
+      />
+    )}
+      
+    {/* Order Details Drawer */}
+    <Drawer
+      title={selectedOrder ? `Order #${selectedOrder.orderNumber} Details` : 'Order Details'}
+      placement="right"
+      onClose={closeOrderDetails}
+      open={orderDetailsVisible}
+      width={500}
+      extra={
+        selectedOrder && selectedOrder.status !== OrderStatus.COMPLETED && selectedOrder.status !== OrderStatus.CANCELLED ? (
           <Space>
-            {selectedRestaurantId && (
-              <Button 
-                icon={<ReloadOutlined />} 
-                onClick={() => {
-                  fetchOrders();
-                  message.success('Orders refreshed');
-                }}
-              >
-                Refresh
-              </Button>
-            )}
+            <Button 
+              type="primary"
+              onClick={() => {
+                if (selectedOrder) {
+                  updateOrderStatus(selectedOrder._id, getNextStatus(selectedOrder.status as string));
+                }
+              }}
+            >
+              {selectedOrder?.status === OrderStatus.PENDING ? 'Confirm' : 
+               selectedOrder?.status === OrderStatus.PREPARING ? 'Mark Ready' :
+               selectedOrder?.status === OrderStatus.READY ? 'Mark Delivered' :
+               selectedOrder?.status === OrderStatus.DELIVERED ? 'Complete' : 'Update'}
+            </Button>
+            <Button 
+              danger
+              onClick={() => {
+                if (selectedOrder) {
+                  updateOrderStatus(selectedOrder._id, OrderStatus.CANCELLED);
+                }
+              }}
+            >
+              Cancel Order
+            </Button>
           </Space>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Select
-            placeholder="Select a restaurant"
-            style={{ width: 300 }}
-            loading={loadingRestaurants}
-            value={selectedRestaurantId || undefined}
-            onChange={(value) => {
-              setSelectedRestaurantId(value);
-            }}
-          >
-            {restaurants.map((restaurant: Restaurant) => (
-              <Select.Option key={restaurant._id} value={restaurant._id}>
-                {restaurant.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Search
-            placeholder="Search by order number, table or customer"
-            onChange={handleSearchChange}
-            style={{ width: 300 }}
-            allowClear
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '50px 0' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16 }}>Loading orders...</div>
-        </div>
-      ) : filteredOrders.length === 0 ? (
-        <Empty
+        ) : null
+      }
+    >
+      {selectedOrder && (
+        <>
+          <Descriptions column={1} bordered>
+            <Descriptions.Item label="Status">
+              <Tag color={getStatusTagColor(selectedOrder.status as string)}>
+                {getStatusDisplayName(selectedOrder.status as string)}
+              </Tag>
+            </Descriptions.Item>
+            {selectedOrder.customerName && (
+              <Descriptions.Item label="Customer">
+                {selectedOrder.customerName}
+              </Descriptions.Item>
+            )}
+            {selectedOrder.tableNumber && (
+              <Descriptions.Item label="Table">
+                {selectedOrder.tableNumber}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Order Time">
+              {formatDate(selectedOrder.createdAt as string)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Total">
+              {formatCurrency(selectedOrder.total || 0)}
+            </Descriptions.Item>
+            {selectedOrder.notes && (
+              <Descriptions.Item label="Notes">
+                {selectedOrder.notes}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+            
+          <Divider orientation="left">Order Items</Divider>
+            
+          <List
+            itemLayout="horizontal"
+            dataSource={selectedOrder.items || []}
+            renderItem={(item: any) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={<Avatar>{item.quantity}</Avatar>}
           description={
             searchQuery 
               ? "No orders matching your search" 
@@ -589,40 +616,40 @@ const LiveOrders: React.FC = () => {
       
       {/* Order Details Drawer */}
       <Drawer
-      title={selectedOrder ? `Order #${selectedOrder.orderNumber} Details` : 'Order Details'}
-      placement="right"
-      onClose={closeOrderDetails}
-      open={orderDetailsVisible}
-      width={500}
-      extra={
-        selectedOrder && selectedOrder.status !== OrderStatus.COMPLETED && selectedOrder.status !== OrderStatus.CANCELLED ? (
-          <Space>
-            <Button 
-              type="primary"
-              onClick={() => {
-                if (selectedOrder) {
-                  updateOrderStatus(selectedOrder._id, getNextStatus(selectedOrder.status as string));
-                }
-              }}
-            >
-              {selectedOrder?.status === OrderStatus.PENDING ? 'Confirm' : 
-               selectedOrder?.status === OrderStatus.PREPARING ? 'Mark Ready' :
-               selectedOrder?.status === OrderStatus.READY ? 'Mark Delivered' :
-               selectedOrder?.status === OrderStatus.DELIVERED ? 'Complete' : 'Update'}
-            </Button>
-            <Button 
-              danger
-              onClick={() => {
-                if (selectedOrder) {
-                  updateOrderStatus(selectedOrder._id, OrderStatus.CANCELLED);
-                }
-              }}
-            >
-              Cancel Order
-            </Button>
-          </Space>
-        ) : null
-      }
+        title={selectedOrder ? `Order #${selectedOrder.orderNumber} Details` : 'Order Details'}
+        placement="right"
+        onClose={closeOrderDetails}
+        open={orderDetailsVisible}
+        width={500}
+        extra={
+          selectedOrder && selectedOrder.status !== OrderStatus.COMPLETED && selectedOrder.status !== OrderStatus.CANCELLED ? (
+            <Space>
+              <Button 
+                type="primary"
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderStatus(selectedOrder._id, getNextStatus(selectedOrder.status as string));
+                  }
+                }}
+              >
+                {selectedOrder?.status === OrderStatus.PENDING ? 'Confirm' : 
+                 selectedOrder?.status === OrderStatus.PREPARING ? 'Mark Ready' :
+                 selectedOrder?.status === OrderStatus.READY ? 'Mark Delivered' :
+                 selectedOrder?.status === OrderStatus.DELIVERED ? 'Complete' : 'Update'}
+              </Button>
+              <Button 
+                danger
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderStatus(selectedOrder._id, OrderStatus.CANCELLED);
+                  }
+                }}
+              >
+                Cancel Order
+              </Button>
+            </Space>
+          ) : null
+        }
       >
         {selectedOrder && (
           <>

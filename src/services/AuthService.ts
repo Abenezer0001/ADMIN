@@ -209,6 +209,63 @@ class AuthService {
     }
   }
 
+  async checkAuthStatus(): Promise<AuthResponse> {
+    try {
+      console.log('Checking authentication status...');
+      const response = await api.get('/auth/verify', { 
+        withCredentials: true,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
+      
+      // Type-safe handling of response data
+      const data = response.data as { 
+        success?: boolean; 
+        user?: User;
+        message?: string; 
+      };
+      
+      console.log('Auth verification response:', data);
+      const isAuthenticated = data.success === true && !!data.user;
+      
+      if (isAuthenticated && data.user) {
+        console.log('User is authenticated:', data.user);
+        // Save user info to session storage for redundancy
+        sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+        sessionStorage.setItem('lastSuccessfulAuth', new Date().toISOString());
+      } else {
+        console.warn('Auth verification returned success=false or no user');
+      }
+      
+      return {
+        success: isAuthenticated,
+        user: data.user
+      };
+    } catch (error: any) {
+      console.error('Auth verification failed:', error);
+      
+      // Check if we have a cached user we can fall back to during network issues
+      const cachedUser = sessionStorage.getItem('currentUser');
+      if (cachedUser && (!error.response || error.response.status !== 401)) {
+        try {
+          console.log('Using cached user during network issues');
+          return {
+            success: true,
+            user: JSON.parse(cachedUser) as User
+          };
+        } catch (parseError) {
+          console.error('Failed to parse cached user:', parseError);
+        }
+      }
+      
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Authentication verification failed.'
+      };
+    }
+  }
+
   async getCurrentUser(isDemoMode = false): Promise<User | null> {
     if (isDemoMode) {
       const demoEmail = sessionStorage.getItem('demoEmail');

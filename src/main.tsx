@@ -1,7 +1,10 @@
+// Import our temporary environment configuration first
+import './tempEnvConfig';
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import App from './App'
 import { StagewiseToolbar } from '@stagewise/toolbar-react';
 
 // Stagewise configuration

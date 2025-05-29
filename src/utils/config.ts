@@ -1,6 +1,9 @@
-// Get environment variables
-const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const ENV_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
+// Import temporary environment configuration
+import envConfig from '../tempEnvConfig';
+
+// Get environment variables (using our temporary config override if available)
+const ENV_API_BASE_URL = window.ENV?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL;
+const ENV_SOCKET_URL = window.ENV?.VITE_SOCKET_URL || import.meta.env.VITE_SOCKET_URL;
 
 // Debug log the raw environment variables
 console.log('Raw environment configuration:', {

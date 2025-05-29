@@ -1,160 +1,337 @@
 import { Order } from '../types/order';
+import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../utils/config';
 
 // WebSocket events
 export enum WebSocketEventType {
-  CONNECTION_ESTABLISHED = 'CONNECTION_ESTABLISHED',
-  NEW_ORDER = 'NEW_ORDER',
-  ORDER_UPDATE = 'ORDER_UPDATE',
-  ORDER_CANCELLED = 'ORDER_CANCELLED',
-  PING = 'PING',
-  PONG = 'PONG',
+  CONNECT = 'connect',
+  DISCONNECT = 'disconnect',
+  ERROR = 'error',
+  JOIN_ROOM = 'joinRoom',
+  LEAVE_ROOM = 'leaveRoom',
+  NEW_ORDER = 'orderCreated',
+  ORDER_UPDATED = 'orderUpdated',
+  ORDER_CANCELLED = 'orderCancelled',
+  ORDER_COMPLETED = 'orderCompleted',
+  ORDER_ALERT = 'orderAlert',
 }
 
-export interface WebSocketMessage {
-  type: WebSocketEventType | string;
-  data?: any;
-  message?: string;
-  timestamp?: number;
+export interface OrderEventData {
+  order?: any; // Replace 'any' with your Order type
 }
 
-type WebSocketEventListener = (data: any) => void;
+export interface OrderAlert {
+  orderId: string;
+  restaurantId?: string;
+  message: string;
+  timestamp: Date | string;
+}
+
+type EventCallback = (data: any) => void;
 
 class WebSocketService {
-  private socket: WebSocket | null = null;
-  private reconnectInterval: number = 5000; // 5 seconds
-  private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 10;
-  private eventListeners: Map<string, WebSocketEventListener[]> = new Map();
-  private url: string;
+  private socket: Socket | null = null;
+  private eventListeners: Map<string, Set<EventCallback>> = new Map();
+  private reconnecting = false;
+  private rooms: Set<string> = new Set();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(url: string = import.meta.env.VITE_SOCKET_URL?.replace('http', 'ws') || import.meta.env.VITE_API_BASE_URL?.replace('http', 'ws')) {
-    this.url = url;
+  constructor() {
+    // Socket.io will be initialized in connect()
   }
 
   /**
-   * Connect to WebSocket server
+   * Connect to WebSocket server with restaurant context
    */
-  connect(): void {
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('WebSocket: Already connected or connecting');
+  connect(restaurantId?: string): void {
+    if (this.socket?.connected) {
+      console.log('[WebSocket] Socket already connected');
+      // Even if already connected, make sure we're in the restaurant room
+      if (restaurantId) {
+        this.joinRoom(`restaurant:${restaurantId}`);
+      }
       return;
     }
 
-    console.log(`WebSocket: Connecting to ${this.url}`);
-    this.socket = new WebSocket(this.url);
+    // Initialize socket connection
+    console.log(`[WebSocket] Connecting to ${SOCKET_URL}`);
+    console.log('[WebSocket] Restaurant ID for WebSocket:', restaurantId);
+    
+    // Store the socket URL for debugging
+    const actualSocketUrl = SOCKET_URL || 'http://localhost:3001';
+    console.log('[WebSocket] Actual socket URL used:', actualSocketUrl);
+    console.log('[WebSocket] Connection options: withCredentials=true, transports=[websocket,polling]');
+    
+    // Close any existing socket before creating a new one
+    if (this.socket) {
+      console.log('[WebSocket] Closing existing socket before reconnecting');
+      this.socket.close();
+      this.socket = null;
+    }
+    
+    try {
+      this.socket = io(actualSocketUrl, {
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 30000,
+        withCredentials: true,
+        transports: ['websocket', 'polling'] // Try WebSocket first, then fall back to polling
+      });
+      
+      console.log('[WebSocket] Socket.io instance created successfully');
+    } catch (error) {
+      console.error('[WebSocket] Error creating socket.io instance:', error);
+    }
 
-    this.socket.onopen = this.onOpen.bind(this);
-    this.socket.onmessage = this.onMessage.bind(this);
-    this.socket.onclose = this.onClose.bind(this);
-    this.socket.onerror = this.onError.bind(this);
+    this.setupSocketListeners();
+    
+    // Join restaurant room if provided
+    if (restaurantId) {
+      this.joinRoom(`restaurant:${restaurantId}`);
+    }
   }
 
   /**
    * Disconnect from WebSocket server
    */
   disconnect(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
     if (this.socket) {
-      this.socket.close();
+      this.socket.disconnect();
       this.socket = null;
     }
+    
+    console.log('Socket.io: Disconnected');
   }
 
   /**
-   * Send message to WebSocket server
+   * Join a specific room
    */
-  send(message: WebSocketMessage): void {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(message));
-    } else {
-      console.error('WebSocket: Cannot send message, socket not connected');
+  joinRoom(room: string): void {
+    if (!this.socket?.connected) {
+      console.warn('Cannot join room: socket not connected');
+      this.rooms.add(room); // Store for later when connected
+      return;
     }
+
+    this.socket.emit(WebSocketEventType.JOIN_ROOM, room);
+    this.rooms.add(room);
+    console.log(`Joined room: ${room}`);
+  }
+  
+  /**
+   * Leave a specific room
+   */
+  leaveRoom(room: string): void {
+    if (!this.socket?.connected) {
+      console.warn('Cannot leave room: socket not connected');
+      this.rooms.delete(room);
+      return;
+    }
+
+    this.socket.emit(WebSocketEventType.LEAVE_ROOM, room);
+    this.rooms.delete(room);
+    console.log(`Left room: ${room}`);
+  }
+  
+  /**
+   * Rejoin all rooms on reconnection
+   */
+  private rejoinRooms(): void {
+    if (!this.socket?.connected) return;
+    
+    this.rooms.forEach(room => {
+      this.socket!.emit(WebSocketEventType.JOIN_ROOM, room);
+      console.log(`Rejoined room: ${room}`);
+    });
+  }
+
+  /**
+   * Subscribe to order-specific updates
+   */
+  subscribeToOrder(orderId: string): void {
+    this.joinRoom(`order:${orderId}`);
+  }
+
+  /**
+   * Unsubscribe from order-specific updates
+   */
+  unsubscribeFromOrder(orderId: string): void {
+    this.leaveRoom(`order:${orderId}`);
   }
 
   /**
    * Add event listener
    */
-  addEventListener(eventType: WebSocketEventType | string, listener: WebSocketEventListener): void {
-    const listeners = this.eventListeners.get(eventType) || [];
-    listeners.push(listener);
-    this.eventListeners.set(eventType, listeners);
+  addEventListener(event: string, callback: EventCallback): void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, new Set());
+    }
+    this.eventListeners.get(event)!.add(callback);
   }
 
   /**
    * Remove event listener
    */
-  removeEventListener(eventType: WebSocketEventType | string, listener: WebSocketEventListener): void {
-    const listeners = this.eventListeners.get(eventType) || [];
-    const filteredListeners = listeners.filter(l => l !== listener);
-    this.eventListeners.set(eventType, filteredListeners);
+  removeEventListener(event: string, callback: EventCallback): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.delete(callback);
+    }
+  }
+  
+  /**
+   * Remove all event listeners
+   */
+  removeAllEventListeners(): void {
+    this.eventListeners.clear();
+    console.log('[WebSocket] All event listeners removed');
+  }
+  
+  /**
+   * Check if socket is connected
+   * @returns true if socket is connected, false otherwise
+   */
+  isConnected(): boolean {
+    return this.socket?.connected || false;
   }
 
   /**
-   * Handle WebSocket open event
+   * Set up Socket.io event listeners
    */
-  private onOpen(event: Event): void {
-    console.log('WebSocket: Connected');
-    this.reconnectAttempts = 0;
-    this.notifyEventListeners(WebSocketEventType.CONNECTION_ESTABLISHED, { connected: true });
-    
-    // Start ping interval to keep connection alive
-    setInterval(() => {
-      this.send({ type: WebSocketEventType.PING, timestamp: Date.now() });
-    }, 30000); // 30 seconds
-  }
+  private setupSocketListeners(): void {
+    if (!this.socket) {
+      console.error('[WebSocket] Cannot setup listeners: socket is null');
+      return;
+    }
 
-  /**
-   * Handle WebSocket message event
-   */
-  private onMessage(event: MessageEvent): void {
-    try {
-      const message: WebSocketMessage = JSON.parse(event.data);
-      console.log('WebSocket: Received message', message);
+    console.log('[WebSocket] Setting up socket event listeners...');
+
+    // Send a test ping every 30 seconds to verify connection
+    const pingInterval = setInterval(() => {
+      if (this.socket?.connected) {
+        console.log('[WebSocket] Sending ping to verify connection...');
+        this.socket.emit('ping', (response: any) => {
+          console.log('[WebSocket] Received ping response:', response);
+        });
+      }
+    }, 30000);
+
+    // Handle connection events
+    this.socket.on(WebSocketEventType.CONNECT, () => {
+      console.log('[WebSocket] ✅ Successfully connected to WebSocket server with ID:', this.socket?.id);
+      this.reconnectAttempts = 0;
+      
+      // Log socket handshake details
+      console.log('[WebSocket] Connection details:', {
+        transport: this.socket?.io?.engine?.transport?.name,
+        id: this.socket?.id,
+      });
+      
+      // Rejoin rooms on reconnection
+      if (this.reconnecting) {
+        console.log('[WebSocket] Reconnected after disconnection, rejoining rooms...');
+        this.rejoinRooms();
+        this.reconnecting = false;
+      }
       
       // Notify listeners
-      if (message.type) {
-        this.notifyEventListeners(message.type, message.data || message);
+      this.notifyEventListeners(WebSocketEventType.CONNECT, { connected: true });
+    });
+
+    this.socket.on(WebSocketEventType.DISCONNECT, (reason) => {
+      console.log(`[WebSocket] ❌ Disconnected from WebSocket server: ${reason}`);
+      this.reconnecting = true;
+      
+      // Clean up the ping interval on disconnect
+      clearInterval(pingInterval);
+      
+      // Try to reconnect if not explicitly disconnected
+      if (reason === 'io server disconnect') {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          
+          // Attempt to reconnect after delay
+          this.reconnectTimeout = setTimeout(() => {
+            console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+            this.socket?.connect();
+          }, 2000 * this.reconnectAttempts);
+        }
       }
-    } catch (error) {
-      console.error('WebSocket: Error parsing message', error);
-    }
-  }
+      
+      this.notifyEventListeners(WebSocketEventType.DISCONNECT, { reason });
+    });
 
-  /**
-   * Handle WebSocket close event
-   */
-  private onClose(event: CloseEvent): void {
-    console.log(`WebSocket: Connection closed (${event.code}: ${event.reason})`);
-    this.socket = null;
+    this.socket.on(WebSocketEventType.ERROR, (error) => {
+      console.error('WebSocket error:', error);
+      this.notifyEventListeners(WebSocketEventType.ERROR, { error });
+    });
+
+    // Set up event listeners for order events
+    this.socket.on(WebSocketEventType.NEW_ORDER, (data) => {
+      console.log('🟢 New order received from server:', data);
+      console.log('Order details:', JSON.stringify(data, null, 2));
+      this.notifyEventListeners(WebSocketEventType.NEW_ORDER, data);
+    });
+
+    this.socket.on(WebSocketEventType.ORDER_UPDATED, (data) => {
+      console.log('🔵 Order updated:', data);
+      console.log('Updated order details:', JSON.stringify(data, null, 2));
+      this.notifyEventListeners(WebSocketEventType.ORDER_UPDATED, data);
+    });
+
+    this.socket.on(WebSocketEventType.ORDER_CANCELLED, (data) => {
+      console.log('🔴 Order cancelled:', data);
+      console.log('Cancelled order details:', JSON.stringify(data, null, 2));
+      this.notifyEventListeners(WebSocketEventType.ORDER_CANCELLED, data);
+    });
     
-    // Attempt to reconnect
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      console.log(`WebSocket: Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      setTimeout(() => this.connect(), this.reconnectInterval);
-    } else {
-      console.error('WebSocket: Max reconnect attempts reached');
-    }
-  }
-
-  /**
-   * Handle WebSocket error event
-   */
-  private onError(event: Event): void {
-    console.error('WebSocket: Error', event);
+    this.socket.on(WebSocketEventType.ORDER_COMPLETED, (data) => {
+      console.log('✅ Order completed:', data);
+      console.log('Completed order details:', JSON.stringify(data, null, 2));
+      this.notifyEventListeners(WebSocketEventType.ORDER_COMPLETED, data);
+    });
+    
+    this.socket.on(WebSocketEventType.ORDER_ALERT, (data) => {
+      console.log('⚠️ Order alert received:', data);
+      console.log('Alert details:', JSON.stringify(data, null, 2));
+      this.notifyEventListeners(WebSocketEventType.ORDER_ALERT, data);
+    });
+    
+    // Add ping/pong for connection verification
+    setInterval(() => {
+      if (this.socket?.connected) {
+        console.log('Socket connection check: Connected ✓');
+      } else {
+        console.log('Socket connection check: Disconnected ✗');
+        // Try to reconnect if disconnected
+        this.socket?.connect();
+      }
+    }, 10000);
   }
 
   /**
    * Notify all event listeners for a specific event type
    */
-  private notifyEventListeners(eventType: WebSocketEventType | string, data: any): void {
-    const listeners = this.eventListeners.get(eventType) || [];
-    listeners.forEach(listener => {
-      try {
-        listener(data);
-      } catch (error) {
-        console.error(`WebSocket: Error in ${eventType} event listener`, error);
-      }
-    });
+  private notifyEventListeners(event: string, data: any): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in ${event} event listener:`, error);
+        }
+      });
+    }
   }
 }
 
