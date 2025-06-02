@@ -129,25 +129,29 @@ const PasswordSetup: React.FC = () => {
         password
       });
       
-      console.log('Password setup response:', response.status);
+      console.log('Password setup response:', response.status, response.data);
 
-      // Type assertion for the response data
-      const data = response.data as {
-        success: boolean;
-        message?: string;
-      };
-
-      if (data.success) {
+      // Check for successful response (status 200/201 or success in data)
+      if (response.status === 200 || response.status === 201 || (response.data as any)?.success) {
+        console.log('Password setup successful, setting success state');
         setSuccess(true);
-        // Redirect to login after a short delay
+        setError(null);
+        
+        // Redirect to login after a shorter delay
         setTimeout(() => {
+          console.log('Redirecting to login...');
           navigate('/login');
-        }, 3000);
+        }, 2000);
       } else {
-        setError(data.message || 'Failed to set up password. Please try again.');
+        const errorMessage = (response.data as any)?.message || 'Failed to set up password. Please try again.';
+        console.log('Password setup failed:', errorMessage);
+        setError(errorMessage);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred. Please try again.');
+      console.error('Password setup error:', err);
+      const errorMessage = err.response?.data?.message || 'An error occurred. Please try again.';
+      setError(errorMessage);
+      setSuccess(false);
     } finally {
       setIsLoading(false);
     }
@@ -183,10 +187,13 @@ const PasswordSetup: React.FC = () => {
       return (
         <Box textAlign="center" p={3}>
           <Alert severity="success" sx={{ mb: 2 }}>
-            Password successfully set! You will be redirected to the login page.
+            ✅ Password successfully set! You will be redirected to the login page in 2 seconds.
           </Alert>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            If you're not redirected automatically, click the button below:
+          </Typography>
           <Button variant="contained" color="primary" onClick={() => navigate('/login')}>
-            Go to Login
+            Go to Login Now
           </Button>
         </Box>
       );

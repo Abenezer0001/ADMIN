@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios from 'axios';
 import api from '../utils/axiosConfig';
 import { API_BASE_URL } from '../utils/config';
 import { Order, OrderStatus, PaymentStatus, OrdersResponse } from '../types/order';
@@ -13,7 +13,7 @@ class OrderService {
   private failedRequests: Array<{
     resolve: (value: any) => void,
     reject: (error: any) => void,
-    config: AxiosRequestConfig
+    config: any
   }> = [];
 
   // Debug method to log API URLs for troubleshooting
@@ -25,7 +25,7 @@ class OrderService {
   }
 
   // Central handler for authentication errors
-  private async handleAuthError(error: AxiosError, originalRequest: AxiosRequestConfig): Promise<any> {
+  private async handleAuthError(error: any, originalRequest: any): Promise<any> {
     // Check if the error is a 401 Unauthorized
     if (error.response && error.response.status === 401) {
       console.warn('Authentication error detected: 401 Unauthorized');
@@ -211,10 +211,10 @@ class OrderService {
     method: string, 
     url: string, 
     data?: any, 
-    config: AxiosRequestConfig = {}
+    config: any = {}
   ): Promise<T> {
     try {
-      let response: AxiosResponse;
+      let response: any;
       
       // Remove baseUrl from url if it's included
       const endpoint = url.startsWith(this.baseUrl) 

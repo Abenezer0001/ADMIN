@@ -357,25 +357,7 @@ function Dashboard() {
               <Box sx={{ width: '100%', height: 4, bgcolor: theme.palette.error.main, mt: 1, borderRadius: 2 }} />
             </Box>
           </Box>
-          <Box sx={{ 
-            bgcolor: theme.palette.background.paper, 
-            borderRadius: 2, 
-            p: 2, 
-            display: 'flex',
-            alignItems: 'center',
-            width: '30%',
-            overflow: 'hidden'
-          }}>
-            <img 
-              src="/api/placeholder/400/320"
-              alt="Dashboard illustration"
-              style={{ 
-                maxHeight: '100%', 
-                maxWidth: '100%', 
-                objectFit: 'contain'
-              }}
-            />
-          </Box>
+
         </Box>
             {/* Quick Links Section */}
             <Grid item xs={12}>
@@ -665,7 +647,7 @@ function Dashboard() {
           </Grid>
           
           {/* Device Type */}
-          <Grid item xs={12} md={4}>
+          {/* <Grid item xs={12} md={4}>
             <Paper
               sx={{ 
                 bgcolor: theme.palette.background.paper, 
@@ -718,10 +700,10 @@ function Dashboard() {
                 ))}
               </Box>
             </Paper>
-          </Grid>
+          </Grid> */}
           
           {/* Total Clicks */}
-          <Grid item xs={12} md={4}>
+          {/* <Grid item xs={12} md={4}>
             <Paper
               sx={{ 
                 bgcolor: theme.palette.background.paper, 
@@ -759,10 +741,10 @@ function Dashboard() {
                 </Typography>
               </Box>
             </Paper>
-          </Grid>
+          </Grid> */}
           
           {/* Total Views */}
-          <Grid item xs={12} md={4}>
+          {/* <Grid item xs={12} md={4}>
             <Paper
               sx={{ 
                 bgcolor: theme.palette.background.paper, 
@@ -802,7 +784,7 @@ function Dashboard() {
                 </Typography>
               </Box>
             </Paper>
-          </Grid>
+          </Grid> */}
           
           {/* Total Accounts */}
           <Grid item xs={12}>
