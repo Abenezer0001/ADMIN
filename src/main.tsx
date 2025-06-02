@@ -1,6 +1,3 @@
-// Import our temporary environment configuration first
-import './tempEnvConfig';
-
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

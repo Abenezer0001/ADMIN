@@ -59,9 +59,12 @@ class WebSocketService {
     console.log(`[WebSocket] Connecting to ${SOCKET_URL}`);
     console.log('[WebSocket] Restaurant ID for WebSocket:', restaurantId);
     
-    // Store the socket URL for debugging
-    const actualSocketUrl = SOCKET_URL || 'http://localhost:3001';
-    console.log('[WebSocket] Actual socket URL used:', actualSocketUrl);
+    // Validate socket URL is configured
+    if (!SOCKET_URL) {
+      throw new Error('SOCKET_URL must be configured in environment variables');
+    }
+    
+    console.log('[WebSocket] Socket URL used:', SOCKET_URL);
     console.log('[WebSocket] Connection options: withCredentials=true, transports=[websocket,polling]');
     
     // Close any existing socket before creating a new one
@@ -72,7 +75,7 @@ class WebSocketService {
     }
     
     try {
-      this.socket = io(actualSocketUrl, {
+      this.socket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

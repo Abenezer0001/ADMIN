@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../../utils/config';
 import {
   Box, Typography, Paper, Grid, Chip, Button, IconButton, CircularProgress, List, ListItem, ListItemText
 } from '@mui/material';
@@ -52,7 +53,7 @@ const MenuItemDetail: React.FC = () => {
       try {
         console.log(`Fetching menu item with ID: ${menuItemId}`);
         // Adjust URL as needed
-        const response = await axios.get<MenuItem>(`http://localhost:3000/api/menu-items/${menuItemId}`);
+        const response = await axios.get<MenuItem>(`${API_BASE_URL}/menu-items/${menuItemId}`);
         console.log("API Response Data:", response.data);
         setMenuItem(response.data);
       } catch (err) {
