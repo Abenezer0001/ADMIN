@@ -2,11 +2,15 @@ import React from 'react';
 const { Suspense, lazy } = React;
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
+import { PermissionProvider } from './context/PermissionContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Import the PasswordSetup component
 import PasswordSetup from './pages/PasswordSetup';
 
-// Lazy load components
+// Import ResourceDashboard
+const ResourceDashboard = lazy(() => import('./pages/ResourceDashboard'));
+
 // Lazy load components
 // User Management Components
 const UserList = lazy(() => import('./components/users/UserList'));
@@ -105,6 +109,9 @@ const MenuList = lazy(() => import('./components/menus/MenuList'));
 const MenuDetail = lazy(() => import('./components/menus/MenuDetail'));
 const MenuForm = lazy(() => import('./components/menus/MenuForm'));
 
+// Business Management
+const BusinessList = lazy(() => import('./components/business/BusinessList'));
+const BusinessDashboard = lazy(() => import('./components/business/BusinessDashboard'));
 
 const LoadingScreen = () => (
   <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -114,149 +121,491 @@ const LoadingScreen = () => (
 
 const AppRoutes = () => {
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <Routes>
-        {/* Default route */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
-        {/* Authentication Routes */}
-        <Route path="/password-setup" element={<PasswordSetup />} />
+    <PermissionProvider>
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          {/* Default route */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Authentication Routes */}
+          <Route path="/password-setup" element={<PasswordSetup />} />
 
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/sales" element={<Sales />} />
+          {/* Dashboard */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Resource Management Dashboard */}
+          <Route path="/resources" element={
+            <ProtectedRoute>
+              <ResourceDashboard />
+            </ProtectedRoute>
+          } />
 
-        {/* Admin Management */}
-        <Route path="/settings/admins" element={<AdminManagement />} />
+          {/* Analytics */}
+          <Route path="/analytics" element={
+            <ProtectedRoute resource="analytics" action="read">
+              <Analytics />
+            </ProtectedRoute>
+          } />
+          <Route path="/sales" element={
+            <ProtectedRoute resource="analytics" action="read">
+              <Sales />
+            </ProtectedRoute>
+          } />
 
-        {/* RBAC Dashboard */}
-        <Route path="/settings/rbac" element={<RbacDashboard />} />
+          {/* Admin Management */}
+          <Route path="/settings/admins" element={
+            <ProtectedRoute resource="user" action="read">
+              <AdminManagement />
+            </ProtectedRoute>
+          } />
 
-        {/* Restaurants */}
-        {/* <Route path="/restaurants" element={<RestaurantsPage />} /> */}
-        <Route path="/restaurants/add" element={<AddRestaurant />} />
-        <Route path="/restaurants/add/:id" element={<AddRestaurant />} />
-        <Route path="/restaurants/list" element={<RestaurantList />} />
-        <Route path="/restaurants/detail/:id" element={<RestaurantDetail />} />
-        {/* Zones */}
-        <Route path="/zones/list" element={<ZoneList />} />
-        <Route path="/zones/add" element={<ZoneForm />} />
-        <Route path="/zones/add/:venueId/:id" element={<ZoneForm />} />
-        <Route path="/zones/:id" element={<ZoneSettings />} />
-        <Route path="/zones/detail/:id" element={<ZoneDetail />} />
+          {/* RBAC Dashboard */}
+          <Route path="/settings/rbac" element={
+            <ProtectedRoute resource="settings" action="read">
+              <RbacDashboard />
+            </ProtectedRoute>
+          } />
 
-        {/* Tables */}
-        <Route path="/tables/list" element={<TableList />} />
-        <Route path="/tables/new" element={<TableForm title="Add New Table" />} />
-        <Route path="/tables/edit/:id" element={<TableForm title="Edit Table" />} />
-        <Route path="/tables/detail/:id" element={<TableDetail />} />
-        <Route path="/tables/:id" element={<TableDetail />} />
+          {/* Business Management */}
+          <Route path="/business/dashboard" element={
+            <ProtectedRoute resource="business" action="read">
+              <BusinessDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/business/list" element={
+            <ProtectedRoute resource="business" action="read">
+              <BusinessList />
+            </ProtectedRoute>
+          } />
+          <Route path="/business/detail/:businessId" element={
+            <ProtectedRoute resource="business" action="read">
+              <BusinessDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/businesses/:businessId/edit" element={
+            <ProtectedRoute resource="business" action="update">
+              <BusinessDashboard />
+            </ProtectedRoute>
+          } />
 
+          {/* Restaurants */}
+          {/* <Route path="/restaurants" element={<RestaurantsPage />} /> */}
+          <Route path="/restaurants/add" element={
+            <ProtectedRoute resource="restaurant" action="create">
+              <AddRestaurant />
+            </ProtectedRoute>
+          } />
+          <Route path="/restaurants/add/:id" element={
+            <ProtectedRoute resource="restaurant" action="update">
+              <AddRestaurant />
+            </ProtectedRoute>
+          } />
+          <Route path="/restaurants/list" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <RestaurantList />
+            </ProtectedRoute>
+          } />
+          <Route path="/restaurants/detail/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <RestaurantDetail />
+            </ProtectedRoute>
+          } />
+          
+          {/* Zones */}
+          <Route path="/zones/list" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <ZoneList />
+            </ProtectedRoute>
+          } />
+          <Route path="/zones/add" element={
+            <ProtectedRoute resource="restaurant" action="create">
+              <ZoneForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/zones/add/:venueId/:id" element={
+            <ProtectedRoute resource="restaurant" action="update">
+              <ZoneForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/zones/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <ZoneSettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/zones/detail/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <ZoneDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Venues */}
-        <Route path="/venues/list" element={<VenueList />} />
-        <Route path="/venues/add" element={<VenueForm />} />
-        <Route path="/venues/add/:id" element={<VenueForm />} />
-        <Route path="/venues/detail/:id" element={<VenueDetail />} />
-        <Route path="/venues/settings/:id" element={<VenueSettings />} />
+          {/* Tables */}
+          <Route path="/tables/list" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <TableList />
+            </ProtectedRoute>
+          } />
+          <Route path="/tables/new" element={
+            <ProtectedRoute resource="restaurant" action="create">
+              <TableForm title="Add New Table" />
+            </ProtectedRoute>
+          } />
+          <Route path="/tables/edit/:id" element={
+            <ProtectedRoute resource="restaurant" action="update">
+              <TableForm title="Edit Table" />
+            </ProtectedRoute>
+          } />
+          <Route path="/tables/detail/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <TableDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/tables/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <TableDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Analytics Routes */}
-        <Route path="/analytics/customer-insight" element={<CustomerInsight />} />
-        <Route path="/analytics/menu-report" element={<MenuReport />} />
-        <Route path="/analytics/order-performance" element={<OrderPerformance />} />
+          {/* Venues */}
+          <Route path="/venues/list" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <VenueList />
+            </ProtectedRoute>
+          } />
+          <Route path="/venues/add" element={
+            <ProtectedRoute resource="restaurant" action="create">
+              <VenueForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/venues/add/:id" element={
+            <ProtectedRoute resource="restaurant" action="update">
+              <VenueForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/venues/detail/:id" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <VenueDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/venues/settings/:id" element={
+            <ProtectedRoute resource="restaurant" action="update">
+              <VenueSettings />
+            </ProtectedRoute>
+          } />
 
-        {/* Live Orders */}
-        
-        
+          {/* Analytics Routes */}
+          <Route path="/analytics/customer-insight" element={
+            <ProtectedRoute resource="analytics" action="read">
+              <CustomerInsight />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics/menu-report" element={
+            <ProtectedRoute resource="analytics" action="read">
+              <MenuReport />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics/order-performance" element={
+            <ProtectedRoute resource="analytics" action="read">
+              <OrderPerformance />
+            </ProtectedRoute>
+          } />
 
-        {/* Menu Management */}
-        <Route path="/items" element={<Items />} />
-        <Route path="/modifiers" element={<Modifiers />} />
-        <Route path="/menus" element={<MenusByRestaurant />} />
-        <Route path="/menu/items" element={<MenuItemsList />} />
-        <Route path="/menu/items/new" element={<MenuItems />} />
-        <Route path="/menu/items/edit/:id" element={<MenuItems />} /> {/* Changed path for clarity */}
-        <Route path="/menu-items/detail/:id" element={<MenuItemDetail />} /> {/* Added detail route */}
-        <Route path="/menu/modifiers" element={<ModifierGroups />} />
-        <Route path="/menu/modifiers/:id" element={<ModifierGroupEdit />} />
-        <Route path="/menu/modifiers/new" element={<ModifierGroupEdit />} />
+          {/* Menu Management */}
+          <Route path="/items" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <Items />
+            </ProtectedRoute>
+          } />
+          <Route path="/modifiers" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <Modifiers />
+            </ProtectedRoute>
+          } />
+          <Route path="/menus" element={
+            <ProtectedRoute resource="menu" action="read">
+              <MenusByRestaurant />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/items" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <MenuItemsList />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/items/new" element={
+            <ProtectedRoute resource="menuitem" action="create">
+              <MenuItems />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/items/edit/:id" element={
+            <ProtectedRoute resource="menuitem" action="update">
+              <MenuItems />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu-items/detail/:id" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <MenuItemDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/modifiers" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <ModifierGroups />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/modifiers/:id" element={
+            <ProtectedRoute resource="menuitem" action="update">
+              <ModifierGroupEdit />
+            </ProtectedRoute>
+          } />
+          <Route path="/menu/modifiers/new" element={
+            <ProtectedRoute resource="menuitem" action="create">
+              <ModifierGroupEdit />
+            </ProtectedRoute>
+          } />
 
-        {/* Menus */}
-        <Route path="/menus/list" element={<MenuList />} />
-        <Route path="/menus/add" element={<MenuForm title="Add New Menu" />} />
-        <Route path="/menus/edit/:id" element={<MenuForm title="Edit Menu" />} />
-        <Route path="/menus/detail/:id" element={<MenuDetail />} />
+          {/* Menus */}
+          <Route path="/menus/list" element={
+            <ProtectedRoute resource="menu" action="read">
+              <MenuList />
+            </ProtectedRoute>
+          } />
+          <Route path="/menus/add" element={
+            <ProtectedRoute resource="menu" action="create">
+              <MenuForm title="Add New Menu" />
+            </ProtectedRoute>
+          } />
+          <Route path="/menus/edit/:id" element={
+            <ProtectedRoute resource="menu" action="update">
+              <MenuForm title="Edit Menu" />
+            </ProtectedRoute>
+          } />
+          <Route path="/menus/detail/:id" element={
+            <ProtectedRoute resource="menu" action="read">
+              <MenuDetail />
+            </ProtectedRoute>
+          } />
 
+          {/* Orders */}
+          <Route path="/schedule" element={
+            <ProtectedRoute resource="order" action="read">
+              <Schedule />
+            </ProtectedRoute>
+          } />
+          <Route path="/tables" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <Tables />
+            </ProtectedRoute>
+          } />
 
-        {/* Orders */}
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/tables" element={<Tables />} />
+          {/* Invoices */}
+          <Route path="/invoices" element={
+            <ProtectedRoute resource="order" action="read">
+              <Invoices />
+            </ProtectedRoute>
+          } />
+          <Route path="/invoices/:id" element={
+            <ProtectedRoute resource="order" action="read">
+              <InvoicesDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Tables Routes */}
-        {/* <Route path="/tables/*" element={<TablesPage />} /> */}
+          {/* Modifiers */}
+          <Route path="/modifiers" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <ModifierList />
+            </ProtectedRoute>
+          } />
+          <Route path="/modifiers/add" element={
+            <ProtectedRoute resource="menuitem" action="create">
+              <ModifierForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/modifiers/edit/:id" element={
+            <ProtectedRoute resource="menuitem" action="update">
+              <ModifierForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/modifiers/detail/:id" element={
+            <ProtectedRoute resource="menuitem" action="read">
+              <ModifierDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* New Routes */}
-        {/* <Route path="/users/manage" element={<UserManagement />} /> */}
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/invoices/:id" element={<InvoicesDetail />} />
+          {/* Categories */}
+          <Route path="/categories" element={
+            <ProtectedRoute resource="category" action="read">
+              <CategoryList />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories/add" element={
+            <ProtectedRoute resource="category" action="create">
+              <CategoryForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories/edit/:id" element={
+            <ProtectedRoute resource="category" action="update">
+              <CategoryForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories/detail/:id" element={
+            <ProtectedRoute resource="category" action="read">
+              <CategoryDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Modifiers */}
-        <Route path="/modifiers" element={<ModifierList />} />
-        <Route path="/modifiers/add" element={<ModifierForm />} />
-        <Route path="/modifiers/edit/:id" element={<ModifierForm />} />
-        <Route path="/modifiers/detail/:id" element={<ModifierDetail />} />
+          {/* SubCategories */}
+          <Route path="/subcategories/list" element={
+            <ProtectedRoute resource="category" action="read">
+              <SubCategoryList />
+            </ProtectedRoute>
+          } />
+          <Route path="/subcategories/add" element={
+            <ProtectedRoute resource="category" action="create">
+              <SubCategoryForm title="Add New Sub-Category" />
+            </ProtectedRoute>
+          } />
+          <Route path="/subcategories/edit/:id" element={
+            <ProtectedRoute resource="category" action="update">
+              <SubCategoryForm title="Edit Sub-Category" />
+            </ProtectedRoute>
+          } />
+          <Route path="/subcategories/detail/:id" element={
+            <ProtectedRoute resource="category" action="read">
+              <SubCategoryDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Categories */}
-        <Route path="/categories" element={<CategoryList />} />
-        <Route path="/categories/add" element={<CategoryForm />} />
-        <Route path="/categories/edit/:id" element={<CategoryForm />} />
-        <Route path="/categories/detail/:id" element={<CategoryDetail />} />
+          {/* SubSubCategories */}
+          <Route path="/subsubcategories/list" element={
+            <ProtectedRoute resource="category" action="read">
+              <SubSubCategoryList />
+            </ProtectedRoute>
+          } />
+          <Route path="/subsubcategories/add" element={
+            <ProtectedRoute resource="category" action="create">
+              <SubSubCategoryForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/subsubcategories/edit/:id" element={
+            <ProtectedRoute resource="category" action="update">
+              <SubSubCategoryForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/subsubcategories/detail/:id" element={
+            <ProtectedRoute resource="category" action="read">
+              <SubSubCategoryDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* SubCategories */}
-        <Route path="/subcategories/list" element={<SubCategoryList />} />
-        <Route path="/subcategories/add" element={<SubCategoryForm title="Add New Sub-Category" />} />
-        <Route path="/subcategories/edit/:id" element={<SubCategoryForm title="Edit Sub-Category" />} />
-        <Route path="/subcategories/detail/:id" element={<SubCategoryDetail />} />
+          {/* Settings */}
+          <Route path="/settings/preferences" element={
+            <ProtectedRoute resource="settings" action="read">
+              <Preferences />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/change-password" element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/sidebar" element={
+            <ProtectedRoute>
+              <SidebarSettings />
+            </ProtectedRoute>
+          } />
 
-        {/* SubSubCategories */}
-        <Route path="/subsubcategories/list" element={<SubSubCategoryList />} />
-        <Route path="/subsubcategories/add" element={<SubSubCategoryForm />} />
-        <Route path="/subsubcategories/edit/:id" element={<SubSubCategoryForm />} />
-        <Route path="/subsubcategories/detail/:id" element={<SubSubCategoryDetail />} />
+          {/* Setting & Administration */}
+          <Route path="/settings/system" element={
+            <ProtectedRoute resource="settings" action="update">
+              <SystemSettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/integration" element={
+            <ProtectedRoute resource="settings" action="update">
+              <Integration />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/access-control" element={
+            <ProtectedRoute resource="settings" action="update">
+              <AccessControl />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/loyalty" element={
+            <ProtectedRoute resource="settings" action="update">
+              <LoyaltySettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          } />
 
-        {/* Settings */}
-        <Route path="/settings/preferences" element={<Preferences />} />
-        <Route path="/settings/profile" element={<Profile />} />
-        <Route path="/settings/change-password" element={<ChangePassword />} />
-        <Route path="/settings/sidebar" element={<SidebarSettings />} />
+          {/* Customer and Inventory */}
+          <Route path="/customers" element={
+            <ProtectedRoute resource="user" action="read">
+              <Customers />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <Inventory />
+            </ProtectedRoute>
+          } />
+          
+          {/* Orders */}
+          <Route path="/orders/history" element={
+            <ProtectedRoute resource="order" action="read">
+              <OrderHistory />
+            </ProtectedRoute>
+          } />
+          <Route path="/orders/live" element={
+            <ProtectedRoute resource="order" action="read">
+              <LiveOrders />
+            </ProtectedRoute>
+          } />
+          <Route path="/orders/history/:id" element={
+            <ProtectedRoute resource="order" action="read">
+              <OrderDetail />
+            </ProtectedRoute>
+          } />
 
-        {/* Setting & Administration */}
-        <Route path="/settings/system" element={<SystemSettings />} />
-        <Route path="/settings/integration" element={<Integration />} />
-        <Route path="/settings/access-control" element={<AccessControl />} />
-        <Route path="/settings/loyalty" element={<LoyaltySettings />} />
-        <Route path="/settings/notifications" element={<Notifications />} />
-
-        {/*  */}
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/inventory" element={<Inventory />} />
-        
-        
-        
-<Route path="/orders/history" element={<OrderHistory />} />
-<Route path="/orders/live" element={<LiveOrders />} />
-<Route path="/orders/history/:id" element={<OrderDetail/>} />
-
-        {/* User Management */}
-        <Route path="/users" element={<UserList />} />
-        <Route path="/users/new" element={<UserForm />} />
-        <Route path="/users/edit/:id" element={<UserForm />} />
-        <Route path="/users/:id" element={<UserDetail />} />
-        <Route path="/users/roles/:id" element={<UserDetail />} /> {/* Redirects to user detail with roles tab active */}
-     
-      </Routes>
-    </Suspense>
+          {/* User Management */}
+          <Route path="/users" element={
+            <ProtectedRoute resource="user" action="read">
+              <UserList />
+            </ProtectedRoute>
+          } />
+          <Route path="/users/new" element={
+            <ProtectedRoute resource="user" action="create">
+              <UserForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/users/edit/:id" element={
+            <ProtectedRoute resource="user" action="update">
+              <UserForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/users/:id" element={
+            <ProtectedRoute resource="user" action="read">
+              <UserDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/users/roles/:id" element={
+            <ProtectedRoute resource="user" action="read">
+              <UserDetail />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Suspense>
+    </PermissionProvider>
   );
 };
 

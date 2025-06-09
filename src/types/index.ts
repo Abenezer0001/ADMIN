@@ -35,3 +35,6 @@ export interface Order {
   total: number;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
 }
+
+// Export business types
+export * from './business';

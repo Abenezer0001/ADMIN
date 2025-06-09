@@ -31,6 +31,7 @@ interface AdminFormData {
   email: string;
   firstName: string;
   lastName: string;
+  role?: string;
 }
 
 interface SnackbarState {
@@ -47,8 +48,10 @@ const AdminManagement: React.FC = () => {
   const [formData, setFormData] = useState<AdminFormData>({
     email: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    role: 'restaurant_admin'
   });
+  const [roles, setRoles] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({
     email: '',
     firstName: '',
@@ -60,10 +63,36 @@ const AdminManagement: React.FC = () => {
     severity: 'success'
   });
 
-  // Fetch admins on component mount
+  // Fetch admins and available roles on component mount
   useEffect(() => {
     fetchAdmins();
+    fetchAvailableRoles();
   }, []);
+  
+  const fetchAvailableRoles = async () => {
+    try {
+      const availableRoles = await AdminService.getAvailableRoles();
+      if (availableRoles.length > 0) {
+        setRoles(availableRoles);
+        // Set default role to first available role
+        setFormData((prev: AdminFormData) => ({
+          ...prev,
+          role: availableRoles[0]
+        }));
+      } else {
+        // Fallback if no roles available
+        const userRole = localStorage.getItem('userRole');
+        const defaultRoles = userRole === 'system_admin' 
+          ? ['system_admin', 'restaurant_admin'] 
+          : ['restaurant_admin'];
+        setRoles(defaultRoles);
+      }
+    } catch (error) {
+      console.error('Failed to fetch available roles:', error);
+      // Fallback to default roles
+      setRoles(['restaurant_admin']);
+    }
+  };
 
   const fetchAdmins = async () => {
     setLoading(true);
@@ -103,26 +132,30 @@ const AdminManagement: React.FC = () => {
     setFormData({
       email: '',
       firstName: '',
-      lastName: ''
+      lastName: '',
+      role: 'restaurant_admin'
     });
     setFormErrors({
       email: '',
       firstName: '',
-      lastName: ''
+      lastName: '',
+      role: ''
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    if (name) {
+      setFormData({
+        ...formData,
+        [name as string]: value
+      });
+    }
     // Clear error when user types
-    if (formErrors[name]) {
+    if (name && formErrors[name as string]) {
       setFormErrors({
         ...formErrors,
-        [name]: ''
+        [name as string]: ''
       });
     }
   };
@@ -268,8 +301,8 @@ const AdminManagement: React.FC = () => {
       size: 120,
       accessorFn: (row) => {
         const totalPermissions = [
-          ...(row.permissions || []),
-          ...(row.directPermissions || [])
+          ...(row.roles || []),
+          ...(row.roles || [])
         ].length;
         return totalPermissions;
       },
@@ -332,8 +365,6 @@ const AdminManagement: React.FC = () => {
           </Box>
         )}
       </Box>
-
-      {/* Add Admin Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Add New Administrator</DialogTitle>
         <DialogContent>
@@ -369,6 +400,25 @@ const AdminManagement: React.FC = () => {
               error={!!formErrors.lastName}
               helperText={formErrors.lastName}
             />
+            <TextField
+              select
+              fullWidth
+              margin="normal"
+              label="Role"
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              SelectProps={{
+                native: true,
+              }}
+              helperText="Select admin role"
+            >
+              {roles.map((role: string) => (
+                <option key={role} value={role}>
+                  {role === 'system_admin' ? 'System Admin' : 'Restaurant Admin'}
+                </option>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>

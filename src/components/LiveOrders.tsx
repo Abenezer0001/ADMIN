@@ -308,27 +308,18 @@ const LiveOrders: React.FC = () => {
     try {
       console.log(`Fetching orders for restaurant: ${selectedRestaurantId}`);
       
-      // Get orders without date filtering to avoid timezone issues
-      // We can filter client-side if needed
+      // Get all orders for the restaurant - removing the date filter
       const response = await OrderService.getAllOrders({
         restaurantId: selectedRestaurantId
       });
       
       if (response && response.data) {
-        // Filter to today's orders client-side
-        const today = new Date();
-        const todayOrders = (response.data as OrderWithMeta[]).filter((order: OrderWithMeta) => {
-          if (!order.createdAt) return false;
-          const orderDate = new Date(order.createdAt);
-          return orderDate.toDateString() === today.toDateString();
-        });
-        
-        // Sort orders by creation date (newest first)
-        const sortedOrders = todayOrders.sort((a, b) => 
+        // Sort orders by creation date (newest first) without filtering by date
+        const sortedOrders = (response.data as OrderWithMeta[]).sort((a, b) => 
           new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
         
-        console.log(`Fetched ${sortedOrders.length} orders from today out of ${response.data.length} total orders`);
+        console.log(`Fetched ${sortedOrders.length} total orders for the restaurant`);
         setOrders(sortedOrders);
         resetNewOrdersCount(); // Reset counter after fetching
       } else {
@@ -405,7 +396,7 @@ const LiveOrders: React.FC = () => {
       }
       
       notification.success({ 
-        message: `Order status updated to ${getStatusDisplayName(status)}`
+        message: `Order status updated to ${getStatusDisplayName(status)}` 
       });
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -418,24 +409,24 @@ const LiveOrders: React.FC = () => {
   // OrderCard component for displaying individual orders
   const OrderCard: React.FC<{ order: OrderWithMeta }> = ({ order }: { order: OrderWithMeta }) => {
     const getCardBorderColor = (status: string): string => {
-      switch (status) {
-        case OrderStatus.PENDING:
+    switch (status) {
+      case OrderStatus.PENDING:
           return '#faad14'; // orange
-        case OrderStatus.PREPARING:
+      case OrderStatus.PREPARING:
           return '#1890ff'; // blue
-        case OrderStatus.READY:
+      case OrderStatus.READY:
           return '#52c41a'; // green
-        case OrderStatus.DELIVERED:
+      case OrderStatus.DELIVERED:
           return '#52c41a'; // green
-        case OrderStatus.COMPLETED:
+      case OrderStatus.COMPLETED:
           return '#8c8c8c'; // gray
-        case OrderStatus.CANCELLED:
+      case OrderStatus.CANCELLED:
           return '#ff4d4f'; // red
-        default:
+      default:
           return '#d9d9d9'; // default gray
-      }
-    };
-
+    }
+  };
+    
     return (
       <Card
         hoverable
@@ -561,9 +552,9 @@ const LiveOrders: React.FC = () => {
           flexWrap: 'wrap',
           marginTop: 'auto'
         }}>
-          <Button 
+        <Button 
             type="text" 
-            icon={<InfoCircleOutlined />}
+          icon={<InfoCircleOutlined />}
             onClick={(e: React.MouseEvent<HTMLElement>) => {
               e.stopPropagation();
               showOrderDetails(order);
@@ -573,48 +564,48 @@ const LiveOrders: React.FC = () => {
               fontSize: '12px',
               height: '32px'
             }}
-          >
-            Details
-          </Button>
-          {order.status === OrderStatus.PENDING && (
-            <Button 
-              type="primary" 
-              size="small"
+        >
+          Details
+        </Button>
+        {order.status === OrderStatus.PENDING && (
+          <Button 
+            type="primary" 
+            size="small" 
               onClick={(e: React.MouseEvent<HTMLElement>) => {
                 e.stopPropagation();
                 updateOrderStatus(order._id, OrderStatus.PREPARING);
               }}
               style={{ height: '32px' }}
-            >
-              Accept
-            </Button>
-          )}
-          {order.status === OrderStatus.PREPARING && (
-            <Button 
-              type="primary" 
-              size="small"
+          >
+            Accept
+          </Button>
+        )}
+        {order.status === OrderStatus.PREPARING && (
+          <Button 
+            type="primary" 
+            size="small" 
               onClick={(e: React.MouseEvent<HTMLElement>) => {
                 e.stopPropagation();
                 updateOrderStatus(order._id, OrderStatus.READY);
               }}
               style={{ height: '32px' }}
-            >
-              Mark Ready
-            </Button>
-          )}
-          {order.status === OrderStatus.READY && (
-            <Button 
-              type="primary" 
-              size="small"
+          >
+            Mark Ready
+          </Button>
+        )}
+        {order.status === OrderStatus.READY && (
+          <Button 
+            type="primary" 
+            size="small" 
               onClick={(e: React.MouseEvent<HTMLElement>) => {
                 e.stopPropagation();
                 updateOrderStatus(order._id, OrderStatus.DELIVERED);
               }}
               style={{ height: '32px' }}
-            >
-              Complete
-            </Button>
-          )}
+          >
+            Complete
+          </Button>
+        )}
         </div>
       </Card>
     );
@@ -625,7 +616,7 @@ const LiveOrders: React.FC = () => {
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <Title level={2}>
-            Today's Orders
+            Live Orders
             {newOrdersCount > 0 && (
               <Badge count={newOrdersCount} style={{ marginLeft: 10 }} />
             )}
@@ -692,7 +683,7 @@ const LiveOrders: React.FC = () => {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '50px 0' }}>
           <Spin size="large" />
-          <div style={{ marginTop: 16 }}>Loading today's orders...</div>
+          <div style={{ marginTop: 16 }}>Loading orders...</div>
         </div>
       ) : filteredOrders.length === 0 ? (
         <Empty
@@ -700,7 +691,7 @@ const LiveOrders: React.FC = () => {
             searchQuery 
               ? "No orders matching your search" 
               : selectedRestaurantId 
-                ? "No orders today for this restaurant"
+                ? "No orders found for this restaurant"
                 : "Please select a restaurant to view orders"
           }
           image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -741,48 +732,48 @@ const LiveOrders: React.FC = () => {
                   `${range[0]}-${range[1]} of ${total} orders`
                 }
                 pageSizeOptions={['12', '24', '36', '48']}
-              />
-            </div>
+                />
+              </div>
           )}
         </>
       )}
       
       {/* Order Details Drawer */}
       <Drawer
-        title={selectedOrder ? `Order #${selectedOrder.orderNumber} Details` : 'Order Details'}
-        placement="right"
-        onClose={closeOrderDetails}
-        open={orderDetailsVisible}
-        width={500}
-        extra={
-          selectedOrder && selectedOrder.status !== OrderStatus.COMPLETED && selectedOrder.status !== OrderStatus.CANCELLED ? (
-            <Space>
-              <Button 
-                type="primary"
-                onClick={() => {
-                  if (selectedOrder) {
-                    updateOrderStatus(selectedOrder._id, getNextStatus(selectedOrder.status as string));
-                  }
-                }}
-              >
+      title={selectedOrder ? `Order #${selectedOrder.orderNumber} Details` : 'Order Details'}
+      placement="right"
+      onClose={closeOrderDetails}
+      open={orderDetailsVisible}
+      width={500}
+      extra={
+        selectedOrder && selectedOrder.status !== OrderStatus.COMPLETED && selectedOrder.status !== OrderStatus.CANCELLED ? (
+          <Space>
+            <Button 
+              type="primary"
+              onClick={() => {
+                if (selectedOrder) {
+                  updateOrderStatus(selectedOrder._id, getNextStatus(selectedOrder.status as string));
+                }
+              }}
+            >
                 {selectedOrder?.status === OrderStatus.PENDING ? 'Accept Order' : 
-                 selectedOrder?.status === OrderStatus.PREPARING ? 'Mark Ready' :
-                 selectedOrder?.status === OrderStatus.READY ? 'Mark Delivered' :
-                 selectedOrder?.status === OrderStatus.DELIVERED ? 'Complete' : 'Update'}
-              </Button>
-              <Button 
-                danger
-                onClick={() => {
-                  if (selectedOrder) {
-                    updateOrderStatus(selectedOrder._id, OrderStatus.CANCELLED);
-                  }
-                }}
-              >
-                Cancel Order
-              </Button>
-            </Space>
-          ) : null
-        }
+               selectedOrder?.status === OrderStatus.PREPARING ? 'Mark Ready' :
+               selectedOrder?.status === OrderStatus.READY ? 'Mark Delivered' :
+               selectedOrder?.status === OrderStatus.DELIVERED ? 'Complete' : 'Update'}
+            </Button>
+            <Button 
+              danger
+              onClick={() => {
+                if (selectedOrder) {
+                  updateOrderStatus(selectedOrder._id, OrderStatus.CANCELLED);
+                }
+              }}
+            >
+              Cancel Order
+            </Button>
+          </Space>
+        ) : null
+      }
       >
         {selectedOrder && (
           <>

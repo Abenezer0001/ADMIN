@@ -12,6 +12,9 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import CityAutocomplete, { City } from './CityAutocomplete';
+import AddressAutocomplete from './AddressAutocomplete';
+import RestaurantMap from './RestaurantMap';
 
 interface Location {
   address: string;
@@ -40,6 +43,9 @@ function AddRestaurant() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
+  
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -54,7 +60,16 @@ function AddRestaurant() {
       setLoading(true);
       setError(null);
       const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/restaurants/${id}`);
-      setFormData(response.data);
+      const restaurantData = response.data;
+      setFormData(restaurantData);
+      
+      // If we have location data, set up the map
+      if (restaurantData.locations && restaurantData.locations[0]) {
+        const location = restaurantData.locations[0];
+        if (location.coordinates) {
+          setSelectedLocation([location.coordinates.latitude, location.coordinates.longitude]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching restaurant:', error);
       setError('Failed to fetch restaurant details');
@@ -83,24 +98,96 @@ function AddRestaurant() {
     }
   };
 
-  const handleLocationChange = (index: number, field: string, value: string) => {
-    const newLocations = [...formData.locations];
-    if (field === 'address') {
-      newLocations[index].address = value;
-    } else if (field === 'latitude' || field === 'longitude') {
-      newLocations[index].coordinates[field] = parseFloat(value) || 0;
+  const handleCitySelect = (city: City | null) => {
+    setSelectedCity(city);
+    
+    if (city) {
+      // Clear address and location when city changes
+      setFormData(prev => ({
+        ...prev,
+        locations: [{ address: '', coordinates: { latitude: 0, longitude: 0 } }]
+      }));
+      setSelectedLocation(null);
+    } else {
+      // Clear everything if city is cleared
+      setFormData(prev => ({
+        ...prev,
+        locations: [{ address: '', coordinates: { latitude: 0, longitude: 0 } }]
+      }));
+      setSelectedLocation(null);
     }
-    setFormData({ ...formData, locations: newLocations });
   };
 
-  const addLocation = () => {
-    setFormData({
-      ...formData,
-      locations: [
-        ...formData.locations,
-        { address: '', coordinates: { latitude: 0, longitude: 0 } },
-      ],
-    });
+  const handleAddressSelect = (addressData: any) => {
+    if (addressData) {
+      // Update address and coordinates
+      setFormData(prev => ({
+        ...prev,
+        locations: [{
+          address: addressData.displayName,
+          coordinates: {
+            latitude: addressData.lat,
+            longitude: addressData.lon
+          }
+        }]
+      }));
+      setSelectedLocation([addressData.lat, addressData.lon]);
+    } else {
+      // Clear address if selection is cleared
+      setFormData(prev => ({
+        ...prev,
+        locations: [{ address: '', coordinates: { latitude: 0, longitude: 0 } }]
+      }));
+      setSelectedLocation(null);
+    }
+  };
+
+  const handleMapLocationSelect = async (coordinates: [number, number]) => {
+    setSelectedLocation(coordinates);
+    
+    // Perform reverse geocoding to get the address name
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordinates[0]}&lon=${coordinates[1]}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'InseatApp'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const addressName = data.display_name || `${coordinates[0].toFixed(6)}, ${coordinates[1].toFixed(6)}`;
+        
+        // Update form data with the new address and coordinates
+        setFormData(prev => ({
+          ...prev,
+          locations: [{
+            address: addressName,
+            coordinates: {
+              latitude: coordinates[0],
+              longitude: coordinates[1]
+            }
+          }]
+        }));
+      }
+    } catch (error) {
+      console.error('Error in reverse geocoding:', error);
+      // Fall back to coordinates if geocoding fails
+      const formattedCoordinates = `${coordinates[0].toFixed(6)}, ${coordinates[1].toFixed(6)}`;
+      setFormData(prev => ({
+        ...prev,
+        locations: [{
+          address: formattedCoordinates,
+          coordinates: {
+            latitude: coordinates[0],
+            longitude: coordinates[1]
+          }
+        }]
+      }));
+    }
   };
 
   if (loading) {
@@ -136,51 +223,43 @@ function AddRestaurant() {
               />
             </Grid>
 
-            {formData.locations.map((location, index) => (
-              <Grid item xs={12} key={index}>
-                <Typography variant="h6" gutterBottom>
-                  Location {index + 1}
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <TextField
-                      required
-                      fullWidth
-                      label="Address"
-                      value={location.address}
-                      onChange={(e) => handleLocationChange(index, 'address', e.target.value)}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Latitude"
-                      type="number"
-                      value={location.coordinates.latitude}
-                      onChange={(e) => handleLocationChange(index, 'latitude', e.target.value)}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Longitude"
-                      type="number"
-                      value={location.coordinates.longitude}
-                      onChange={(e) => handleLocationChange(index, 'longitude', e.target.value)}
-                    />
-                  </Grid>
-                </Grid>
-              </Grid>
-            ))}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Location Information
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" gutterBottom>
+                City <span style={{ color: 'red' }}>*</span>
+              </Typography>
+              <CityAutocomplete
+                onSelect={handleCitySelect}
+                placeholder="Search for a city"
+                value={selectedCity?.name || ''}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" gutterBottom>
+                Address <span style={{ color: 'red' }}>*</span>
+              </Typography>
+              <AddressAutocomplete
+                selectedCity={selectedCity}
+                onSelect={handleAddressSelect}
+                value={formData.locations[0]?.address || ''}
+                placeholder="Search for an address"
+                disabled={!selectedCity}
+              />
+            </Grid>
 
             <Grid item xs={12}>
-              <Button
-                variant="outlined"
-                onClick={addLocation}
-                fullWidth
-              >
-                Add Location
-              </Button>
+              <RestaurantMap
+                selectedCity={selectedCity}
+                markerPosition={selectedLocation}
+                onLocationSelect={handleMapLocationSelect}
+                isDisabled={!selectedCity}
+              />
             </Grid>
 
             <Grid item xs={12}>

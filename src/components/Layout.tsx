@@ -62,10 +62,13 @@ import {
   People as PeopleIcon,
   Inventory as InventoryIcon,
   Description as DescriptionIcon,
-  Restaurant as RestaurantIcon
+  Restaurant as RestaurantIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
+import { useBusiness } from '../context/BusinessContext';
+import { useRbac } from '../context/RbacContext';
 import LogoutButton from './common/LogoutButton';
 
 const drawerWidth = 290;
@@ -218,6 +221,8 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { isSuperAdmin, isBusinessOwner } = useBusiness();
+  const { checkPermission } = useRbac();
 
   const handleDrawerToggle = () => {
     if (open) {
@@ -281,6 +286,77 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
     setAppsAnchorEl(null);
   };
 
+  // Permission mapping for menu items
+  const getMenuItemPermission = (itemKey: string): { resource: string; action: string } | null => {
+    const permissionMap: Record<string, { resource: string; action: string }> = {
+      'dashboard': { resource: 'dashboard', action: 'read' },
+      'analytics': { resource: 'analytics', action: 'read' },
+      'analytics/menu-report': { resource: 'analytics', action: 'read' },
+      'analytics/order-performance': { resource: 'analytics', action: 'read' },
+      'analytics/customer-insight': { resource: 'analytics', action: 'read' },
+      'sales': { resource: 'analytics', action: 'read' },
+      'business/list': { resource: 'business', action: 'read' },
+      'business/dashboard': { resource: 'business', action: 'read' },
+      'restaurants/list': { resource: 'restaurant', action: 'read' },
+      'venues/list': { resource: 'restaurant', action: 'read' },
+      'tables/list': { resource: 'restaurant', action: 'read' },
+      'zones/list': { resource: 'restaurant', action: 'read' },
+      'categories': { resource: 'category', action: 'read' },
+      'subcategories/list': { resource: 'category', action: 'read' },
+      'subsubcategories/list': { resource: 'category', action: 'read' },
+      'menu/items': { resource: 'menuitem', action: 'read' },
+      'modifiers': { resource: 'menuitem', action: 'read' },
+      'menus/list': { resource: 'menu', action: 'read' },
+      'menu': { resource: 'menu', action: 'read' },
+      'orders': { resource: 'order', action: 'read' },
+      'orders/live': { resource: 'order', action: 'read' },
+      'orders/history': { resource: 'order', action: 'read' },
+      'invoices': { resource: 'order', action: 'read' },
+      'inventory': { resource: 'restaurant', action: 'read' },
+      'customers': { resource: 'user', action: 'read' },
+      'settings/admins': { resource: 'user', action: 'read' },
+      'settings/rbac': { resource: 'user', action: 'read' },
+      'settings/system': { resource: 'settings', action: 'read' },
+      'settings/integration': { resource: 'settings', action: 'read' },
+      'settings/notifications': { resource: 'settings', action: 'read' },
+    };
+    
+    return permissionMap[itemKey] || null;
+  };
+
+  // Check if user can access a menu item
+  const canAccessMenuItem = (itemKey: string): boolean => {
+    // Dashboard is always accessible
+    if (itemKey === 'dashboard') return true;
+    
+    // System admin has access to everything
+    if (isSuperAdmin()) return true;
+    
+    // Restaurant admin (business owner) can access most items including admin management and RBAC
+    if (isBusinessOwner()) {
+      // Restaurant admin can access admin management and RBAC for their business
+      if (itemKey === 'settings/admins' || itemKey === 'settings/rbac') {
+        return true;
+      }
+    }
+    
+    // Special handling for business management
+    if (itemKey === 'business/list') {
+      return isSuperAdmin();
+    }
+    if (itemKey === 'business/dashboard') {
+      return isBusinessOwner() || isSuperAdmin();
+    }
+    
+    // Check specific permissions
+    const permission = getMenuItemPermission(itemKey);
+    if (permission) {
+      return checkPermission(permission.resource, permission.action);
+    }
+    
+    return false;
+  };
+
   const categories: CategoryType[] = [ // Use renamed type
     {
       category: 'Overview',
@@ -319,6 +395,22 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
         },
       ],
     },
+    // Business Management - Only show if user is SuperAdmin or Business Owner
+    ...(isSuperAdmin() || isBusinessOwner() ? [{
+      category: 'Business Management',
+      items: [
+        ...(isSuperAdmin() ? [{
+          key: 'business/list',
+          icon: <BusinessIcon sx={{ fontSize: 24 }} />,
+          label: 'All Businesses',
+        }] : []),
+        ...(isBusinessOwner() ? [{
+          key: 'business/dashboard',
+          icon: <BusinessIcon sx={{ fontSize: 24 }} />,
+          label: 'My Business',
+        }] : []),
+      ],
+    }] : []),
     {
       category: 'Restaurant Management',
       items: [
@@ -817,7 +909,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
               }}>
                 {category.category}
               </Typography>
-              {category.items.map((item, itemIndex) => (
+              {category.items.filter(item => canAccessMenuItem(item.key)).map((item, itemIndex) => (
                 <React.Fragment key={item.key}>
                   <Tooltip key={`tooltip-${item.key}-${itemIndex}`} title={!open ? item.label : ""} placement="right" arrow>
                     <ListItemButton
@@ -835,7 +927,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                         {item.icon}
                       </StyledListItemIcon>
                       <ListItemText primary={item.label} sx={{ opacity: open ? 1 : 0 }} />
-                      {item.children && (
+                      {item.children && item.children.filter(child => canAccessMenuItem(child.key)).length > 0 && (
                         <Box className="arrow-icon">
                           {expandedMenus[item.key] ? <ExpandLess /> : <ExpandMore />}
                         </Box>
@@ -845,7 +937,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                   {item.children && (
                     <Collapse in={open && expandedMenus[item.key]} timeout="auto" unmountOnExit>
                       <List component="div" disablePadding>
-                        {item.children.map((child, childIndex) => (
+                        {item.children.filter(child => canAccessMenuItem(child.key)).map((child, childIndex) => (
                           <Tooltip key={`tooltip-${child.key}-${childIndex}`} title={!open ? child.label : ""} placement="right" arrow>
                             <ListItemButton
                               key={`item-${child.key}-${childIndex}`}
