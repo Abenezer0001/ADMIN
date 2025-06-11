@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Box, 
   Typography, 
@@ -19,13 +19,13 @@ import AddIcon from '@mui/icons-material/Add';
 import AdminService, { AdminUser } from '../../services/AdminService';
 import DataTable from '../common/DataTable';
 import { MRT_ColumnDef } from 'material-react-table';
+import { useAuth } from '../../context/AuthContext';
+import { useBusiness } from '../../context/BusinessContext';
 
 interface AdminListResponse {
   message: string;
   admins: AdminUser[];
 }
-
-
 
 interface AdminFormData {
   email: string;
@@ -41,72 +41,133 @@ interface SnackbarState {
 }
 
 const AdminManagement: React.FC = () => {
+  const { user } = useAuth();
+  const { currentBusiness } = useBusiness();
+  
   // State
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [formData, setFormData] = useState<AdminFormData>({
+  const [admins, setAdmins] = React.useState<AdminUser[]>([]);
+  const [businessUsers, setBusinessUsers] = React.useState<AdminUser[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [formData, setFormData] = React.useState<AdminFormData>({
     email: '',
     firstName: '',
     lastName: '',
     role: 'restaurant_admin'
   });
-  const [roles, setRoles] = useState<string[]>([]);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({
+  const [roles, setRoles] = React.useState<string[]>([]);
+  const [formErrors, setFormErrors] = React.useState<Record<string, string>>({
     email: '',
     firstName: '',
     lastName: ''
   });
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
+  const [snackbar, setSnackbar] = React.useState<SnackbarState>({
     open: false,
     message: '',
     severity: 'success'
   });
 
+  // Check if user is system admin
+  const isSystemAdmin = user?.role === 'system_admin' || user?.roles?.some((role: any) => 
+    typeof role === 'string' ? role === 'system_admin' : role.name === 'system_admin'
+  );
+
   // Fetch admins and available roles on component mount
-  useEffect(() => {
-    fetchAdmins();
-    fetchAvailableRoles();
-  }, []);
-  
+  React.useEffect(() => {
+    if (isSystemAdmin) {
+      fetchAdmins();
+      fetchAvailableRoles();
+    } else {
+      // For restaurant admins, fetch business users
+      fetchBusinessUsers();
+      fetchAvailableRoles();
+    }
+  }, [isSystemAdmin, currentBusiness]);
+
+  const fetchBusinessUsers = async () => {
+    if (!currentBusiness?._id) {
+      console.log('No current business found for fetching users');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // For now, show current user info since getBusinessUsers doesn't exist yet
+      // TODO: Implement getBusinessUsers in AdminService
+      setBusinessUsers([{
+        _id: user?._id || '',
+        email: user?.email || '',
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        role: user?.role || 'restaurant_admin',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        roles: user?.roles || []
+      }]);
+      
+      setSnackbar({
+        open: true,
+        message: 'Showing your account information. Full business user management is coming soon.',
+        severity: 'info'
+      });
+    } catch (error) {
+      console.error('Failed to fetch business users:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load business users.',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchAvailableRoles = async () => {
     try {
-      const availableRoles = await AdminService.getAvailableRoles();
-      if (availableRoles.length > 0) {
-        setRoles(availableRoles);
-        // Set default role to first available role
-        setFormData((prev: AdminFormData) => ({
-          ...prev,
-          role: availableRoles[0]
-        }));
+      if (isSystemAdmin) {
+        const availableRoles = await AdminService.getAvailableRoles();
+        if (availableRoles.length > 0) {
+          setRoles(availableRoles);
+          setFormData((prev: AdminFormData) => ({
+            ...prev,
+            role: availableRoles[0]
+          }));
+        } else {
+          setRoles(['system_admin', 'restaurant_admin']);
+        }
       } else {
-        // Fallback if no roles available
-        const userRole = localStorage.getItem('userRole');
-        const defaultRoles = userRole === 'system_admin' 
-          ? ['system_admin', 'restaurant_admin'] 
-          : ['restaurant_admin'];
-        setRoles(defaultRoles);
+        // Restaurant admin can only create restaurant admins
+        setRoles(['restaurant_admin']);
       }
     } catch (error) {
       console.error('Failed to fetch available roles:', error);
-      // Fallback to default roles
-      setRoles(['restaurant_admin']);
+      // Fallback to default roles based on user role
+      setRoles(isSystemAdmin ? ['system_admin', 'restaurant_admin'] : ['restaurant_admin']);
     }
   };
 
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const response = await AdminService.listAdmins();
-      console.log('Fetched admins:', response);
-      if (response?.admins && Array.isArray(response.admins)) {
-        setAdmins(response.admins);
+      if (isSystemAdmin) {
+        const response = await AdminService.listAdmins();
+        console.log('Fetched admins:', response);
+        if (response?.admins && Array.isArray(response.admins)) {
+          setAdmins(response.admins);
+        } else {
+          console.error('No admins data found or invalid format', response);
+          setAdmins([]);
+          setSnackbar({
+            open: true,
+            message: 'No admin users found',
+            severity: 'info'
+          });
+        }
       } else {
-        console.error('No admins data found or invalid format', response);
-        setAdmins([]);
+        // For restaurant admins, show their business users or a message
         setSnackbar({
           open: true,
-          message: 'No admin users found',
+          message: 'Restaurant admin view - contact system administrator to manage users',
           severity: 'info'
         });
       }
@@ -114,7 +175,7 @@ const AdminManagement: React.FC = () => {
       console.error('Failed to fetch admins:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to load administrators',
+        message: isSystemAdmin ? 'Failed to load administrators' : 'Access restricted - contact system administrator',
         severity: 'error'
       });
     } finally {
@@ -300,15 +361,13 @@ const AdminManagement: React.FC = () => {
       header: 'Permissions',
       size: 120,
       accessorFn: (row) => {
-        const totalPermissions = [
-          ...(row.roles || []),
-          ...(row.roles || [])
-        ].length;
-        return totalPermissions;
+        // Calculate permissions from roles array
+        const rolesCount = row.roles ? (Array.isArray(row.roles) ? row.roles.length : 1) : 0;
+        return rolesCount;
       },
       Cell: ({ cell }) => (
         <Chip 
-          label={`${cell.getValue<number>()} permissions`} 
+          label={`${cell.getValue<number>()} role(s)`} 
           color="primary" 
           size="small"
         />
@@ -325,6 +384,74 @@ const AdminManagement: React.FC = () => {
     }
   ] as MRT_ColumnDef<AdminUser>[];
 
+  // Restaurant Admin View
+  if (!isSystemAdmin) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Business Users
+            </Typography>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              startIcon={<AddIcon />}
+              onClick={handleOpenDialog}
+              disabled={true} // Disable until full implementation
+            >
+              Add Business User (Coming Soon)
+            </Button>
+          </Box>
+
+          <Typography variant="body2" color="textSecondary" paragraph>
+            Managing users for: {currentBusiness?.name || 'Your Business'}
+          </Typography>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : businessUsers.length === 0 ? (
+            <Box sx={{ textAlign: 'center', my: 4 }}>
+              <Typography variant="body1" color="textSecondary">
+                No business users found.
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ mt: 2, height: 'calc(100vh - 300px)', overflow: 'auto' }}>
+              <DataTable 
+                columns={columns}
+                data={businessUsers}
+                enableColumnFilters={true}
+                enableColumnOrdering={true}
+                enablePinning={true}
+                enableGrouping={false}
+              />
+            </Box>
+          )}
+        </Box>
+        
+        {/* Notifications */}
+        <Snackbar 
+          open={snackbar.open} 
+          autoHideDuration={6000} 
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity={snackbar.severity}
+            variant="filled"
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    );
+  }
+
+  // System Admin View
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>

@@ -1,6 +1,6 @@
 // import api from '../utils/axiosConfig';
 import { API_BASE_URL } from '../utils/config';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 import { 
   Permission, 
   Role, 
@@ -10,8 +10,6 @@ import {
   PermissionCheckResult,
   ResourceDefinition
 } from '../types/permissions';
-import api from 'utils/axiosConfig';
-// import api from 'utils/axiosConfig';
 
 export class PermissionService {
   private baseUrl : string;
@@ -24,19 +22,35 @@ export class PermissionService {
    * Get all permissions
    */
   static async getAllPermissions(): Promise<Permission[]> {
-    const response = await axios.get(`${API_BASE_URL}/auth/permissions`);
-    return (response.data as any).permissions || response.data as Permission[];
+    try {
+      console.log('Fetching all permissions...');
+      const response = await api.get('/auth/permissions');
+      console.log('All permissions response:', response.data);
+      return (response.data as any).permissions || response.data as Permission[];
+    } catch (error: any) {
+      console.error('Error fetching all permissions:', error);
+      throw error;
+    }
   }
 
   /**
    * Get user permissions
    */
   static async getUserPermissions(userId?: string): Promise<Permission[]> {
-    const url = userId 
-      ? `${API_BASE_URL}/auth/users/${userId}/permissions`
-      : `${API_BASE_URL}/auth/me/permissions`;
-    const response = await axios.get(url);
-    return (response.data as any).permissions || response.data as Permission[];
+    try {
+      const url = userId 
+        ? `/auth/users/${userId}/permissions`
+        : `/auth/me/permissions`;
+      console.log('Fetching user permissions from:', url);
+      
+      const response = await api.get(url);
+      console.log('User permissions response:', response.data);
+      
+      return (response.data as any).permissions || response.data as Permission[];
+    } catch (error: any) {
+      console.error('Error fetching user permissions:', error);
+      throw error;
+    }
   }
 
   /**
@@ -50,9 +64,11 @@ export class PermissionService {
     try {
       // For now, we'll check permissions by getting all permissions and filtering
       const permissions = await this.getUserPermissions(userId);
-      return permissions.some(permission => 
+      const hasPermission = permissions.some(permission => 
         permission.resource === resource && permission.action === action
       );
+      console.log(`Permission check for ${resource}:${action}:`, hasPermission);
+      return hasPermission;
     } catch (error) {
       console.error('Permission check failed:', error);
       return false;
@@ -85,8 +101,15 @@ export class PermissionService {
    * Seed permissions in the database
    */
   static async seedPermissions(): Promise<{ message: string; permissions: Permission[] }> {
-    const response = await axios.post(`${API_BASE_URL}/auth/permissions/seed`);
-    return response.data as { message: string; permissions: Permission[] };
+    try {
+      console.log('Seeding permissions...');
+      const response = await api.post('/auth/permissions/seed');
+      console.log('Seed permissions response:', response.data);
+      return response.data as { message: string; permissions: Permission[] };
+    } catch (error: any) {
+      console.error('Error seeding permissions:', error);
+      throw error;
+    }
   }
 
   /**
@@ -97,8 +120,15 @@ export class PermissionService {
     action: PermissionAction;
     description: string;
   }): Promise<Permission> {
-    const response = await axios.post(`${API_BASE_URL}/auth/permissions`, permissionData);
-    return (response.data as any).permission || response.data as Permission;
+    try {
+      console.log('Creating permission:', permissionData);
+      const response = await api.post('/auth/permissions', permissionData);
+      console.log('Create permission response:', response.data);
+      return (response.data as any).permission || response.data as Permission;
+    } catch (error: any) {
+      console.error('Error creating permission:', error);
+      throw error;
+    }
   }
 
   /**
@@ -108,16 +138,30 @@ export class PermissionService {
     permissionId: string, 
     updateData: Partial<Permission>
   ): Promise<Permission> {
-    const response = await axios.put(`${API_BASE_URL}/auth/permissions/${permissionId}`, updateData);
-    return (response.data as any).permission || response.data as Permission;
+    try {
+      console.log('Updating permission:', permissionId, updateData);
+      const response = await api.put(`/auth/permissions/${permissionId}`, updateData);
+      console.log('Update permission response:', response.data);
+      return (response.data as any).permission || response.data as Permission;
+    } catch (error: any) {
+      console.error('Error updating permission:', error);
+      throw error;
+    }
   }
 
   /**
    * Delete permission
    */
   static async deletePermission(permissionId: string): Promise<{ message: string }> {
-    const response = await axios.delete(`${API_BASE_URL}/auth/permissions/${permissionId}`);
-    return response.data as { message: string };
+    try {
+      console.log('Deleting permission:', permissionId);
+      const response = await api.delete(`/auth/permissions/${permissionId}`);
+      console.log('Delete permission response:', response.data);
+      return response.data as { message: string };
+    } catch (error: any) {
+      console.error('Error deleting permission:', error);
+      throw error;
+    }
   }
 }
 

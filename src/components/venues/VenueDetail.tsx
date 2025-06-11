@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -9,37 +9,10 @@ import {
   Chip,
   Button,
   CircularProgress,
-  Divider,
-  Tabs,
-  Tab
+  Divider
 } from '@mui/material';
 import { API_BASE_URL } from '../../utils/config';
 import { venueService } from '../../services/VenueService';
-import ZoneList from '../zones/ZoneList';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
 
 interface Venue {
   _id: string;
@@ -50,20 +23,20 @@ interface Venue {
   restaurantId: {
     _id: string;
     name: string;
-  };
+  } | string; // Can be populated object or just string ID
   createdAt: string;
   updatedAt: string;
 }
 
+
 const VenueDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [venue, setVenue] = useState<Venue | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+  const [venue, setVenue] = React.useState<Venue | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchVenueDetails();
   }, [id]);
 
@@ -73,7 +46,7 @@ const VenueDetail: React.FC = () => {
       if (!id) {
         throw new Error('Venue ID is required');
       }
-      const venueData = await venueService.getVenue(id);
+      const venueData = await venueService.getVenue(id) as Venue;
       setVenue(venueData);
     } catch (error) {
       console.error('Error fetching venue details:', error);
@@ -81,10 +54,6 @@ const VenueDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
   };
 
   if (loading) {
@@ -110,13 +79,7 @@ const VenueDetail: React.FC = () => {
       </Box>
 
       <Paper>
-        <Box>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label="Details" />
-            <Tab label="Zones" />
-          </Tabs>
-
-          <TabPanel value={tabValue} index={0}>
+        <Box p={3}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -144,7 +107,11 @@ const VenueDetail: React.FC = () => {
 
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle1" color="textSecondary">Restaurant</Typography>
-                <Typography>{venue.restaurantId?.name || 'N/A'}</Typography>
+              <Typography>
+                {typeof venue.restaurantId === 'object' && venue.restaurantId?.name 
+                  ? venue.restaurantId.name 
+                  : 'N/A'}
+              </Typography>
               </Grid>
 
               <Grid item xs={12} sm={6}>
@@ -175,20 +142,6 @@ const VenueDetail: React.FC = () => {
                 </Box>
               </Grid>
             </Grid>
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={1}>
-            <Box mb={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => navigate(`/zones/add/${venue._id}`)}
-              >
-                Add New Zone
-              </Button>
-            </Box>
-            <ZoneList venueId={venue._id} />
-          </TabPanel>
         </Box>
       </Paper>
     </Container>

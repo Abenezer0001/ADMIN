@@ -38,19 +38,58 @@ import {
   MenuItem,
   SelectChangeEvent
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import SecurityIcon from '@mui/icons-material/Security';
-import GroupIcon from '@mui/icons-material/Group';
-import KeyIcon from '@mui/icons-material/Key';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  ExpandMore as ExpandMoreIcon,
+  Security as SecurityIcon,
+  Group as GroupIcon,
+  Assignment as AssignmentIcon,
+  AdminPanelSettings as AdminIcon
+} from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import RbacService, { Role, Permission, ResourceActions } from '../services/RbacService';
 import UserManagementService from '../services/UserManagementService';
+
+// Type definitions
+interface Permission {
+  _id: string;
+  resource: string;
+  action: string;
+  description: string;
+}
+
+interface Role {
+  _id: string;
+  name: string;
+  description: string;
+  permissions: Permission[];
+}
+
+interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roles: Role[];
+}
+
+interface NewRole {
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+interface NewPermission {
+  resource: string;
+  action: string;
+  description: string;
+}
+
+interface PermissionMatrix {
+  [key: string]: boolean;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -77,7 +116,7 @@ function RbacDashboard() {
   const [currentTab, setCurrentTab] = useState(0);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [resourceActions, setResourceActions] = useState<ResourceActions>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,12 +126,12 @@ function RbacDashboard() {
   const [isCreatePermissionOpen, setIsCreatePermissionOpen] = useState(false);
   const [isUserAssignmentOpen, setIsUserAssignmentOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Form states
-  const [newRole, setNewRole] = useState({ name: '', description: '', permissions: [] as string[] });
-  const [newPermission, setNewPermission] = useState({ resource: '', action: '', description: '' });
-  const [permissionMatrix, setPermissionMatrix] = useState<{ [key: string]: boolean }>({});
+  const [newRole, setNewRole] = useState<NewRole>({ name: '', description: '', permissions: [] });
+  const [newPermission, setNewPermission] = useState<NewPermission>({ resource: '', action: '', description: '' });
+  const [permissionMatrix, setPermissionMatrix] = useState<PermissionMatrix>({});
 
   useEffect(() => {
     loadData();
@@ -263,7 +302,7 @@ function RbacDashboard() {
       <Alert severity="error" sx={{ m: 2 }}>
         {error}
         <IconButton onClick={() => loadData()} sx={{ ml: 2 }}>
-          <RefreshIcon />
+          <AdminIcon />
         </IconButton>
       </Alert>
     );
@@ -289,7 +328,7 @@ function RbacDashboard() {
           </Typography>
         </Box>
         <IconButton onClick={() => loadData()} title="Refresh">
-          <RefreshIcon />
+          <AdminIcon />
         </IconButton>
       </Box>
 
@@ -312,7 +351,7 @@ function RbacDashboard() {
           <Card>
             <CardContent>
               <Stack direction="row" spacing={2} alignItems="center">
-                <KeyIcon color="success" />
+                <SecurityIcon color="success" />
                 <Box>
                   <Typography variant="h4">{permissions.length}</Typography>
                   <Typography variant="body2" color="text.secondary">Total Permissions</Typography>
@@ -546,7 +585,7 @@ function RbacDashboard() {
                           setIsUserAssignmentOpen(true);
                         }}
                       >
-                        <PersonAddIcon />
+                        <AssignmentIcon />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -562,7 +601,7 @@ function RbacDashboard() {
             <Typography variant="h6">Permission Matrix</Typography>
             <Button
               variant="contained"
-              startIcon={<SaveIcon />}
+              startIcon={<AddIcon />}
               onClick={handleCreatePermissionsFromMatrix}
               disabled={Object.values(permissionMatrix).every(v => !v)}
             >

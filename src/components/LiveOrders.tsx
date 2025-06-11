@@ -4,7 +4,7 @@ import { SearchOutlined, ReloadOutlined, BellOutlined, InfoCircleOutlined, Check
 import OrderService from '../services/OrderService';
 import WebSocketService, { WebSocketEventType } from '../services/websocketService';
 import { Order, OrderStatus } from '../types/order';
-import { restaurantService, Restaurant } from '../services/RestaurantService';
+import { RestaurantService } from '../services/RestaurantService';
 import { formatDistanceToNow, parseISO, isToday, startOfDay, endOfDay } from 'date-fns';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -27,7 +27,7 @@ const LiveOrders: React.FC = () => {
   const [newOrdersCount, setNewOrdersCount] = React.useState<number>(0);
   
   // Restaurant selection state
-  const [restaurants, setRestaurants] = React.useState<Restaurant[]>([]);
+  const [restaurants, setRestaurants] = React.useState<any[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = React.useState<string>('');
   const [loadingRestaurants, setLoadingRestaurants] = React.useState<boolean>(false);
   const [wsConnected, setWsConnected] = React.useState<boolean>(false);
@@ -121,17 +121,17 @@ const LiveOrders: React.FC = () => {
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true);
-        const data = await restaurantService.getRestaurants();
+        const data = await RestaurantService.getAllRestaurants();
         
         // Ensure data is treated as a Restaurant array
-        const restaurantData: Restaurant[] = Array.isArray(data) ? data : [];
+        const restaurantData: any[] = Array.isArray(data) ? data : [];
         setRestaurants(restaurantData);
 
         // If we have restaurants, select the first one by default
         if (restaurantData.length > 0) {
           // Check if there's a saved restaurant ID in localStorage
           const savedRestaurantId = localStorage.getItem('currentRestaurantId');
-          if (savedRestaurantId && restaurantData.some((r: Restaurant) => r._id === savedRestaurantId)) {
+          if (savedRestaurantId && restaurantData.some((r: any) => r._id === savedRestaurantId)) {
             setSelectedRestaurantId(savedRestaurantId);
           } else {
             setSelectedRestaurantId(restaurantData[0]._id);
@@ -218,12 +218,18 @@ const LiveOrders: React.FC = () => {
     try {
       console.log('Setting up WebSocket event listeners');
       
-      // Listen for new orders
+      // Listen for new orders - with restaurant filtering
       OrderService.onNewOrder((order: OrderWithMeta) => {
         console.log('New order received in LiveOrders component:', order);
         // Ensure order has all necessary fields
         if (!order || !order._id) {
           console.error('Received invalid order data:', order);
+          return;
+        }
+        
+        // Filter by restaurant ID - only add if it matches the selected restaurant
+        if (order.restaurantId !== selectedRestaurantId) {
+          console.log(`Order ${order._id} is for restaurant ${order.restaurantId}, but we're viewing ${selectedRestaurantId} - ignoring`);
           return;
         }
         
@@ -244,11 +250,17 @@ const LiveOrders: React.FC = () => {
         });
       });
       
-      // Listen for order updates
+      // Listen for order updates - with restaurant filtering
       OrderService.onOrderUpdated((updatedOrder: OrderWithMeta) => {
         console.log('Order update received in LiveOrders component:', updatedOrder);
         if (!updatedOrder || !updatedOrder._id) {
           console.error('Received invalid order update data:', updatedOrder);
+          return;
+        }
+        
+        // Filter by restaurant ID - only update if it matches the selected restaurant
+        if (updatedOrder.restaurantId !== selectedRestaurantId) {
+          console.log(`Order update ${updatedOrder._id} is for restaurant ${updatedOrder.restaurantId}, but we're viewing ${selectedRestaurantId} - ignoring`);
           return;
         }
         
@@ -262,11 +274,17 @@ const LiveOrders: React.FC = () => {
         }
       });
       
-      // Listen for order cancellations
+      // Listen for order cancellations - with restaurant filtering
       OrderService.onOrderCancelled((cancelledOrder: OrderWithMeta) => {
         console.log('Order cancellation received in LiveOrders component:', cancelledOrder);
         if (!cancelledOrder || !cancelledOrder._id) {
           console.error('Received invalid order cancellation data:', cancelledOrder);
+          return;
+        }
+        
+        // Filter by restaurant ID - only update if it matches the selected restaurant
+        if (cancelledOrder.restaurantId !== selectedRestaurantId) {
+          console.log(`Order cancellation ${cancelledOrder._id} is for restaurant ${cancelledOrder.restaurantId}, but we're viewing ${selectedRestaurantId} - ignoring`);
           return;
         }
         
@@ -655,7 +673,7 @@ const LiveOrders: React.FC = () => {
             disabled={loadingRestaurants}
           >
             <option value="">Select a restaurant</option>
-            {restaurants.map((restaurant: Restaurant) => (
+            {restaurants.map((restaurant: any) => (
               <option key={restaurant._id} value={restaurant._id}>
                 {restaurant.name}
               </option>

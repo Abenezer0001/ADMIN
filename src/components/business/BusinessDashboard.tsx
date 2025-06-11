@@ -35,7 +35,7 @@ import BusinessService from '../../services/BusinessService';
 const BusinessDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { businessId } = useParams<{ businessId: string }>();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const {
     currentBusiness,
     isLoading,
@@ -49,33 +49,133 @@ const BusinessDashboard: React.FC = () => {
   const [specificBusinessLoading, setSpecificBusinessLoading] = React.useState(false);
   const [specificBusinessError, setSpecificBusinessError] = React.useState<string | null>(null);
 
-  // Load business data based on context
-  React.useEffect(() => {
-    if (businessId) {
-      // Viewing specific business (from business list)
-      loadSpecificBusiness();
-    } else if (user?.businessId) {
-      // Business owner viewing their own business
-      loadCurrentBusiness();
-    }
-  }, [businessId, user?.businessId]);
-
-  const loadSpecificBusiness = async () => {
+  const fetchBusinessData = React.useCallback(async () => {
     if (!businessId) return;
     
+    console.log('fetchBusinessData called with:', {
+      businessId,
+      userRole: user?.role,
+      isAuthenticated,
+      authLoading
+    });
+
     setSpecificBusinessLoading(true);
     setSpecificBusinessError(null);
     
     try {
+      console.log('Fetching business data for ID:', businessId);
       const business = await BusinessService.getBusinessById(businessId);
+      console.log('Business data received:', business);
       setSpecificBusiness(business);
-    } catch (error: any) {
-      console.error('Failed to load business:', error);
-      setSpecificBusinessError(error.response?.data?.message || error.message || 'Failed to load business details');
+      setSpecificBusinessError(null);
+    } catch (err: any) {
+      console.error('Error fetching business data:', {
+        error: err,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      
+      // If we get 401, test authentication to debug the issue
+      if (err.response?.status === 401) {
+        console.log('401 error detected, testing authentication...');
+        try {
+          await BusinessService.testAuthentication();
+          console.log('Basic auth test passed, trying system admin debug endpoint...');
+          try {
+            await BusinessService.testSystemAdminAuth();
+            setSpecificBusinessError('Both authentication tests passed but business endpoint failed. There may be a specific issue with the business endpoint permissions.');
+          } catch (adminError: any) {
+            console.error('System admin test failed:', adminError);
+            setSpecificBusinessError('Authentication works but system admin role check failed. Please check if your account has system admin privileges.');
+          }
+        } catch (authError: any) {
+          console.error('Authentication test also failed:', authError);
+          setSpecificBusinessError('Authentication failed. Please log in again.');
+        }
+      } else if (err.response?.status === 403) {
+        setSpecificBusinessError('Access denied. You don\'t have permission to view this business.');
+      } else if (err.response?.status === 404) {
+        setSpecificBusinessError('Business not found.');
+      } else {
+        setSpecificBusinessError(err.response?.data?.message || err.message || 'Failed to fetch business data');
+      }
     } finally {
       setSpecificBusinessLoading(false);
     }
-  };
+  }, [businessId, user?.role, isAuthenticated, authLoading]);
+
+  React.useEffect(() => {
+    console.log('BusinessDashboard useEffect triggered:', {
+      isAuthenticated,
+      authLoading,
+      businessId,
+      userRole: user?.role,
+      userRoles: user?.roles,
+      userBusinessId: user?.businessId,
+      isSuperAdminResult: isSuperAdmin(),
+      isBusinessOwnerResult: isBusinessOwner()
+    });
+
+    if (!authLoading && isAuthenticated) {
+      if (businessId) {
+        // Viewing specific business (from business list or direct URL)
+        console.log('Attempting to view specific business:', businessId);
+        
+        if (isSuperAdmin()) {
+          console.log('System admin accessing business:', businessId);
+          fetchBusinessData();
+          return;
+        }
+        
+        if (isBusinessOwner()) {
+          console.log('Business owner accessing business:', businessId);
+          fetchBusinessData();
+          return;
+        }
+        
+        // Allow restaurant admins to view their associated business
+        if (user?.role === 'restaurant_admin') {
+          if (user?.businessId === businessId) {
+            console.log('Restaurant admin accessing their associated business:', businessId);
+            fetchBusinessData();
+            return;
+          } else {
+            // Redirect restaurant admin to their own business
+            console.log('Restaurant admin trying to access different business, redirecting to their own:', user.businessId);
+            if (user.businessId) {
+              navigate(`/business/dashboard/${user.businessId}`, { replace: true });
+              return;
+            } else {
+              setSpecificBusinessError('No business associated with your account. Please contact an administrator.');
+              return;
+            }
+          }
+        }
+        
+        // For other roles, deny access
+        console.log('User role not authorized for direct business access:', user?.role);
+        setSpecificBusinessError(`Access denied. You don't have permission to view this business. Your role: ${user?.role}`);
+      } else if (user?.businessId && (isBusinessOwner() || user?.role === 'restaurant_admin')) {
+        // Business owner or restaurant admin viewing their own business (no specific businessId in URL)
+        console.log('Business owner/restaurant admin loading their own business:', user.businessId);
+        // Redirect to their business URL
+        if (user?.role === 'restaurant_admin') {
+          console.log('Redirecting restaurant admin to their business dashboard');
+          navigate(`/business/dashboard/${user.businessId}`, { replace: true });
+        }
+        // This will be handled by the BusinessContext's loadCurrentBusiness for business owners
+      } else if (isSuperAdmin()) {
+        // System admin without specific business - show message
+        console.log('System admin without specific business ID');
+        setSpecificBusinessError('Select a business from the Business List to view details.');
+      } else {
+        // Other users without permission
+        console.log('User without business access:', user?.role);
+        setSpecificBusinessError(`This dashboard is only available for business owners, restaurant administrators, and system administrators. Your role: ${user?.role}`);
+      }
+    }
+  }, [isAuthenticated, authLoading, businessId, fetchBusinessData, user?.role, user?.roles, user?.businessId, isSuperAdmin, isBusinessOwner, navigate]);
 
   const formatAddress = (address?: any) => {
     if (!address) return 'No address provided';
@@ -92,43 +192,59 @@ const BusinessDashboard: React.FC = () => {
   const loading = specificBusinessLoading || isLoading;
   const displayError = specificBusinessError || error;
 
-  // Check access permissions
-  if (!businessId && !isBusinessOwner()) {
+  // Show loading while authentication is being determined
+  if (authLoading) {
+    console.log('Auth still loading...');
     return (
-      <Alert severity="info">
-        This dashboard is only available for business owners.
-      </Alert>
-    );
-  }
-
-  if (businessId && !isSuperAdmin() && !isBusinessOwner()) {
-    return (
-      <Alert severity="error">
-        Access denied. You don't have permission to view this business.
-      </Alert>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <Box display="flex" justifyContent="center" alignItems="center" height="200px">
         <CircularProgress />
+        <Typography ml={2}>Loading authentication...</Typography>
       </Box>
     );
   }
 
-  if (displayError) {
+  // Check authentication
+  if (!isAuthenticated) {
+    console.log('User not authenticated');
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {displayError}
+      <Alert severity="error">
+        You must be logged in to access this page.
       </Alert>
     );
   }
 
-  if (!displayBusiness) {
+  // Show error if there's one
+  if (displayError) {
+    console.log('Showing error:', displayError);
     return (
-      <Alert severity="warning">
-        No business information found. Please contact your administrator.
+      <Alert severity="error">
+        {displayError}
+        <Box mt={2}>
+          <Typography variant="body2">
+            Debug info: User role: {user?.role}, Business ID: {businessId}
+          </Typography>
+        </Box>
+      </Alert>
+    );
+  }
+
+  // Show loading while business data is being fetched
+  if (loading) {
+    console.log('Loading business data...');
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+        <CircularProgress />
+        <Typography ml={2}>Loading business data...</Typography>
+      </Box>
+    );
+  }
+
+  // Show message if no business data
+  if (!displayBusiness) {
+    console.log('No business data available');
+    return (
+      <Alert severity="info">
+        No business data available. Business ID: {businessId}
       </Alert>
     );
   }
@@ -239,24 +355,45 @@ const BusinessDashboard: React.FC = () => {
                   <List dense>
                     <ListItem>
                       <ListItemIcon>
-                        <EmailIcon />
+                        <PersonIcon />
                       </ListItemIcon>
-                      <ListItemText
-                        primary="Email"
-                        secondary={displayBusiness.contactInfo.email}
+                      <ListItemText 
+                        primary="Owner"
+                        secondary={
+                          currentBusiness?.owner 
+                            ? `${currentBusiness.owner.firstName || ''} ${currentBusiness.owner.lastName || ''}`.trim() || currentBusiness.owner.email || 'Not available'
+                            : user?.firstName && user?.lastName 
+                              ? `${user.firstName} ${user.lastName}`
+                              : user?.email || 'Not available'
+                        }
                       />
                     </ListItem>
-                    {displayBusiness.contactInfo.phone && (
-                      <ListItem>
-                        <ListItemIcon>
-                          <PhoneIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Phone"
-                          secondary={displayBusiness.contactInfo.phone}
-                        />
-                      </ListItem>
-                    )}
+                    <ListItem>
+                      <ListItemIcon>
+                        <EmailIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Contact Email"
+                        secondary={
+                          currentBusiness?.contactInfo?.email 
+                            || currentBusiness?.owner?.email 
+                            || user?.email 
+                            || 'Not available'
+                        }
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon>
+                        <PhoneIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Phone"
+                        secondary={
+                          currentBusiness?.contactInfo?.phone 
+                            || 'Not available'
+                        }
+                      />
+                    </ListItem>
                   </List>
                 </Grid>
 

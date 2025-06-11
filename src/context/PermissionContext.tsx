@@ -65,15 +65,22 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 
   const loadUserPermissions = async () => {
     try {
+      console.log('[PermissionContext] Starting to load user permissions...');
       setIsLoading(true);
       setError(null);
       const permissions = await PermissionService.getUserPermissions();
+      console.log('[PermissionContext] Loaded permissions:', {
+        count: permissions.length,
+        userRole: user?.role,
+        permissions: permissions.map(p => `${p.resource}:${p.action}`)
+      });
       setUserPermissions(permissions);
     } catch (err: any) {
-      console.error('Failed to load user permissions:', err);
+      console.error('[PermissionContext] Failed to load user permissions:', err);
       setError(err.message || 'Failed to load permissions');
     } finally {
       setIsLoading(false);
+      console.log('[PermissionContext] Finished loading permissions');
     }
   };
 
@@ -93,8 +100,25 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
   };
 
   const hasPermission = (resource: ResourceType, action: PermissionAction): boolean => {
+    // Debug logging to help identify the issue
+    console.log('[PermissionContext] hasPermission check:', {
+      resource,
+      action,
+      userRole: user?.role,
+      userPermissionsLength: userPermissions.length,
+      isLoading,
+      userPermissions: userPermissions.slice(0, 3), // Log first 3 permissions for debugging
+    });
+
     // System admin has all permissions
     if (user?.role === 'system_admin') {
+      console.log('[PermissionContext] Granting access to system_admin');
+      return true;
+    }
+
+    // Restaurant admin should have restaurant permissions even during loading
+    if (user?.role === 'restaurant_admin' && resource === 'restaurant') {
+      console.log('[PermissionContext] Granting restaurant access to restaurant_admin');
       return true;
     }
 
@@ -102,7 +126,19 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     
     // Check cache first
     if (permissionCache.has(cacheKey)) {
-      return permissionCache.get(cacheKey)!;
+      const cachedResult = permissionCache.get(cacheKey)!;
+      console.log('[PermissionContext] Using cached result:', { resource, action, result: cachedResult });
+      return cachedResult;
+    }
+
+    // If permissions are still loading, be more permissive for restaurant admin users
+    if (isLoading && user?.role === 'restaurant_admin') {
+      // Allow basic restaurant-related permissions while loading
+      const restaurantResources = ['restaurant', 'venue', 'table', 'zone', 'menu', 'menuitem', 'category', 'order'];
+      if (restaurantResources.includes(resource)) {
+        console.log('[PermissionContext] Temporary access granted during loading for restaurant_admin');
+        return true;
+      }
     }
 
     // Check permissions - removed isActive check since it doesn't exist in API response
@@ -110,6 +146,13 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       permission.resource === resource && 
       permission.action === action
     );
+
+    console.log('[PermissionContext] Permission check result:', {
+      resource,
+      action,
+      hasAccess,
+      foundPermissions: userPermissions.filter(p => p.resource === resource)
+    });
 
     // Cache the result
     setPermissionCache(prev => new Map(prev).set(cacheKey, hasAccess));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { TextField, Typography } from '@mui/material';
 import { City } from './CityAutocomplete';
 
@@ -24,19 +24,19 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   value = "",
   placeholder = "Search for an address",
   disabled = false
-}) => {
-  const [inputValue, setInputValue] = useState(value);
-  const [results, setResults] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
+}: AddressAutocompleteProps) => {
+  const [inputValue, setInputValue] = React.useState<string>(value);
+  const [results, setResults] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = React.useState<boolean>(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setInputValue(value);
   }, [value]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (inputValue && selectedCity && inputValue.length > 2) {
-      const fetchAddressResults = async () => {
+      const fetchAddressResults = async (): Promise<void> => {
         setIsLoading(true);
         try {
           // Build the query - include city if provided
@@ -81,7 +81,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     }
   }, [inputValue, selectedCity]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const newValue = e.target.value;
     setInputValue(newValue);
     
@@ -92,7 +92,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     }
   };
 
-  const handleAddressSelect = (location: any) => {
+  const handleAddressSelect = (location: any): void => {
     const displayAddress = location.display_name;
     setInputValue(displayAddress);
     setResults([]);
@@ -107,7 +107,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     });
   };
 
-  const handleBlur = () => {
+  const handleBlur = (): void => {
     // Delay hiding dropdown to allow clicking on options
     setTimeout(() => {
       setShowDropdown(false);
@@ -166,7 +166,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
             overflowY: 'auto',
           }}
         >
-          {results.map((result, index) => (
+          {results.map((result: any, index: number) => (
             <div
               key={result.place_id || index}
               onClick={() => handleAddressSelect(result)}
@@ -176,11 +176,11 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                 borderBottom: index < results.length - 1 ? '1px solid #f0f0f0' : 'none',
                 transition: 'background-color 0.2s',
               }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5';
+              onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => {
+                (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5';
               }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
+              onMouseOut={(e: React.MouseEvent<HTMLDivElement>) => {
+                (e.currentTarget as HTMLDivElement).style.backgroundColor = 'white';
               }}
             >
               <div style={{ fontWeight: 500, marginBottom: '2px' }}>

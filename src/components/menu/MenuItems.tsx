@@ -9,11 +9,25 @@ import {
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon, Upload as UploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { menuItemService, MenuItem as MenuItemData, CreateMenuItemDto, UpdateMenuItemDto } from '../../services/MenuItemService';
-import { restaurantService, Restaurant } from '../../services/RestaurantService';
+import RestaurantService from '../../services/RestaurantService'; // Fix import
 import { categoryService, Category } from '../../services/CategoryService';
 import { subCategoryService, SubCategory } from '../../services/SubCategoryService';
 import { subSubCategoryService, SubSubCategory } from '../../services/SubSubCategoryService';
 import { venueService, Venue } from '../../services/VenueService';
+
+// Add Restaurant interface
+interface Restaurant {
+  _id: string;
+  name: string;
+  locations: Array<{
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  }>;
+  isActive?: boolean;
+}
 
 // Simplified form data state matching DTOs + necessary UI state
 interface MenuItemFormData {
@@ -81,7 +95,7 @@ const MenuItems = () => {
     const fetchRestaurants = async () => {
       try {
         setLoadingFilters(true);
-        const data = await restaurantService.getRestaurants();
+        const data = await RestaurantService.getRestaurants(); // Use static method
         const restaurantList = Array.isArray(data) ? data : [];
         setRestaurants(restaurantList);
         
@@ -160,7 +174,7 @@ const MenuItems = () => {
       // Clear previous subcategories when categories change
       setFilteredSubCategories([]);
       setSubCategories([]);
-      setForm(prev => ({ ...prev, subCategories: [], subSubCategory: '' }));
+      setForm((prev: MenuItemFormData) => ({ ...prev, subCategories: [], subSubCategory: '' }));
       
       if (form.categories.length === 0) {
         return; // Don't fetch if no categories selected
@@ -171,14 +185,14 @@ const MenuItems = () => {
         console.log('Fetching subcategories for categories:', form.categories);
         
         // Fetch subcategories for each selected category and combine results
-        const subCategoryPromises = form.categories.map(categoryId => 
+        const subCategoryPromises = form.categories.map((categoryId: string) => 
           subCategoryService.getSubCategories(categoryId)
         );
         
         const results = await Promise.all(subCategoryPromises);
         // Flatten the array of arrays and remove duplicates
-        const allSubCategories = results.flat().filter((subCat, index, self) => 
-          index === self.findIndex(s => s._id === subCat._id)
+        const allSubCategories = results.flat().filter((subCat: SubCategory, index: number, self: SubCategory[]) => 
+          index === self.findIndex((s: SubCategory) => s._id === subCat._id)
         );
         
         console.log('Fetched subcategories:', allSubCategories);
@@ -201,7 +215,7 @@ const MenuItems = () => {
       // Clear previous subsubcategories when subcategories change
       setFilteredSubSubCategories([]);
       setSubSubCategories([]);
-      setForm(prev => ({ ...prev, subSubCategory: '' }));
+      setForm((prev: MenuItemFormData) => ({ ...prev, subSubCategory: '' }));
       
       if (form.subCategories.length === 0) {
         return; // Don't fetch if no subcategories selected
@@ -212,14 +226,14 @@ const MenuItems = () => {
         console.log('Fetching subsubcategories for subcategories:', form.subCategories);
         
         // Fetch subsubcategories for each selected subcategory and combine results
-        const subSubCategoryPromises = form.subCategories.map(subCategoryId => 
+        const subSubCategoryPromises = form.subCategories.map((subCategoryId: string) => 
           subSubCategoryService.getSubSubCategories(subCategoryId)
         );
         
         const results = await Promise.all(subSubCategoryPromises);
         // Flatten the array of arrays and remove duplicates
-        const allSubSubCategories = results.flat().filter((subSubCat, index, self) => 
-          index === self.findIndex(s => s._id === subSubCat._id)
+        const allSubSubCategories = results.flat().filter((subSubCat: SubSubCategory, index: number, self: SubSubCategory[]) => 
+          index === self.findIndex((s: SubSubCategory) => s._id === subSubCat._id)
         );
         
         console.log('Fetched subsubcategories:', allSubSubCategories);
@@ -243,7 +257,10 @@ const MenuItems = () => {
 
       setLoading(true);
       try {
+        console.log('Loading menu item for edit:', menuItemId);
         const data: MenuItemData = await menuItemService.getMenuItem(menuItemId);
+        console.log('Loaded menu item data:', data);
+        
         setForm({
           name: data.name,
           description: data.description || '',
@@ -266,13 +283,16 @@ const MenuItems = () => {
             : data.restaurantId, // Assuming restaurantId is always string from backend
           venueId: typeof data.venueId === 'string' 
             ? data.venueId 
-            : data.venueId._id, // Assuming venueId can be populated
+            : (data.venueId && typeof data.venueId === 'object' && data.venueId._id) 
+              ? data.venueId._id 
+              : '', // Safe access with fallback
           isAvailable: data.isAvailable,
           isActive: data.isActive,
         });
         setImagePreview(data.image || '');
         setImageFile(null); // Reset file input on load
         setError(null);
+        console.log('Menu item form populated successfully');
       } catch (error) {
         console.error('Error loading menu item:', error);
         setError('Failed to load menu item data.');
@@ -550,7 +570,7 @@ const MenuItems = () => {
                       label="Restaurant"
                       value={form.restaurantId} 
                       onChange={handleSelectChange}
-                      disabled={loadingFilters || isEditMode} 
+                      disabled={loadingFilters} 
                     >
                       {restaurants.map((r: Restaurant) => (
                         <MuiMenuItem key={r._id} value={r._id}>{r.name}</MuiMenuItem>
@@ -758,7 +778,7 @@ const MenuItems = () => {
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ 
+                  {/* <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     p: 2, 
@@ -795,7 +815,7 @@ const MenuItems = () => {
                         },
                       }}
                     />
-                  </Box>
+                  </Box> */}
                 </Grid>
               </Grid>
             </Grid>

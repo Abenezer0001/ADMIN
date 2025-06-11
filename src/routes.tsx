@@ -186,6 +186,11 @@ const AppRoutes = () => {
               <BusinessDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/businesses/:businessId" element={
+            <ProtectedRoute resource="business" action="read">
+              <BusinessDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/businesses/:businessId/edit" element={
             <ProtectedRoute resource="business" action="update">
               <BusinessDashboard />

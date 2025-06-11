@@ -4,12 +4,10 @@ import {
   Button,
   CircularProgress,
   Container,
-  FormControlLabel,
   Grid,
   MenuItem,
   Paper,
   Select,
-  Switch,
   TextField,
   Typography,
   FormControl,
@@ -24,15 +22,13 @@ interface VenueFormData {
   name: string;
   description: string;
   capacity: number;
-  isActive: boolean;
 }
 
 const VenueForm = () => {
   const [formData, setFormData] = useState<VenueFormData>({
     name: '',
     description: '',
-    capacity: 0,
-    isActive: true
+    capacity: 0
   });
   
   const [loading, setLoading] = useState(false);
@@ -72,12 +68,11 @@ const VenueForm = () => {
       const fetchVenue = async () => {
         try {
           setLoading(true);
-          const venueData = await venueService.getVenue(id);
+          const venueData = await venueService.getVenue(id) as any;
           setFormData({
             name: venueData.name,
             description: venueData.description || '',
-            capacity: venueData.capacity,
-            isActive: venueData.isActive
+            capacity: venueData.capacity
           });
           
           // If the venue has a restaurantId, select it
@@ -101,13 +96,6 @@ const VenueForm = () => {
     setFormData({
       ...formData,
       [name]: name === 'capacity' ? parseInt(value) || 0 : value
-    });
-  };
-
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      isActive: e.target.checked
     });
   };
 
@@ -176,7 +164,7 @@ const VenueForm = () => {
                     label="Restaurant"
                     onChange={handleRestaurantChange}
                   >
-                    {restaurants.map((restaurant) => (
+                    {restaurants.map((restaurant: any) => (
                       <MenuItem key={restaurant._id} value={restaurant._id}>
                         {restaurant.name}
                       </MenuItem>
@@ -219,18 +207,6 @@ const VenueForm = () => {
                 value={formData.capacity}
                 onChange={handleChange}
                 inputProps={{ min: 0 }}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isActive}
-                    onChange={handleSwitchChange}
-                  />
-                }
-                label="Active"
               />
             </Grid>
 

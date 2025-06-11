@@ -73,16 +73,6 @@ const VenueList: React.FC = () => {
       header: 'Capacity',
       accessorKey: 'capacity',
     },
-    {
-      header: 'Zones',
-      accessorFn: (row) => row.zones?.length || 0,
-      cell: ({ getValue }) => getValue(),
-    },
-    {
-      header: 'Status',
-      accessorKey: 'isActive',
-      cell: ({ row }) => (row.original.isActive ? 'Active' : 'Inactive'),
-    },
   ];
 
   const handleView = (venue: Venue) => {
@@ -104,7 +94,7 @@ const VenueList: React.FC = () => {
     try {
       setLoading(true);
       await venueService.deleteVenue(venueToDelete._id);
-      setVenues(venues.filter(v => v._id !== venueToDelete._id));
+      setVenues(venues.filter((v: Venue) => v._id !== venueToDelete._id));
       setDeleteDialogOpen(false);
       setVenueToDelete(null);
     } catch (error) {

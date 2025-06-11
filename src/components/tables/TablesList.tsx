@@ -272,6 +272,22 @@ const TablesList = () => {
     }
   };
 
+  const handleToggleAvailability = async (tableId: string, isOccupied: boolean) => {
+    try {
+      await tableService.toggleTableAvailability(tableId, isOccupied);
+      // Update the table availability in the tables array
+      setTables(prevTables => 
+        prevTables.map(table => 
+          (table._id || table.id) === tableId 
+            ? { ...table, isOccupied: !isOccupied } 
+            : table
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling table availability:', error);
+    }
+  };
+
   const getTableTypeName = (tableTypeId: any) => {
     // Case 1: tableTypeId is a TableType object with name property
     if (tableTypeId && typeof tableTypeId === 'object' && tableTypeId.name) {
@@ -430,6 +446,8 @@ const TablesList = () => {
                             label={table.isOccupied ? 'Occupied' : 'Available'}
                             color={table.isOccupied ? 'error' : 'success'}
                             size="small"
+                            onClick={() => handleToggleAvailability(table._id || table.id, table.isOccupied)}
+                            sx={{ cursor: 'pointer' }}
                           />
                           <Chip 
                             label={table.isActive ? 'Active' : 'Inactive'} 

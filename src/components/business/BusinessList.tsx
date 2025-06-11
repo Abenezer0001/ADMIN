@@ -192,7 +192,7 @@ const BusinessList: React.FC = () => {
   };
 
   const handleViewBusiness = (businessId: string) => {
-    navigate(`/businesses/${businessId}/edit`);
+    navigate(`/businesses/${businessId}`);
   };
 
   const handleEditBusiness = (businessId: string) => {

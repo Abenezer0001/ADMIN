@@ -31,7 +31,7 @@ import {
   CircularProgress,
   Tooltip
 } from '@mui/material';
-import {
+import { 
   Search as SearchIcon,
   FilterList as FilterIcon,
   Visibility as ViewIcon,
@@ -104,7 +104,7 @@ function CustomersComponent() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response: CustomersResponse = await CustomerService.getCustomers(
         filters.business || undefined,
         filters.restaurant || undefined
@@ -117,11 +117,11 @@ function CustomersComponent() {
       if (response.businesses) {
         setBusinesses(response.businesses);
       }
-      
+
       if (response.restaurants) {
         setRestaurants(response.restaurants);
       }
-      
+
     } catch (err: any) {
       console.error('Error loading customers:', err);
       setError(err.message || 'Failed to load customers');
@@ -162,7 +162,7 @@ function CustomersComponent() {
       filtered = filtered.filter(customer => 
         filters.status === 'active' ? customer.isActive : !customer.isActive
       );
-    }
+      }
 
     setFilteredCustomers(filtered);
     setPage(0); // Reset to first page when filtering
@@ -232,7 +232,7 @@ function CustomersComponent() {
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Customer Management
-      </Typography>
+          </Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -242,110 +242,110 @@ function CustomersComponent() {
 
       {/* Analytics Cards */}
       {analytics && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
             <Card>
-              <CardContent>
+            <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <GroupIcon sx={{ color: theme.palette.primary.main, mr: 2 }} />
                   <Box>
                     <Typography variant="h4">{analytics.totalCustomers}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Total Customers
-                    </Typography>
+                  Total Customers
+                </Typography>
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
             <Card>
-              <CardContent>
+            <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <PersonAddIcon sx={{ color: theme.palette.success.main, mr: 2 }} />
                   <Box>
                     <Typography variant="h4">{analytics.newCustomers}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                       New This Month
-                    </Typography>
+              </Typography>
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
             <Card>
-              <CardContent>
+            <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <ActiveIcon sx={{ color: theme.palette.info.main, mr: 2 }} />
                   <Box>
                     <Typography variant="h4">{analytics.activeCustomers}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                       Active Customers
-                    </Typography>
+              </Typography>
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
             <Card>
-              <CardContent>
+            <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <TrendingUpIcon sx={{ color: theme.palette.warning.main, mr: 2 }} />
                   <Box>
                     <Typography variant="h4">{analytics.returnRate}%</Typography>
-                    <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                       Activity Rate
-                    </Typography>
+              </Typography>
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+            </CardContent>
+          </Card>
         </Grid>
+      </Grid>
       )}
 
       {/* Analytics Charts */}
       {analytics && analytics.loyaltyDistribution.length > 0 && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom>
                 Customer Distribution
-              </Typography>
+            </Typography>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={analytics.loyaltyDistribution}
-                      cx="50%"
-                      cy="50%"
+                    <PieChart>
+                      <Pie
+                        data={analytics.loyaltyDistribution}
+                        cx="50%"
+                        cy="50%"
                       labelLine={false}
                       label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {analytics.loyaltyDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
+                        dataKey="value"
+                      >
+                        {analytics.loyaltyDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
                     <RechartsTooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-          
+                    </PieChart>
+                  </ResponsiveContainer>
+            </Box>
+          </Paper>
+      </Grid>
+
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom>
                 Customer Signups
-              </Typography>
+        </Typography>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analytics.customerActivity}>
@@ -359,7 +359,7 @@ function CustomersComponent() {
                 </ResponsiveContainer>
               </Box>
             </Paper>
-          </Grid>
+            </Grid>
         </Grid>
       )}
 
@@ -367,18 +367,18 @@ function CustomersComponent() {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={4}>
-            <TextField
+          <TextField
               fullWidth
               placeholder="Search customers..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
             />
           </Grid>
           
@@ -477,7 +477,7 @@ function CustomersComponent() {
                           <Typography variant="caption" color="text.secondary">
                             ID: {customer._id.slice(-8)}
                           </Typography>
-                        </Box>
+            </Box>
                       </Box>
                     </TableCell>
                     
@@ -516,7 +516,7 @@ function CustomersComponent() {
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <CalendarIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
                         {formatDate(customer.createdAt)}
-                      </Box>
+        </Box>
                     </TableCell>
                     
                     <TableCell align="center">

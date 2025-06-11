@@ -186,7 +186,7 @@ const MenuList = () => {
                 <TableCell>Description</TableCell>
                 <TableCell>Restaurant</TableCell>
                  <TableCell>Categories</TableCell>
-                <TableCell>Status</TableCell>
+                {/* <TableCell>Status</TableCell> */}
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -199,7 +199,7 @@ const MenuList = () => {
                     <TableCell>{menu.description || '-'}</TableCell>
                     <TableCell>{getRestaurantName(menu.restaurantId)}</TableCell>
                      <TableCell>{menu.categories?.length || 0}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                        <Chip
                           icon={<CircleIcon fontSize="small" />}
                           label={menu.isActive ? 'Active' : 'Inactive'}
@@ -208,7 +208,7 @@ const MenuList = () => {
                           // onClick={() => handleToggleStatus(menu._id, menu.isActive)} // Add toggle handler if needed
                           // sx={{ cursor: 'pointer' }}
                         />
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                         <Tooltip title="View Details">

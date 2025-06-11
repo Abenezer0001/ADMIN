@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../../utils/config';
 import {
-  Box, Typography, Paper, Grid, Chip, Button, IconButton, CircularProgress, List, ListItem, ListItemText
+  Box, Typography, Paper, Grid, Chip, Button, IconButton, CircularProgress
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import CircleIcon from '@mui/icons-material/Circle';
-import CategoryIcon from '@mui/icons-material/Category'; // For sub-subcategory
+import CategoryIcon from '@mui/icons-material/Category';
 import ImageIcon from '@mui/icons-material/Image';
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; // For prep time
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'; // For allergens
-import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu'; // For nutritional info
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 // Define the MenuItem type (ensure this matches your actual backend model)
 interface MenuItem {
@@ -23,24 +22,22 @@ interface MenuItem {
   image?: string;
   preparationTime?: number;
   isAvailable: boolean;
-  isActive: boolean; // Consider if needed for display logic, not shown directly per refactor goal
+  isActive: boolean;
   allergens?: string[];
-  nutritionalInfo?: Record<string, string | number>;
-  subSubCategory?: { _id: string; name: string }; // Assuming populated
+  subSubCategory?: { _id: string; name: string };
   restaurantId: string;
-  createdAt: string; // Assuming string from backend
-  updatedAt: string; // Assuming string from backend
-  // Add any other fields
+  createdAt: string;
+  updatedAt: string;
 }
 
 const MenuItemDetail: React.FC = () => {
   const { id: menuItemId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [menuItem, setMenuItem] = useState<MenuItem | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [menuItem, setMenuItem] = React.useState<MenuItem | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchMenuItem = async () => {
       if (!menuItemId) {
         setError("Menu Item ID not found in URL.");
@@ -52,18 +49,15 @@ const MenuItemDetail: React.FC = () => {
       setError(null);
       try {
         console.log(`Fetching menu item with ID: ${menuItemId}`);
-        // Adjust URL as needed
         const response = await axios.get<MenuItem>(`${API_BASE_URL}/menu-items/${menuItemId}`);
         console.log("API Response Data:", response.data);
         setMenuItem(response.data);
       } catch (err) {
         console.error("Error fetching menu item:", err);
         let message = 'An unknown error occurred';
-        // Using property checks as a workaround for persistent Axios type errors
         if (typeof err === 'object' && err !== null) {
-            const errorObj = err as any; // Use 'any' carefully as a workaround
+            const errorObj = err as any;
             if (errorObj.response) {
-                // Server responded with a status code outside 2xx range
                 message = `Server error: ${errorObj.response.status} ${errorObj.response.statusText || ''}`;
                 if (errorObj.response.status === 404) {
                     message = 'Menu item not found.';
@@ -72,11 +66,9 @@ const MenuItemDetail: React.FC = () => {
                 console.error('Error response status:', errorObj.response.status);
                 console.error('Error response headers:', errorObj.response.headers);
             } else if (errorObj.request) {
-                // Request was made but no response received
                 message = 'Could not connect to the server. Please check your network connection.';
                 console.error('Error request:', errorObj.request);
             } else if (errorObj.message) {
-                 // Standard Error object or Axios setup error
                  message = errorObj.message;
                  console.error('Error message:', errorObj.message);
             } else {
@@ -130,14 +122,14 @@ const MenuItemDetail: React.FC = () => {
         <Button
           startIcon={<EditIcon />}
           variant="outlined"
-          onClick={() => navigate(`/menuitems/edit/${menuItem._id}`)} // Corrected path
+          onClick={() => navigate(`/menuitems/edit/${menuItem._id}`)}
         >
           Edit
         </Button>
       </Box>
 
       <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3}> {/* Increased spacing */}
+        <Grid container spacing={3}>
           {/* Image Column */}
           <Grid item xs={12} md={4}>
              {menuItem.image ? (
@@ -148,10 +140,10 @@ const MenuItemDetail: React.FC = () => {
                   sx={{
                     width: '100%',
                     height: 'auto',
-                    maxHeight: { xs: 250, md: 350 }, // Adjusted height
+                    maxHeight: { xs: 250, md: 350 },
                     objectFit: 'cover',
-                    borderRadius: 2, // Corresponds to theme.shape.borderRadius * 2
-                    boxShadow: 3, // Add subtle shadow
+                    borderRadius: 2,
+                    boxShadow: 3,
                   }}
                 />
               ) : (
@@ -211,47 +203,32 @@ const MenuItemDetail: React.FC = () => {
                    </Grid>
                </Grid>
 
-               {/* Dietary Information Section */}
-               {(menuItem.allergens && menuItem.allergens.length > 0) || menuItem.nutritionalInfo ? (
+               {/* Allergens Section - Only show if allergens exist */}
+               {menuItem.allergens && menuItem.allergens.length > 0 && (
                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                    <Typography variant="h6" gutterBottom>Dietary Information</Typography>
-                   {menuItem.allergens && menuItem.allergens.length > 0 && (
-                     <Box sx={{ mb: 2 }}>
-                       <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                         <WarningAmberIcon sx={{ mr: 1, color: 'warning.main' }} /> Allergens
-                       </Typography>
-                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                         {menuItem.allergens.map((allergen: string) => (
-                           <Chip key={allergen} label={allergen} size="small" variant="outlined" color="warning" />
-                         ))}
-                       </Box>
+                   <Box sx={{ mb: 2 }}>
+                     <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                       <WarningAmberIcon sx={{ mr: 1, color: 'warning.main' }} /> Allergens
+                     </Typography>
+                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                       {menuItem.allergens.map((allergen: string) => (
+                         <Chip key={allergen} label={allergen} size="small" variant="outlined" color="warning" />
+                       ))}
                      </Box>
-                   )}
-
-                   {menuItem.nutritionalInfo && Object.keys(menuItem.nutritionalInfo).length > 0 && (
-                     <Box>
-                       <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <RestaurantMenuIcon sx={{ mr: 1, color: 'info.main' }} /> Nutritional Info
-                       </Typography>
-                       <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'grey.50' }}>
-                         <List dense disablePadding>
-                           {Object.entries(menuItem.nutritionalInfo).map(([key, value]) => (
-                             <ListItem key={key} disableGutters sx={{ py: 0.5 }}>
-                               <ListItemText
-                                 primary={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                 secondary={String(value)}
-                                 primaryTypographyProps={{ variant: 'body2', fontWeight: 'medium' }}
-                                 secondaryTypographyProps={{ variant: 'body2', color: 'text.primary' }}
-                                 sx={{ m: 0 }}
-                               />
-                             </ListItem>
-                           ))}
-                         </List>
-                       </Paper>
-                     </Box>
-                   )}
+                   </Box>
                  </Box>
-               ) : null}
+               )}
+
+               {/* Show Empty Allergens message if no allergens */}
+               {(!menuItem.allergens || menuItem.allergens.length === 0) && (
+                 <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                   <Typography variant="h6" gutterBottom>Dietary Information</Typography>
+                   <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                     No allergens listed
+                   </Typography>
+                 </Box>
+               )}
            </Grid>
         </Grid>
       </Paper>

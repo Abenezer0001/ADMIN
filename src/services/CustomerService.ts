@@ -175,16 +175,16 @@ class CustomerService {
         console.error('Error fetching customer data for analytics:', customerError);
         
         // Return mock data as final fallback
-        return {
-          totalCustomers: 0,
-          newCustomers: 0,
+      return {
+        totalCustomers: 0,
+        newCustomers: 0,
           activeCustomers: 0,
-          returnRate: 0,
-          averageSpend: 0,
-          loyaltyDistribution: [],
-          customerActivity: [],
-          demographicData: []
-        };
+        returnRate: 0,
+        averageSpend: 0,
+        loyaltyDistribution: [],
+        customerActivity: [],
+        demographicData: []
+      };
       }
     }
   }

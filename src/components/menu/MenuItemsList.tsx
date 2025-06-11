@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Standard import
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
   TextField,
   InputAdornment,
   Button,
-  // Switch, // Removed as we replace it
+  Switch,
   Menu,
   MenuItem,
   useTheme,
@@ -27,20 +27,20 @@ import {
   CircularProgress,
   Tooltip,
   SelectChangeEvent,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+  Checkbox
 } from '@mui/material';
 import {
   Search as SearchIcon,
   FilterList as FilterIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  // FileCopy as FileCopyIcon, // Removed unused
-  // ChevronRight as ChevronRightIcon, // Removed unused
   Download as DownloadIcon,
   Edit as EditIcon,
-  // ContentCopy as ContentCopyIcon, // Removed unused
-  // Category as CategoryIcon, // Removed unused
-  // Restaurant as RestaurantIcon, // Removed unused
-  Visibility as VisibilityIcon, // Added for View Detail
+  Visibility as VisibilityIcon,
  } from '@mui/icons-material';
  import { Link, useNavigate } from 'react-router-dom';
 import { menuItemService, MenuItem as MenuItemData } from '../../services/MenuItemService';
@@ -49,70 +49,58 @@ import { subSubCategoryService, SubSubCategory } from '../../services/SubSubCate
 
 const MenuItemsList = () => {
   const theme = useTheme();
-  const [items, setItems] = useState<MenuItemData[]>([]); // Standard useState
-  const [searchTerm, setSearchTerm] = useState(''); // Standard useState
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // Standard useState
-  const [selectedItem, setSelectedItem] = useState<MenuItemData | null>(null); // Standard useState
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false); // Standard useState
+  const [items, setItems] = useState<MenuItemData[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItemData | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); // Standard useState
-  const [error, setError] = useState<string | null>(null); // Standard useState
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Add state for filters
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]); // Standard useState
-  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]); // Standard useState
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('all'); // Standard useState
-  const [selectedSubSubCategoryId, setSelectedSubSubCategoryId] = useState<string>('all'); // Standard useState
-  const [loadingFilters, setLoadingFilters] = useState(true); // Standard useState
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('all');
+  const [selectedSubSubCategoryId, setSelectedSubSubCategoryId] = useState<string>('all');
+  const [loadingFilters, setLoadingFilters] = useState(true);
 
+  useEffect(() => {
+    Promise.all([fetchFilterData(), loadItems()]);
+  }, []);
 
-  // Fetch initial filter data
-  useEffect(() => { // Standard useEffect
     const fetchFilterData = async () => {
-      setLoadingFilters(true);
       try {
-        const [restaurantData, subSubCategoryData] = await Promise.all([
+      const [restaurantsData, subSubCategoriesData] = await Promise.all([
           restaurantService.getRestaurants(),
           subSubCategoryService.getSubSubCategories()
         ]);
-        setRestaurants(restaurantData || []);
-        setSubSubCategories(subSubCategoryData || []);
-      } catch (err) {
-        console.error('Error loading filter data:', err);
-        setError('Failed to load filters.');
-      } finally {
-        setLoadingFilters(false);
+      
+      setRestaurants(restaurantsData || []);
+      setSubSubCategories(subSubCategoriesData || []);
+    } catch (error) {
+      console.error('Error fetching filter data:', error);
       }
     };
-    fetchFilterData();
-  }, []);
 
-
-  // Fetch items based on filters
-  // NOTE: This fetches on mount and filter change. It won't automatically refetch
-  // if items are added elsewhere without a page reload or filter change.
-  useEffect(() => { // Standard useEffect
     const loadItems = async () => {
+    try {
       setLoading(true);
+      // Get both available and unavailable items
+      const data = await menuItemService.getMenuItems({ 
+        restaurantId: selectedRestaurantId !== 'all' ? selectedRestaurantId : undefined,
+        subSubCategoryId: selectedSubSubCategoryId !== 'all' ? selectedSubSubCategoryId : undefined,
+        includeInactive: true // Include both available and unavailable items
+      });
+      setItems(data || []);
       setError(null);
-      try {
-        const params: any = {};
-        if (selectedRestaurantId !== 'all') params.restaurantId = selectedRestaurantId;
-        if (selectedSubSubCategoryId !== 'all') params.subSubCategoryId = selectedSubSubCategoryId;
-
-        const data: MenuItemData[] = await menuItemService.getMenuItems(params);
-        setItems(data || []);
       } catch (error) {
         console.error('Error loading menu items:', error);
-        setError('Failed to load menu items.');
+      setError('Failed to load menu items');
       } finally {
         setLoading(false);
       }
     };
-     if (!loadingFilters) {
-        loadItems();
-     }
-  }, [selectedRestaurantId, selectedSubSubCategoryId, loadingFilters]);
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -127,7 +115,7 @@ const MenuItemsList = () => {
   };
 
   // Filter items based on search term locally
-   const filteredItems = items.filter((item: MenuItemData) => // Added type
+  const filteredItems = items.filter((item: MenuItemData) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -141,13 +129,12 @@ const MenuItemsList = () => {
     if (selectedItem) {
       try {
         await menuItemService.deleteMenuItem(selectedItem._id);
-        // Ensure state update uses the latest state
-        setItems((currentItems: MenuItemData[]) => currentItems.filter((item: MenuItemData) => item._id !== selectedItem._id)); // Added type for currentItems
+        setItems((currentItems: MenuItemData[]) => currentItems.filter((item: MenuItemData) => item._id !== selectedItem._id));
         setDeleteDialogOpen(false);
         setSelectedItem(null);
       } catch (error) {
         console.error('Error deleting item:', error);
-        setError('Failed to delete item.'); // Inform user
+        setError('Failed to delete item.');
       }
     }
   };
@@ -157,17 +144,32 @@ const MenuItemsList = () => {
     setSelectedItem(null);
   };
 
+  // Handle availability toggle
+  const handleAvailabilityToggle = async (item: MenuItemData) => {
+    try {
+      const updatedItem = await menuItemService.toggleMenuItemAvailability(item._id);
+      setItems((currentItems: MenuItemData[]) => 
+        currentItems.map((currentItem: MenuItemData) => 
+          currentItem._id === item._id ? updatedItem : currentItem
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      setError('Failed to toggle availability.');
+    }
+  };
+
   // Helper to get SubSubCategory Name
   const getSubSubCategoryName = (subSubCat: string | SubSubCategory | undefined): string => {
       if (!subSubCat) return 'N/A';
+    
       if (typeof subSubCat === 'string') {
-          // Find by ID if only ID is stored
-          const found = subSubCategories.find((ssc: SubSubCategory) => ssc._id === subSubCat); // Added type
-          return found ? found.name : 'Unknown ID';
+      const found = subSubCategories.find(cat => cat._id === subSubCat);
+      return found ? found.name : 'Unknown';
       }
-      // If object is populated
-      return subSubCat.name;
-  }
+    
+    return subSubCat.name || 'Unknown';
+  };
 
   return (
     <Box sx={{
@@ -281,19 +283,18 @@ const MenuItemsList = () => {
               <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Price</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Prep Time</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Available</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Active</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
-                 <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+                 <TableRow><TableCell colSpan={7} align="center"><CircularProgress /></TableCell></TableRow>
             ) : error ? (
-                 <TableRow><TableCell colSpan={8} align="center" sx={{ color: 'error.main' }}>{error}</TableCell></TableRow>
+                 <TableRow><TableCell colSpan={7} align="center" sx={{ color: 'error.main' }}>{error}</TableCell></TableRow>
             ) : filteredItems.length === 0 ? (
-                 <TableRow><TableCell colSpan={8} align="center">No menu items found.</TableCell></TableRow>
+                 <TableRow><TableCell colSpan={7} align="center">No menu items found.</TableCell></TableRow>
             ) : (
-                filteredItems.map((item: MenuItemData) => ( // Ensure type annotation is correct
+                filteredItems.map((item: MenuItemData) => (
               <TableRow
                 key={item._id}
                 sx={{
@@ -315,25 +316,22 @@ const MenuItemsList = () => {
                 <TableCell>£{item.price.toFixed(2)}</TableCell>
                 <TableCell>{item.preparationTime} min</TableCell>
                  <TableCell>
-                    {/* Improved Availability Indicator */}
-                    <Tooltip title={item.isAvailable ? 'Available' : 'Unavailable'}>
-                      <Box
+                    <Switch
+                      checked={item.isAvailable}
+                      onChange={() => handleAvailabilityToggle(item)}
+                      color={item.isAvailable ? "success" : "error"}
+                      size="small"
                         sx={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          bgcolor: item.isAvailable ? 'success.main' : 'action.disabled',
-                          display: 'inline-block',
-                          ml: 1,
-                        }}
-                      />
-                    </Tooltip>
-                 </TableCell>
-                 <TableCell>
-                     <Chip
-                        label={item.isActive ? 'Active' : 'Inactive'}
-                        color={item.isActive ? 'success' : 'default'}
-                        size="small"
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: item.isAvailable ? '#4caf50' : '#f44336',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: item.isAvailable ? '#4caf50' : '#f44336',
+                        },
+                        '& .MuiSwitch-track': {
+                          backgroundColor: item.isAvailable ? '#4caf50' : '#f44336',
+                        },
+                      }}
                      />
                  </TableCell>
                 <TableCell align="right">
@@ -342,7 +340,7 @@ const MenuItemsList = () => {
                       <Tooltip title="View Details">
                        <IconButton
                          size="small"
-                         onClick={() => navigate(`/menu-items/detail/${item._id}`)} // Navigate to detail page
+                         onClick={() => navigate(`/menu-items/detail/${item._id}`)}
                          sx={{ color: 'text.secondary' }}
                        >
                          <VisibilityIcon fontSize="small"/>
@@ -352,7 +350,7 @@ const MenuItemsList = () => {
                      <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/menu/items/edit/${item._id}`)} // Navigate to edit page
+                          onClick={() => navigate(`/menu/items/edit/${item._id}`)}
                           sx={{ color: 'text.secondary' }}
                         >
                           <EditIcon fontSize="small"/>

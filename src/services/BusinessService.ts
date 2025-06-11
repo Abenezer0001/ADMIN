@@ -11,7 +11,7 @@ import {
 export class BusinessService {
   private baseUrl: string;    // This is the base URL for the business service  
   private static instance: BusinessService;
-  
+ 
   constructor() {
     this.baseUrl = API_BASE_URL;
   }
@@ -28,8 +28,8 @@ export class BusinessService {
    */
   static async getAllBusinesses(): Promise<BusinessListResponse> {
     try {
-    // Use the working test endpoint while middleware issues are resolved
-    const response = await axios.get(`${API_BASE_URL}/test/businesses`, {
+    // Use the correct admin business endpoint
+    const response = await axios.get(`${API_BASE_URL}/admin/businesses`, {
       withCredentials: true
     });
     return response.data as BusinessListResponse;
@@ -40,17 +40,119 @@ export class BusinessService {
   }
 
   /**
-   * Get business by ID (SuperAdmin or Owner)
+   * Test authentication by checking if we can access a simple endpoint
+   */
+  static async testAuthentication(): Promise<any> {
+    try {
+      console.log('Testing authentication...');
+      console.log('Current cookies:', document.cookie);
+      
+      // Use the correct authentication endpoint
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Auth test successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Auth test failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Test system admin debug endpoint
+   */
+  static async testSystemAdminAuth(): Promise<any> {
+    try {
+      console.log('Testing system admin authentication...');
+      
+      // Use the correct authentication endpoint to check user role
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('System admin auth test successful:', response.data);
+      
+      // Check if user has system admin role
+      const user = response.data.user || response.data;
+      if (user.role !== 'system_admin' && !user.roles?.includes('system_admin')) {
+        throw new Error('User does not have system admin privileges');
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('System admin auth test failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get business by ID (SuperAdmin or Owner) - try test endpoint first
    */
   static async getBusinessById(businessId: string): Promise<Business> {
     try {
-    const response = await axios.get(`${API_BASE_URL}/admin/businesses/${businessId}`, {
-      withCredentials: true
-    });
-    return response.data as Business;
+      console.log('Attempting to fetch business by ID:', businessId);
+      console.log('Request URL:', `${API_BASE_URL}/admin/businesses/${businessId}`);
+      
+      // Check if we have authentication cookies
+      console.log('Current cookies:', document.cookie);
+      
+      // First try the authentication endpoint to check if auth is working
+      try {
+        console.log('Testing authentication with auth endpoint...');
+        const authTest = await axios.get(`${API_BASE_URL}/auth/me`, {
+          withCredentials: true
+        });
+        console.log('Authentication test passed:', authTest.data);
+      } catch (authError: any) {
+        console.error('Authentication test failed:', authError.response?.data);
+        throw new Error('Authentication failed. Please log in again.');
+      }
+      
+      const response = await axios.get(`${API_BASE_URL}/admin/businesses/${businessId}`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('getBusinessById response:', response.data);
+      return response.data as Business;
     } catch (error: any) {
-      console.error('getBusinessById error:', error.response?.data || error.message);
-      throw error;
+      console.error('getBusinessById error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      // Provide more descriptive error messages
+      if (error.response?.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      } else if (error.response?.status === 403) {
+        throw new Error('Access denied. You don\'t have permission to view this business.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Business not found.');
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -59,6 +161,7 @@ export class BusinessService {
    */
   static async createBusiness(businessData: CreateBusinessData): Promise<BusinessResponse> {
     try {
+    // Use the correct admin business endpoint
     const response = await axios.post(`${API_BASE_URL}/admin/businesses`, businessData, {
       withCredentials: true
     });
@@ -207,7 +310,7 @@ export class BusinessService {
     try {
       // Get the current business first to get the business ID
       const currentBusiness = await this.getMyBusiness();
-      const response = await axios.put(`${API_BASE_URL}/admin/businesses/${currentBusiness.id}`, updateData, {
+      const response = await axios.put(`${API_BASE_URL}/admin/businesses/${currentBusiness._id}`, updateData, {
         withCredentials: true
       });
       console.log('updateMyBusiness response:', response.data);
@@ -222,8 +325,8 @@ export class BusinessService {
     try {
       console.log('BusinessService: Fetching businesses...');
       
-      // Use the working test endpoint while we fix the middleware issue
-      const response = await fetch(`${API_BASE_URL}/test/businesses`, {
+      // Use the correct admin business endpoint
+      const response = await fetch(`${API_BASE_URL}/admin/businesses`, {
         method: 'GET',
         credentials: 'include',
         headers: {
