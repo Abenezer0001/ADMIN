@@ -73,12 +73,12 @@ function TabPanel(props: TabPanelProps) {
 const UserDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [tabValue, setTabValue] = React.useState(0);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (id) {
       fetchUser(id);
     }
@@ -513,7 +513,7 @@ const UserDetail: React.FC = () => {
                 <CardContent>
                   {user.roles && user.roles.length > 0 ? (
                     <List>
-                      {Array.isArray(user.roles) && user.roles.map((role, index) => {
+                      {Array.isArray(user.roles) && user.roles.map((role: any, index: number) => {
                         // Handle both string roles and Role objects
                         const roleName = typeof role === 'string' ? role : (role as any).name || 'Unknown Role';
                         return (
@@ -549,133 +549,18 @@ const UserDetail: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardHeader 
-                  title="Direct Permissions" 
-                  action={
-                    <Tooltip title="Manage Permissions">
-                      <IconButton onClick={handleManageRoles}>
-                        <SecurityIcon />
-                      </IconButton>
-                    </Tooltip>
-                  }
-                />
-                <Divider />
-                <CardContent>
-                  {user.directPermissions && user.directPermissions.length > 0 ? (
-                    <List>
-                      {Array.isArray(user.directPermissions) && user.directPermissions.map((permission, index) => {
-                        // Handle both string permissions and Permission objects
-                        const permName = typeof permission === 'string' ? permission : (permission as any).name || 'Unknown Permission';
-                        return (
-                          <ListItem key={index} divider={index < (user.directPermissions?.length || 0) - 1}>
-                            <ListItemIcon>
-                              <SecurityIcon color="secondary" />
-                            </ListItemIcon>
-                            <ListItemText 
-                              primary={permName.replace(/:/g, ' • ')}
-                              secondary={typeof permission !== 'string' && (permission as any).description}
-                            />
-                          </ListItem>
-                        );
-                      })}
-                    </List>
-                  ) : user.permissions ? (
-                    <List>
-                      {Array.isArray(user.permissions) && user.permissions.map((permission, index) => (
-                        <ListItem key={index} divider={index < (user.permissions?.length || 0) - 1}>
-                          <ListItemIcon>
-                            <SecurityIcon color="secondary" />
-                          </ListItemIcon>
-                          <ListItemText primary={permission.replace(/:/g, ' • ')} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      No direct permissions assigned
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
             <Grid item xs={12}>
               <Card>
-                <CardHeader title="Effective Permissions" />
+                <CardHeader title="Role-Based Permissions" />
                 <Divider />
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    All permissions available to this user, including those granted via roles
+                    All permissions for this user are managed through their assigned roles
                   </Typography>
                   
-                  {/* Group permissions by category (assuming format like "category:action") */}
-                  {(() => {
-                    // Get all permissions from both direct permissions and role-inherited permissions
-                    let allPermissions: string[] = [];
-                    
-                    // Add direct permissions
-                    if (user.permissions && Array.isArray(user.permissions)) {
-                      allPermissions.push(...user.permissions);
-                    }
-                    
-                    if (user.directPermissions && Array.isArray(user.directPermissions)) {
-                      user.directPermissions.forEach(perm => {
-                        const permName = typeof perm === 'string' ? perm : (perm as any).name;
-                        if (permName && !allPermissions.includes(permName)) {
-                          allPermissions.push(permName);
-                        }
-                      });
-                    }
-                    
-                    // Early return if no permissions
-                    if (allPermissions.length === 0) {
-                      return (
-                        <Typography variant="body2" color="textSecondary">
-                          No permissions available
-                        </Typography>
-                      );
-                    }
-                    
-                    // Group permissions by category (first part of the permission string)
-                    const groupedPermissions: { [key: string]: string[] } = {};
-                    
-                    allPermissions.forEach(perm => {
-                      const parts = perm.split(':');
-                      const category = parts.length > 1 ? parts[0] : 'general';
-                      
-                      if (!groupedPermissions[category]) {
-                        groupedPermissions[category] = [];
-                      }
-                      groupedPermissions[category].push(perm);
-                    });
-                    
-                    // Render grouped permissions
-                    return Object.entries(groupedPermissions).map(([category, permissions]) => (
-                      <Box key={category} mb={2}>
-                        <Typography variant="subtitle1" color="primary" gutterBottom>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </Typography>
-                        <Grid container spacing={1}>
-                          {permissions.map(perm => {
-                            // Extract action part of permission (after the colon)
-                            const action = perm.includes(':') ? perm.split(':').slice(1).join(':') : perm;
-                            return (
-                              <Grid item key={perm}>
-                                <Chip 
-                                  label={action} 
-                                  size="small" 
-                                  variant="outlined" 
-                                  color="secondary"
-                                />
-                              </Grid>
-                            );
-                          })}
-                        </Grid>
-                      </Box>
-                    ));
-                  })()}
+                  <Typography variant="body2" color="textSecondary">
+                    To view detailed permission information, please use the RBAC Dashboard in the Settings menu.
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>

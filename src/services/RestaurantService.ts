@@ -1,107 +1,104 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../utils/config';
+import axiosInstance from '../utils/axiosConfig';
 
-export interface Restaurant {
-  _id: string;
-  name: string;
-  description?: string;
-  address?: string;
-  contactInfo?: string;
-  isActive: boolean;
-  locations?: Array<{
-    address: string;
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
-  }>;
-  venues?: string[];
-  adminIds?: string[];
-  createdAt?: string;
-  updatedAt?: string;
+interface Location {
+  address: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
-class RestaurantService {
-  private baseUrl: string;
+interface Restaurant {
+  _id?: string;
+  name: string;
+  locations: Location[];
+  isActive?: boolean;
+}
 
-  constructor() {
-    this.baseUrl = API_BASE_URL;
-  }
-
+export class RestaurantService {
   /**
    * Get all restaurants
-   * @returns Promise with the restaurants data
    */
-  async getRestaurants() {
+  static async getAllRestaurants(): Promise<Restaurant[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/restaurants`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching restaurants:', error);
+      console.log('Fetching all restaurants...');
+      const response = await axiosInstance.get('/restaurants');
+      console.log('All restaurants response:', response.data);
+      return response.data as Restaurant[];
+    } catch (error: any) {
+      console.error('Error fetching all restaurants:', error);
       throw error;
     }
   }
 
   /**
-   * Get a specific restaurant by ID
-   * @param restaurantId - The ID of the restaurant
-   * @returns Promise with the restaurant data
+   * Get all restaurants (alias for backwards compatibility)
    */
-  async getRestaurant(restaurantId: string) {
+  static async getRestaurants(): Promise<Restaurant[]> {
+    return this.getAllRestaurants();
+  }
+
+  /**
+   * Get restaurant by ID
+   */
+  static async getRestaurantById(id: string): Promise<Restaurant> {
     try {
-      const response = await axios.get(`${this.baseUrl}/restaurants/${restaurantId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching restaurant:', error);
+      console.log('Fetching restaurant by ID:', id);
+      const response = await axiosInstance.get(`/restaurants/${id}`);
+      console.log('Restaurant by ID response:', response.data);
+      return response.data as Restaurant;
+    } catch (error: any) {
+      console.error('Error fetching restaurant by ID:', error);
       throw error;
     }
   }
 
   /**
    * Create a new restaurant
-   * @param restaurantData - The restaurant data to create
-   * @returns Promise with the created restaurant
    */
-  async createRestaurant(restaurantData: Omit<Restaurant, '_id'>) {
+  static async createRestaurant(restaurantData: Partial<Restaurant>): Promise<Restaurant> {
     try {
-      const response = await axios.post(`${this.baseUrl}/restaurants`, restaurantData);
-      return response.data;
-    } catch (error) {
+      console.log('Creating restaurant:', restaurantData);
+      const response = await axiosInstance.post('/restaurants', restaurantData);
+      console.log('Create restaurant response:', response.data);
+      return response.data as Restaurant;
+    } catch (error: any) {
       console.error('Error creating restaurant:', error);
       throw error;
     }
   }
 
   /**
-   * Update an existing restaurant
-   * @param restaurantId - The ID of the restaurant to update
-   * @param restaurantData - The updated restaurant data
-   * @returns Promise with the updated restaurant
+   * Update restaurant
    */
-  async updateRestaurant(restaurantId: string, restaurantData: Partial<Omit<Restaurant, '_id'>>) {
+  static async updateRestaurant(id: string, updateData: Partial<Restaurant>): Promise<Restaurant> {
     try {
-      const response = await axios.put(`${this.baseUrl}/restaurants/${restaurantId}`, restaurantData);
-      return response.data;
-    } catch (error) {
+      console.log('Updating restaurant:', id, updateData);
+      const response = await axiosInstance.put(`/restaurants/${id}`, updateData);
+      console.log('Update restaurant response:', response.data);
+      return response.data as Restaurant;
+    } catch (error: any) {
       console.error('Error updating restaurant:', error);
       throw error;
     }
   }
 
   /**
-   * Delete a restaurant
-   * @param restaurantId - The ID of the restaurant to delete
-   * @returns Promise with the deletion result
+   * Delete restaurant
    */
-  async deleteRestaurant(restaurantId: string) {
+  static async deleteRestaurant(id: string): Promise<{ message: string }> {
     try {
-      const response = await axios.delete(`${this.baseUrl}/restaurants/${restaurantId}`);
-      return response.data;
-    } catch (error) {
+      console.log('Deleting restaurant:', id);
+      const response = await axiosInstance.delete(`/restaurants/${id}`);
+      console.log('Delete restaurant response:', response.data);
+      return response.data as { message: string };
+    } catch (error: any) {
       console.error('Error deleting restaurant:', error);
       throw error;
     }
   }
 }
 
-export const restaurantService = new RestaurantService();
+// Export both default and named for backwards compatibility
+export default RestaurantService;
+export const restaurantService = RestaurantService;

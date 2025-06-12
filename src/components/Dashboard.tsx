@@ -1,7 +1,6 @@
 import React from 'react';
 import { TooltipProps } from 'recharts';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
-const { useState, useMemo } = React;
 import {
   Box,
   Typography,
@@ -39,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import { useAuth } from '../context/AuthContext';
 import {
   AreaChart,
   Area,
@@ -219,18 +219,37 @@ const CircularProgressIndicator = ({ percentage, color }: CircularProgressProps)
   );
 };
 
-function Dashboard() {
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
-  const [selectedChart, setSelectedChart] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [hoveredLink, setHoveredLink] = React.useState<string | null>(null);
+  const [selectedChart, setSelectedChart] = React.useState<string | null>(null);
 
-  const quickLinksData = useMemo(() => [
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user) {
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      if (firstName && lastName) {
+        return `${firstName} ${lastName}`;
+      } else if (firstName) {
+        return firstName;
+      } else if (lastName) {
+        return lastName;
+      } else {
+        return user.email || 'User';
+      }
+    }
+    return 'User';
+  };
+
+  const quickLinksData = React.useMemo(() => [
     {
       label: 'Live Orders',
       icon: <LiveOrdersIcon />,
-      path: '/live-orders',
+      path: '/orders/live',
       color: theme.palette.primary.main,
       description: 'Monitor real-time order activity'
     },
@@ -257,7 +276,7 @@ function Dashboard() {
     }
   ], [theme]);
 
-  const analyticsLinksData = useMemo(() => [
+  const analyticsLinksData = React.useMemo(() => [
     {
       label: 'Sales Overview',
       icon: <AnalyticsIcon />,
@@ -267,7 +286,7 @@ function Dashboard() {
     {
       label: 'Customer Insights',
       icon: <InsightsIcon />,
-      path: '/sales',
+      path: '/analytics/customer-insight',
       color: theme.palette.success.main
     },
     {
@@ -279,7 +298,7 @@ function Dashboard() {
     {
       label: 'Menu Reports',
       icon: <AutoGraphIcon />,
-      path: '/analytics/menu-reports',
+      path: '/analytics/menu-report',
       color: theme.palette.secondary.main
     }
   ], [theme]);
@@ -327,7 +346,7 @@ function Dashboard() {
             </Box>
             <Box>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Welcome back</Typography>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Jhon Anderson!</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{getUserDisplayName()}!</Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -338,11 +357,20 @@ function Dashboard() {
               mr: 3, 
               display: 'flex', 
               flexDirection: 'column',
-              textAlign: 'center'
+              textAlign: 'center',
+              minWidth: 120
             }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>$65.4K</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>$85.2K</Typography>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Today's Sales</Typography>
-              <Box sx={{ width: '100%', height: 4, bgcolor: theme.palette.success.main, mt: 1, borderRadius: 2 }} />
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                mt: 1 
+              }}>
+                <TrendingUpIcon sx={{ color: theme.palette.success.main, fontSize: 16, mr: 0.5 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.success.main }}>+12.5%</Typography>
+              </Box>
             </Box>
             <Box sx={{ 
               bgcolor: theme.palette.background.paper, 
@@ -350,17 +378,26 @@ function Dashboard() {
               p: 2, 
               display: 'flex', 
               flexDirection: 'column',
-              textAlign: 'center'
+              textAlign: 'center',
+              minWidth: 120
             }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.error.main }}>78.4%</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>78.4%</Typography>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Growth Rate</Typography>
-              <Box sx={{ width: '100%', height: 4, bgcolor: theme.palette.error.main, mt: 1, borderRadius: 2 }} />
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                mt: 1 
+              }}>
+                <TrendingUpIcon sx={{ color: theme.palette.primary.main, fontSize: 16, mr: 0.5 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.primary.main }}>+8.2%</Typography>
+              </Box>
             </Box>
           </Box>
-
         </Box>
-            {/* Quick Links Section */}
-            <Grid item xs={12}>
+
+        {/* Quick Links Section */}
+        <Grid item xs={12}>
           <Paper sx={{ 
             bgcolor: theme.palette.background.paper, 
             borderRadius: 2, 
@@ -379,7 +416,7 @@ function Dashboard() {
               </IconButton>
             </Box>
             <Grid container spacing={2}>
-              {quickLinksData.map((link) => (
+              {quickLinksData.map((link: QuickLink) => (
                 <Grid item xs={12} sm={6} md={3} key={link.label}>
                   <Paper
                     onClick={() => navigate(link.path)}
@@ -443,7 +480,7 @@ function Dashboard() {
               </IconButton>
             </Box>
             <Grid container spacing={2}>
-              {analyticsLinksData.map((link) => (
+              {analyticsLinksData.map((link: AnalyticsIcon) => (
                 <Grid item xs={12} sm={6} md={3} key={link.label}>
                   <Paper
                     onClick={() => navigate(link.path)}
@@ -588,7 +625,7 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart 
                     data={monthlySalesData}
-                    onClick={(data) => handleChartClick('monthly-sales')}
+                    onClick={(data: any) => handleChartClick('monthly-sales')}
                     style={{ cursor: 'pointer' }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
@@ -605,7 +642,7 @@ function Dashboard() {
                     />
                     <RechartsTooltip 
                       cursor={{ fill: 'rgba(255,255,255,0.1)' }}
-                      content={({ active, payload, label }) => {
+                      content={({ active, payload, label }: any) => {
                         if (active && payload && payload.length) {
                           return (
                             <Box sx={{ 
@@ -629,7 +666,7 @@ function Dashboard() {
                       dataKey="value" 
                       fill={theme.palette.primary.main} 
                       radius={[4, 4, 0, 0]}
-                      onMouseOver={(data) => {
+                      onMouseOver={(data: any) => {
                         if (data.tooltipPosition) {
                           data.tooltipPosition.stroke = theme.palette.primary.main;
                           data.tooltipPosition.strokeWidth = 2;
@@ -646,147 +683,8 @@ function Dashboard() {
             </Paper>
           </Grid>
           
-          {/* Device Type */}
-          {/* <Grid item xs={12} md={4}>
-            <Paper
-              sx={{ 
-                bgcolor: theme.palette.background.paper, 
-                borderRadius: 2, 
-                p: 2,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">Device Type</Typography>
-                <IconButton size="small" sx={{ color: theme.palette.text.primary }}>
-                  <MoreVertIcon />
-                </IconButton>
-              </Box>
-              
-              <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Box sx={{ position: 'relative', width: 200, height: 200 }}>
-                  <CircularProgressIndicator percentage={68} color={theme.palette.primary.main} />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      position: 'absolute', 
-                      bottom: 50, 
-                      left: 0, 
-                      right: 0, 
-                      textAlign: 'center',
-                      color: theme.palette.text.secondary
-                    }}
-                  >
-                    Total Views
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <Box sx={{ mt: 2 }}>
-                {deviceData.map((item) => (
-                  <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '40%' }}>
-                      {item.name === 'Desktop' && <LaptopIcon sx={{ color: item.color, mr: 1 }} />}
-                      {item.name === 'Tablet' && <TabletIcon sx={{ color: item.color, mr: 1 }} />}
-                      {item.name === 'Mobile' && <MobileIcon sx={{ color: item.color, mr: 1 }} />}
-                      <Typography variant="body2">{item.name}</Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ color: item.color, flex: 1, textAlign: 'right' }}>
-                      {item.value}%
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Grid> */}
-          
-          {/* Total Clicks */}
-          {/* <Grid item xs={12} md={4}>
-            <Paper
-              sx={{ 
-                bgcolor: theme.palette.background.paper, 
-                borderRadius: 2, 
-                p: 2,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">82.7K</Typography>
-                <IconButton size="small" sx={{ color: theme.palette.text.primary }}>
-                  <MoreVertIcon />
-                </IconButton>
-              </Box>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Total Clicks</Typography>
-              
-              <Box sx={{ flex: 1, mt: 2 }}>
-                <ResponsiveContainer width="100%" height={150}>
-                  <BarChart data={totalClicksData}>
-                    <Bar 
-                      dataKey="value" 
-                      fill={theme.palette.error.main} 
-                      radius={[4, 4, 0, 0]} 
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.success.main, mr: 1 }}>12.5%</Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                  from last month
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid> */}
-          
-          {/* Total Views */}
-          {/* <Grid item xs={12} md={4}>
-            <Paper
-              sx={{ 
-                bgcolor: theme.palette.background.paper, 
-                borderRadius: 2, 
-                p: 2,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">68.4K</Typography>
-                <IconButton size="small" sx={{ color: theme.palette.text.primary }}>
-                  <MoreVertIcon />
-                </IconButton>
-              </Box>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Total Views</Typography>
-              
-              <Box sx={{ flex: 1, mt: 2 }}>
-                <ResponsiveContainer width="100%" height={150}>
-                  <LineChart data={totalViewsData}>
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke={theme.palette.secondary.main} 
-                      strokeWidth={2}
-                      dot={{ fill: theme.palette.secondary.main, stroke: theme.palette.secondary.main, strokeWidth: 2, r: 4 }}
-                      activeDot={{ fill: theme.palette.secondary.main, stroke: theme.palette.secondary.main, strokeWidth: 2, r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                  35K users increased from last month
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid> */}
-          
-          {/* Total Accounts */}
+          {/* COMMENTED OUT: Total Accounts Chart */}
+          {/* 
           <Grid item xs={12}>
             <Paper
               sx={{ 
@@ -830,10 +728,11 @@ function Dashboard() {
               </Box>
             </Paper>
           </Grid>
+          */}
         </Grid>
         
         {/* Sales Overview */}
-        <Paper sx={{ p: 3, mb: 4, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
+        <Paper sx={{ p: 3, mb: 4, mt: 4, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
           <Typography variant="h6" gutterBottom>
             Sales Overview
           </Typography>
@@ -857,12 +756,12 @@ function Dashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <CartesianGrid strokeDasharray="3 3" />
-                <RechartsTooltip content={({ active, payload, label }) => {
+                <RechartsTooltip content={({ active, payload, label }: any) => {
                   if (active && payload && payload.length) {
                     return (
                       <Box sx={{ p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                         <Typography variant="body2">{`${label}`}</Typography>
-                        {payload.map((entry, index) => (
+                        {payload.map((entry: any, index: number) => (
                           <Typography key={index} variant="body2" sx={{ color: entry.color }}>
                             {`${entry.name}: ${entry.value}`}
                           </Typography>
@@ -945,12 +844,12 @@ function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis dataKey="name" type="category" scale="band" />
-                    <RechartsTooltip content={({ active, payload, label }) => {
+                    <RechartsTooltip content={({ active, payload, label }: any) => {
                       if (active && payload && payload.length) {
                         return (
                           <Box sx={{ p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                             <Typography variant="body2">{`${label}`}</Typography>
-                            {payload.map((entry, index) => (
+                            {payload.map((entry: any, index: number) => (
                               <Typography key={index} variant="body2" sx={{ color: entry.color }}>
                                 {`${entry.name}: ${entry.value}`}
                               </Typography>
@@ -974,4 +873,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default React.memo(Dashboard);

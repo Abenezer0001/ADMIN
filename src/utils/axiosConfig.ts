@@ -223,45 +223,41 @@ const shouldAttemptRefresh = () => {
   return true;
 };
 
-// Request interceptor
+// Add request interceptor to ensure proper authentication
 api.interceptors.request.use(
   (config) => {
-    // No need to set Authorization header manually
-    // HTTP-only cookies will be sent automatically with withCredentials: true
+    // Ensure cookies are properly set
+    const cookies = document.cookie;
+    console.log('Request interceptor - Available cookies:', cookies);
     
-    // Add detailed request logging
-    // Validate URL format
-    if (config.url && !config.url.startsWith('/')) {
-      console.warn('API URL path does not start with /, adding it:', config.url);
-      config.url = `/${config.url}`;
-    }
-    
-    // Check for empty payload on POST/PUT requests
-    if ((config.method === 'post' || config.method === 'put') && !config.data) {
-      console.warn('POST/PUT request without data payload:', config.url);
-    }
-    
-    console.log('API Request:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      fullUrl: `${config.baseURL}${config.url}`,
-      baseURL: config.baseURL,
-      headers: {
+    // Extract access_token from cookies if available
+    const accessTokenMatch = cookies.match(/access_token=([^;]+)/);
+    if (accessTokenMatch) {
+      const token = accessTokenMatch[1];
+      console.log('Found access_token, adding as Authorization header');
+      
+      // Add both cookie and Authorization header for maximum compatibility
+      config.headers = {
         ...config.headers,
-        // Don't log actual Cookie values
-        Cookie: config.headers?.Cookie ? '[PRESENT]' : '[NONE]'
-      },
-      withCredentials: config.withCredentials,
-      // Log data without exposing sensitive information
-      data: config.data ? {
-        ...config.data,
-        password: config.data.password ? '[REDACTED]' : undefined
-      } : undefined
+        'Authorization': `Bearer ${token}`,
+        'Cookie': cookies
+      };
+    }
+    
+    // Ensure withCredentials is always true
+    config.withCredentials = true;
+    
+    console.log('Request config:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      withCredentials: config.withCredentials
     });
     
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -374,7 +370,7 @@ api.interceptors.response.use(
         
         console.log('Token refresh response:', {
           status: response.status,
-          success: response.data?.success
+          success: (response.data as any)?.success
         });
         
         if (response.status === 200) {
@@ -398,11 +394,11 @@ api.interceptors.response.use(
           console.warn('Token refresh returned unexpected status:', response.status);
           throw new Error('Token refresh failed with status ' + response.status);
         }
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         console.error('Token refresh failed:', refreshError);
         
         // Log detailed refresh error information
-        if (refreshError.response) {
+        if (refreshError?.response) {
           console.error('Refresh error details:', {
             status: refreshError.response.status,
             statusText: refreshError.response.statusText,
@@ -416,8 +412,8 @@ api.interceptors.response.use(
         // Only redirect to login for confirmed auth failures, 
         // not network errors or timeouts
         const isAuthFailure = 
-          refreshError.response?.status === 401 || 
-          refreshError.response?.status === 403;
+          refreshError?.response?.status === 401 || 
+          refreshError?.response?.status === 403;
         
         // Get comprehensive page state
         const pageState = getPageLoadState();
@@ -431,7 +427,7 @@ api.interceptors.response.use(
           hasSuccessfulLoginBefore,
           refreshAttemptCount,
           isAuthFailure,
-          authFailureStatus: refreshError.response?.status
+          authFailureStatus: refreshError?.response?.status
         });
             
         // Enhanced redirect logic with special handling for page load phases:
@@ -476,7 +472,7 @@ api.interceptors.response.use(
             console.log('Authentication failure confirmed, redirecting to login', {
               readyState: document.readyState,
               attemptCount: refreshAttemptCount,
-              pageLoadTime,
+              pageLoadTime: pageState.timeSinceStart,
               hasCookies,
               hasSuccessfulLoginBefore
             });
@@ -484,11 +480,11 @@ api.interceptors.response.use(
             // Store detailed failure information for debugging
             const failureInfo = {
               timestamp: new Date().toISOString(),
-              status: refreshError.response?.status,
-              message: refreshError.message,
+              status: refreshError?.response?.status,
+              message: refreshError?.message,
               attemptCount: refreshAttemptCount,
               readyState: document.readyState,
-              pageLoadTime,
+              pageLoadTime: pageState.timeSinceStart,
               url: window.location.href,
               hasCookies,
               hasSuccessfulLoginBefore
@@ -535,11 +531,11 @@ api.interceptors.response.use(
             }, redirectDelay);
         } else {
             console.log('Not redirecting to login despite refresh failure', {
-              isPageLoad,
+              isPageLoad: pageState.isInitialLoad,
               isEarlyPageLoad: pageState.timeSinceStart < 5000,
               pageLoadTime: pageState.timeSinceStart,
               attemptCount: refreshAttemptCount,
-              hasResponse: !!refreshError.response,
+              hasResponse: !!refreshError?.response,
               hasCookies,
               hasSuccessfulLoginBefore
             });

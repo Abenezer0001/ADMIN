@@ -73,8 +73,9 @@ const TableDetail = () => {
           // Get the restaurant name
           if (tableData.restaurantId) {
             try {
-              const restaurant = await restaurantService.getRestaurant(tableData.restaurantId);
-              setRestaurantName(restaurant.name);
+              const restaurants = await restaurantService.getRestaurants();
+              const restaurant = restaurants.find(r => r._id === tableData.restaurantId);
+              setRestaurantName(restaurant ? restaurant.name : 'Unknown Restaurant');
             } catch (err) {
               console.error('Error fetching restaurant:', err);
               setRestaurantName('Unknown Restaurant');
@@ -84,8 +85,8 @@ const TableDetail = () => {
           // Get the venue name
           if (tableData.venueId) {
             try {
-              const venue = await venueService.getVenue(tableData.restaurantId, tableData.venueId);
-              setVenueName(venue.name);
+              const venue = await venueService.getVenue(tableData.venueId);
+              setVenueName(venue.name || 'Unknown Venue');
             } catch (err) {
               console.error('Error fetching venue:', err);
               setVenueName('Unknown Venue');
@@ -93,11 +94,15 @@ const TableDetail = () => {
           }
           
           // Get the table type name
-          if (tableData.tableTypeId) {
+          if (tableData.tableTypeId && tableData.restaurantId) {
             try {
               const tableTypes = await tableService.getTableTypes(tableData.restaurantId);
+              if (Array.isArray(tableTypes)) {
               const matchingType = tableTypes.find(type => type._id === tableData.tableTypeId);
               setTableTypeName(matchingType ? matchingType.name : 'Unknown Type');
+              } else {
+                setTableTypeName('Unknown Type');
+              }
             } catch (err) {
               console.error('Error fetching table types:', err);
               setTableTypeName('Unknown Type');
@@ -105,12 +110,14 @@ const TableDetail = () => {
           }
           
           // Fetch QR code if available
+          if (tableData.restaurantId && tableData.venueId) {
           try {
             const qrCodeData = await tableService.getTableQRCode(tableData.restaurantId, tableData.venueId, tableId);
             setQrCode(qrCodeData);
           } catch (qrErr) {
             console.error('Error fetching QR code:', qrErr);
             // Don't set an error for QR code failure, just log it
+            }
           }
         }
         

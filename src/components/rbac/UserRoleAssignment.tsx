@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
@@ -36,7 +36,6 @@ interface User {
   lastName: string;
   role: string;
   roles: Role[];
-  directPermissions: Permission[];
 }
 
 interface Role {
@@ -53,17 +52,17 @@ interface Permission {
 }
 
 const UserRoleAssignment: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [openRoleDialog, setOpenRoleDialog] = useState(false);
-  const [openPermissionDialog, setOpenPermissionDialog] = useState(false);
-  const [selectedRoleId, setSelectedRoleId] = useState('');
-  const [selectedPermissionId, setSelectedPermissionId] = useState('');
-  const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [roles, setRoles] = React.useState<Role[]>([]);
+  const [permissions, setPermissions] = React.useState<Permission[]>([]);
+  const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+  const [openRoleDialog, setOpenRoleDialog] = React.useState(false);
+  const [openPermissionDialog, setOpenPermissionDialog] = React.useState(false);
+  const [selectedRoleId, setSelectedRoleId] = React.useState('');
+  const [selectedPermissionId, setSelectedPermissionId] = React.useState('');
+  const [userPermissions, setUserPermissions] = React.useState<Permission[]>([]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchUsers();
     fetchRoles();
     fetchPermissions();
@@ -199,14 +198,14 @@ const UserRoleAssignment: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map(user => (
+            {users.map((user: User) => (
               <TableRow key={user._id}>
                 <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {user.roles?.map(role => (
+                    {user.roles?.map((role: Role) => (
                       <Chip
                         key={role._id}
                         label={role.name}
@@ -250,7 +249,7 @@ const UserRoleAssignment: React.FC = () => {
               onChange={handleRoleChange}
               label="Role"
             >
-              {roles.map(role => (
+              {roles.map((role: Role) => (
                 <MenuItem key={role._id} value={role._id}>
                   {role.name} - {role.description}
                 </MenuItem>
@@ -286,7 +285,7 @@ const UserRoleAssignment: React.FC = () => {
               Current Permissions
             </Typography>
             <Grid container spacing={1}>
-              {userPermissions.map(permission => (
+              {userPermissions.map((permission: Permission) => (
                 <Grid item key={permission._id}>
                   <Chip
                     label={`${permission.resource}:${permission.action}`}
@@ -306,7 +305,7 @@ const UserRoleAssignment: React.FC = () => {
                 onChange={handlePermissionChange}
                 label="Add Permission"
               >
-                {permissions.map(permission => (
+                {permissions.map((permission: Permission) => (
                   <MenuItem key={permission._id} value={permission._id}>
                     {permission.resource}:{permission.action} - {permission.description}
                   </MenuItem>

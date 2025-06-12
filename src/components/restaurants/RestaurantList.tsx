@@ -64,11 +64,11 @@ const RestaurantList: React.FC = () => {
       accessorFn: (row) => row.venues?.length || 0,
       cell: ({ getValue }) => getValue(),
     },
-    {
-      header: 'Tables',
-      accessorFn: (row) => row.tables?.length || 0,
-      cell: ({ getValue }) => getValue(),
-    },
+    // {
+    //   header: 'Tables',
+    //   accessorFn: (row) => row.tables?.length || 0,
+    //   cell: ({ getValue }) => getValue(),
+    // },
   ];
 
   const handleView = (restaurant: Restaurant) => {

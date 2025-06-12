@@ -8,7 +8,8 @@ export interface User {
   lastName?: string;
   role?: string;
   roles?: Role[] | string[];
-  directPermissions?: Permission[] | string[];
+  businessId?: string;
+  businessName?: string;
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
@@ -108,9 +109,4 @@ export interface UserResponse {
 export interface UserRoleAssignmentRequest {
   userId: string;
   roleIds: string[];
-}
-
-export interface UserPermissionAssignmentRequest {
-  userId: string;
-  permissionIds: string[];
 }

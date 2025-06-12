@@ -154,12 +154,44 @@ class TableService {
     return this.updateTable(restaurantId, venueId, tableId, { isActive });
   }
 
-  // Dedicated method to update the table status directly
+  // Update table occupied status (for availability toggle)
+  async updateTableOccupiedStatus(tableId: string, isOccupied: boolean) {
+    try {
+      console.log(`Updating table ${tableId} occupied status to ${isOccupied}`);
+      const response = await axios.patch(
+        `${this.baseUrl}/tables/${tableId}/occupied`,
+        { isOccupied },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating table occupied status:', error);
+      throw error;
+    }
+  }
+
+  // Toggle table availability (occupied/available)
+  async toggleTableAvailability(tableId: string, currentStatus: boolean) {
+    return this.updateTableOccupiedStatus(tableId, !currentStatus);
+  }
+
   async updateTableStatus(tableId: string, isActive: boolean) {
     try {
+      console.log(`Updating table ${tableId} status to ${isActive}`);
       const response = await axios.patch(
         `${this.baseUrl}/tables/${tableId}/status`,
-        { isActive }
+        { isActive },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          withCredentials: true,
+        }
       );
       return response.data;
     } catch (error) {
@@ -216,7 +248,8 @@ class TableService {
   async getTableQRCode(restaurantId: string, venueId: string, tableId: string) {
     try {
       const response = await axios.get(
-        `${this.baseUrl}/restaurant-service/restaurant/${restaurantId}/venue/${venueId}/tables/${tableId}/qrcode`
+        `${this.baseUrl}/restaurants/${restaurantId}/venues/${venueId}/tables/${tableId}/qrcode`,
+        { withCredentials: true }
       );
       return (response.data as { qrCode: string }).qrCode;
     } catch (error) {
@@ -271,7 +304,9 @@ class TableService {
   async generateQRCode(restaurantId: string, venueId: string, tableId: string) {
     try {
       const response = await axios.post(
-        `${this.baseUrl}/restaurants/${restaurantId}/venues/${venueId}/tables/${tableId}/qrcode`
+        `${this.baseUrl}/restaurants/${restaurantId}/venues/${venueId}/tables/${tableId}/qrcode`,
+        {},
+        { withCredentials: true }
       );
       return response.data;
     } catch (error) {
@@ -284,7 +319,8 @@ class TableService {
   async getQRCode(restaurantId: string, venueId: string, tableId: string) {
     try {
       const response = await axios.get(
-        `${this.baseUrl}/restaurants/${restaurantId}/venues/${venueId}/tables/${tableId}/qrcode`
+        `${this.baseUrl}/restaurants/${restaurantId}/venues/${venueId}/tables/${tableId}/qrcode`,
+        { withCredentials: true }
       );
       return response.data;
     } catch (error) {
@@ -309,23 +345,14 @@ class TableService {
   // Get table directly by ID - helpful when restaurant/venue context isn't available
   async getTableById(tableId: string) {
     try {
-      // First try direct access using the pattern that works in deleteTableDirect
-      const response = await axios.get(`${this.baseUrl}/restaurant-service/tables/${tableId}`);
-      const table = response.data;
+      // Use the correct endpoint from table routes: /tables/:tableId
+      const response = await axios.get(`${this.baseUrl}/tables/${tableId}`, {
+        withCredentials: true
+      });
+      const table = response.data as Table;
       
       if (!table) {
         throw new Error('Table not found');
-      }
-
-      // If we have restaurant and venue context, get the full details
-      if (table.restaurantId && table.venueId) {
-        try {
-          // Use the proven getTable method
-          return await this.getTable(table.restaurantId, table.venueId, tableId);
-        } catch (detailError) {
-          console.warn('Could not get full table details, returning basic info:', detailError);
-          return table;
-        }
       }
       
       return table;
@@ -333,22 +360,14 @@ class TableService {
       // If direct access fails, try getting all tables as fallback
       try {
         console.warn('Direct access failed, trying filtered tables...', error);
-        const allTablesResponse = await axios.get(`${this.baseUrl}/tables/filtered`);
-        const allTables = allTablesResponse.data;
+        const allTablesResponse = await axios.get(`${this.baseUrl}/tables/filtered`, {
+          withCredentials: true
+        });
+        const allTables = allTablesResponse.data as Table[];
         
         const table = allTables.find((t: Table) => t._id === tableId || t.id === tableId);
         if (!table) {
           throw new Error('Table not found');
-        }
-
-        // If we found the table and have context, get full details
-        if (table.restaurantId && table.venueId) {
-          try {
-            return await this.getTable(table.restaurantId, table.venueId, tableId);
-          } catch (detailError) {
-            console.warn('Could not get full table details, returning basic info:', detailError);
-            return table;
-          }
         }
         
         return table;

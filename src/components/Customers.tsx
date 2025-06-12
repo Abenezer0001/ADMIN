@@ -1,332 +1,377 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  IconButton,
+  Chip,
+  TextField,
+  InputAdornment,
+  FormControl,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Grid,
   Card,
   CardContent,
   Divider,
-  Stack,
-  Avatar,
-  Chip,
-  LinearProgress,
-  IconButton,
-  TextField,
-  InputAdornment
+  Alert,
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
-import PersonIcon from '@mui/icons-material/Person';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import GroupsIcon from '@mui/icons-material/Groups';
-import RedeemIcon from '@mui/icons-material/Redeem';
-import SearchIcon from '@mui/icons-material/Search';
-import EventNoteIcon from '@mui/icons-material/EventNote';
-// import DataTable from '../common/DataTable';
 import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from 'recharts';
-import DataTable from './common/DataTable';
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  Visibility as ViewIcon,
+  Edit as EditIcon,
+  Block as BlockIcon,
+  CheckCircle as ActiveIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Business as BusinessIcon,
+  CalendarToday as CalendarIcon,
+  TrendingUp as TrendingUpIcon,
+  Group as GroupIcon,
+  PersonAdd as PersonAddIcon,
+  Analytics as AnalyticsIcon
+} from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
+import CustomerService, { Customer, CustomersResponse } from '../services/CustomerService';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
-// Mock data
-const customerSummary = {
-  totalCustomers: 3245,
-  newCustomers: 124,
-  returnRate: 68.5,
-  averageSpend: 42.75
-};
+// Type definitions
+interface CustomerFilter {
+  search: string;
+  status: 'all' | 'active' | 'inactive';
+  business: string;
+  restaurant: string;
+}
 
-const loyaltyDistribution = [
-  { name: 'Bronze', value: 1870, color: '#CD7F32' },
-  { name: 'Silver', value: 972, color: '#C0C0C0' },
-  { name: 'Gold', value: 340, color: '#FFD700' },
-  { name: 'Platinum', value: 63, color: '#E5E4E2' }
-];
+interface CustomerAnalytics {
+  totalCustomers: number;
+  newCustomers: number;
+  activeCustomers: number;
+  returnRate: number;
+  averageSpend: number;
+  loyaltyDistribution: Array<{ name: string; value: number; color: string }>;
+  customerActivity: Array<{ name: string; signups: number }>;
+  demographicData: any[];
+}
 
-const customerActivity = [
-  { month: 'Jan', newCustomers: 96, returningCustomers: 230 },
-  { month: 'Feb', newCustomers: 84, returningCustomers: 210 },
-  { month: 'Mar', newCustomers: 105, returningCustomers: 245 },
-  { month: 'Apr', newCustomers: 122, returningCustomers: 278 },
-  { month: 'May', newCustomers: 114, returningCustomers: 265 }
-];
+function CustomersComponent() {
+  const theme = useTheme();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [analytics, setAnalytics] = useState<CustomerAnalytics | null>(null);
+  const [businesses, setBusinesses] = useState<Array<{ _id: string; name: string }>>([]);
+  const [restaurants, setRestaurants] = useState<Array<{ _id: string; name: string; businessId?: string }>>([]);
+  const [context, setContext] = useState<'system_admin' | 'business_user'>('business_user');
+  const [currentBusinessId, setCurrentBusinessId] = useState<string>('');
 
-const demographicData = [
-  { ageGroup: '18-24', percentage: 15, trend: 4 },
-  { ageGroup: '25-34', percentage: 32, trend: 7 },
-  { ageGroup: '35-44', percentage: 28, trend: 2 },
-  { ageGroup: '45-54', percentage: 18, trend: -3 },
-  { ageGroup: '55+', percentage: 7, trend: -1 }
-];
+  const [filters, setFilters] = useState<CustomerFilter>({
+    search: '',
+    status: 'all',
+    business: '',
+    restaurant: ''
+  });
 
-// Table data
-const columns = [
-  { header: 'Customer Name', accessorKey: 'name' },
-  { header: 'Email', accessorKey: 'email' },
-  { header: 'Orders', accessorKey: 'orders' },
-  { header: 'Total Spent', accessorKey: 'spent' },
-  { header: 'Loyalty', accessorKey: 'loyalty' },
-  { header: 'Last Visit', accessorKey: 'lastVisit' }
-];
+  // Load customers and analytics
+  useEffect(() => {
+    loadCustomers();
+    loadAnalytics();
+  }, [filters.business, filters.restaurant]);
 
-const data = [
-  { name: 'John Smith', email: 'john.smith@example.com', orders: 12, spent: '$526.40', loyalty: 'Gold', lastVisit: '2 days ago' },
-  { name: 'Alice Johnson', email: 'alice.j@example.com', orders: 24, spent: '$1,284.75', loyalty: 'Platinum', lastVisit: '5 days ago' },
-  { name: 'Michael Brown', email: 'mbrown@example.com', orders: 8, spent: '$312.20', loyalty: 'Silver', lastVisit: 'Today' },
-  { name: 'Emma Wilson', email: 'emma.w@example.com', orders: 5, spent: '$186.50', loyalty: 'Bronze', lastVisit: '2 weeks ago' },
-  { name: 'James Davis', email: 'jdavis@example.com', orders: 16, spent: '$729.90', loyalty: 'Gold', lastVisit: 'Yesterday' }
-];
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-function Customer() {
-  const [searchTerm, setSearchTerm] = useState('');
+      const response: CustomersResponse = await CustomerService.getCustomers(
+        filters.business || undefined,
+        filters.restaurant || undefined
+      );
+      
+      setCustomers(response.customers || []);
+      setContext(response.context || 'business_user');
+      setCurrentBusinessId(response.businessId || '');
+      
+      if (response.businesses) {
+        setBusinesses(response.businesses);
+      }
 
-  const handleEdit = (customer: any) => {
-    console.log('Edit customer:', customer);
+      if (response.restaurants) {
+        setRestaurants(response.restaurants);
+      }
+
+    } catch (err: any) {
+      console.error('Error loading customers:', err);
+      setError(err.message || 'Failed to load customers');
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (customer: any) => {
-    console.log('Delete customer:', customer);
+  const loadAnalytics = async () => {
+    try {
+      const analyticsData = await CustomerService.getCustomerAnalytics(
+        filters.business || undefined
+      );
+      setAnalytics(analyticsData);
+    } catch (err: any) {
+      console.error('Error loading customer analytics:', err);
+      // Analytics is optional, so don't show error to user
+    }
   };
 
-  const handleView = (customer: any) => {
-    console.log('View customer:', customer);
+  // Filter customers based on search and status
+  useEffect(() => {
+    let filtered = [...customers];
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(customer =>
+        customer.firstName?.toLowerCase().includes(searchLower) ||
+        customer.lastName?.toLowerCase().includes(searchLower) ||
+        customer.email?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(customer => 
+        filters.status === 'active' ? customer.isActive : !customer.isActive
+      );
+      }
+
+    setFilteredCustomers(filtered);
+    setPage(0); // Reset to first page when filtering
+  }, [customers, filters]);
+
+  const handleFilterChange = (key: keyof CustomerFilter, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
+  const handleBusinessChange = (event: SelectChangeEvent<string>) => {
+    handleFilterChange('business', event.target.value);
   };
+
+  const handleRestaurantChange = (event: SelectChangeEvent<string>) => {
+    handleFilterChange('restaurant', event.target.value);
+  };
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleViewCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setDialogOpen(true);
+  };
+
+  const handleToggleCustomerStatus = async (customerId: string, currentStatus: boolean) => {
+    try {
+      await CustomerService.updateCustomerStatus(customerId, !currentStatus);
+      await loadCustomers(); // Reload to get updated data
+    } catch (err: any) {
+      console.error('Error updating customer status:', err);
+      setError(err.message || 'Failed to update customer status');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
+  const getStatusColor = (isActive: boolean): 'success' | 'error' => {
+    return isActive ? 'success' : 'error';
+  };
+
+  const getStatusText = (isActive: boolean): string => {
+    return isActive ? 'Active' : 'Inactive';
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" gutterBottom>
         Customer Management
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
-        Manage customers and analyze customer metrics
-      </Typography>
+          </Typography>
 
-      {/* Summary Cards */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Analytics Cards */}
+      {analytics && (
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <Card>
             <CardContent>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <GroupsIcon />
-                </Avatar>
-                <Typography variant="h6" component="div">
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <GroupIcon sx={{ color: theme.palette.primary.main, mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analytics.totalCustomers}</Typography>
+                    <Typography variant="body2" color="text.secondary">
                   Total Customers
                 </Typography>
-              </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {customerSummary.totalCustomers.toLocaleString()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Active accounts
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <CardContent>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Avatar sx={{ bgcolor: '#2e7d32' }}>
-                  <PersonIcon />
-                </Avatar>
-                <Typography variant="h6" component="div">
-                  New Customers
-                </Typography>
-              </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {customerSummary.newCustomers}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Last 30 days
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <CardContent>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Avatar sx={{ bgcolor: '#1976d2' }}>
-                  <RedeemIcon />
-                </Avatar>
-                <Typography variant="h6" component="div">
-                  Return Rate
-                </Typography>
-              </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {customerSummary.returnRate}%
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Customer retention
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <CardContent>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Avatar sx={{ bgcolor: '#ed6c02' }}>
-                  <EventNoteIcon />
-                </Avatar>
-                <Typography variant="h6" component="div">
-                  Average Spend
-                </Typography>
-              </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                ${customerSummary.averageSpend}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Per customer
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Charts Section */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 3, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '100%' }}>
-            <Typography variant="h6" gutterBottom>
-              Customer Activity
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Box sx={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={customerActivity}
-                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="newCustomers" name="New Customers" fill="#8884d8" />
-                  <Bar dataKey="returningCustomers" name="Returning Customers" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '100%' }}>
-            <Typography variant="h6" gutterBottom>
-              Loyalty Distribution
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Box sx={{ height: 280, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <ResponsiveContainer width="100%" height="80%">
-                <PieChart>
-                  <Pie
-                    data={loyaltyDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {loyaltyDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 2 }}>
-                {loyaltyDistribution.map((entry, index) => (
-                  <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Box 
-                      sx={{ 
-                        width: 12, 
-                        height: 12, 
-                        bgcolor: entry.color, 
-                        borderRadius: '50%', 
-                        mr: 1 
-                      }} 
-                    />
-                    <Typography variant="body2">{entry.name}</Typography>
                   </Box>
-                ))}
-              </Box>
-            </Box>
-          </Paper>
+                </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+          
+        <Grid item xs={12} sm={6} md={3}>
+            <Card>
+            <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <PersonAddIcon sx={{ color: theme.palette.success.main, mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analytics.newCustomers}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                      New This Month
+              </Typography>
+                  </Box>
+                </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+          
+        <Grid item xs={12} sm={6} md={3}>
+            <Card>
+            <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ActiveIcon sx={{ color: theme.palette.info.main, mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analytics.activeCustomers}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                      Active Customers
+              </Typography>
+                  </Box>
+                </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+          
+        <Grid item xs={12} sm={6} md={3}>
+            <Card>
+            <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TrendingUpIcon sx={{ color: theme.palette.warning.main, mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analytics.returnRate}%</Typography>
+              <Typography variant="body2" color="text.secondary">
+                      Activity Rate
+              </Typography>
+                  </Box>
+                </Box>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
+      )}
 
-      {/* Demographics Section */}
-      <Paper sx={{ p: 3, mb: 4, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
+      {/* Analytics Charts */}
+      {analytics && analytics.loyaltyDistribution.length > 0 && (
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+                Customer Distribution
+            </Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={analytics.loyaltyDistribution}
+                        cx="50%"
+                        cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {analytics.loyaltyDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+            </Box>
+          </Paper>
+      </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Customer Demographics
+                Customer Signups
         </Typography>
-        <Divider sx={{ mb: 3 }} />
-        <Grid container spacing={2}>
-          {demographicData.map((item, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={2.4} key={index}>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="subtitle1" component="div">
-                  {item.ageGroup}
-                </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  {item.percentage}%
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  {item.trend > 0 ? (
-                    <TrendingUpIcon sx={{ color: 'success.main', fontSize: 16, mr: 0.5 }} />
-                  ) : (
-                    <TrendingDownIcon sx={{ color: 'error.main', fontSize: 16, mr: 0.5 }} />
-                  )}
-                  <Typography 
-                    variant="body2" 
-                    color={item.trend > 0 ? 'success.main' : 'error.main'}
-                  >
-                    {item.trend > 0 ? '+' : ''}{item.trend}%
-                  </Typography>
-                </Box>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.customerActivity}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar dataKey="signups" fill={theme.palette.primary.main} />
+                  </BarChart>
+                </ResponsiveContainer>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={item.percentage} 
-                sx={{ 
-                  height: 8, 
-                  borderRadius: 4,
-                  bgcolor: 'rgba(0,0,0,0.05)'
-                }} 
-              />
+            </Paper>
             </Grid>
-          ))}
         </Grid>
-      </Paper>
+      )}
 
-      {/* Customer Table */}
-      <Paper sx={{ p: 3, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6">
-            Customer List
-          </Typography>
+      {/* Filters */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={4}>
           <TextField
-            size="small"
-            placeholder="Search customers"
-            value={searchTerm}
-            onChange={handleSearchChange}
+              fullWidth
+              placeholder="Search customers..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -334,23 +379,293 @@ function Customer() {
                 </InputAdornment>
               ),
             }}
-            variant="outlined"
-            sx={{ width: 250 }}
-          />
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <Box sx={{ overflowX: 'auto' }}>
-          <DataTable
-            columns={columns}
-            data={data}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onView={handleView}
-          />
-        </Box>
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <Select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="all">All Status</MenuItem>
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          {context === 'system_admin' && businesses.length > 0 && (
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth>
+                <Select
+                  value={filters.business}
+                  onChange={handleBusinessChange}
+                  displayEmpty
+                >
+                  <MenuItem value="">All Businesses</MenuItem>
+                  {businesses.map((business) => (
+                    <MenuItem key={business._id} value={business._id}>
+                      {business.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          
+          {context === 'system_admin' && restaurants.length > 0 && (
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth>
+                <Select
+                  value={filters.restaurant}
+                  onChange={handleRestaurantChange}
+                  displayEmpty
+                >
+                  <MenuItem value="">All Restaurants</MenuItem>
+                  {restaurants.map((restaurant) => (
+                    <MenuItem key={restaurant._id} value={restaurant._id}>
+                      {restaurant.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          
+          <Grid item xs={12} sm={2}>
+            <Button
+              variant="outlined"
+              startIcon={<FilterIcon />}
+              onClick={() => setFilters({ search: '', status: 'all', business: '', restaurant: '' })}
+              fullWidth
+            >
+              Clear
+            </Button>
+          </Grid>
+        </Grid>
       </Paper>
+
+      {/* Customers Table */}
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Customer</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Phone</TableCell>
+                {context === 'system_admin' && <TableCell>Business</TableCell>}
+                <TableCell>Status</TableCell>
+                <TableCell>Joined</TableCell>
+                <TableCell align="center">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCustomers
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((customer) => (
+                  <TableRow key={customer._id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PersonIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {customer.firstName} {customer.lastName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            ID: {customer._id.slice(-8)}
+                          </Typography>
+            </Box>
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <EmailIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                        {customer.email}
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PhoneIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                        {customer.phoneNumber || 'N/A'}
+                      </Box>
+                    </TableCell>
+                    
+                    {context === 'system_admin' && (
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <BusinessIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                          {customer.businessId?.name || 'N/A'}
+                        </Box>
+                      </TableCell>
+                    )}
+                    
+                    <TableCell>
+                      <Chip
+                        label={getStatusText(customer.isActive)}
+                        color={getStatusColor(customer.isActive)}
+                        size="small"
+                      />
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CalendarIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                        {formatDate(customer.createdAt)}
+        </Box>
+                    </TableCell>
+                    
+                    <TableCell align="center">
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewCustomer(customer)}
+                        >
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title={customer.isActive ? 'Deactivate' : 'Activate'}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleCustomerStatus(customer._id, customer.isActive)}
+                          color={customer.isActive ? 'error' : 'success'}
+                        >
+                          {customer.isActive ? <BlockIcon /> : <ActiveIcon />}
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filteredCustomers.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Paper>
+
+      {/* Customer Details Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Customer Details
+        </DialogTitle>
+        <DialogContent>
+          {selectedCustomer && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Name
+                </Typography>
+                <Typography variant="body1">
+                  {selectedCustomer.firstName} {selectedCustomer.lastName}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography variant="body1">
+                  {selectedCustomer.email}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Phone
+                </Typography>
+                <Typography variant="body1">
+                  {selectedCustomer.phoneNumber || 'Not provided'}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Status
+                </Typography>
+                <Chip
+                  label={getStatusText(selectedCustomer.isActive)}
+                  color={getStatusColor(selectedCustomer.isActive)}
+                  size="small"
+                />
+              </Grid>
+              
+              {context === 'system_admin' && selectedCustomer.businessId && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Business
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedCustomer.businessId.name}
+                  </Typography>
+                </Grid>
+              )}
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Role
+                </Typography>
+                <Typography variant="body1">
+                  {selectedCustomer.role}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Joined Date
+                </Typography>
+                <Typography variant="body1">
+                  {formatDate(selectedCustomer.createdAt)}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography variant="body1">
+                  {formatDate(selectedCustomer.updatedAt)}
+                </Typography>
+              </Grid>
+              
+              {selectedCustomer.lastLogin && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Last Login
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatDate(selectedCustomer.lastLogin)}
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
 
-export default Customer;
+export default CustomersComponent;

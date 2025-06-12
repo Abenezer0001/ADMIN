@@ -13,6 +13,7 @@ import './styles/global.css';
 import { PreferenceProvider } from './context/PreferenceContext';
 import { AuthProvider } from './context/AuthContext';
 import { RbacProvider } from './context/RbacContext';
+import { BusinessProvider } from './context/BusinessContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PasswordSetup from './pages/PasswordSetup';
@@ -89,9 +90,11 @@ const App: React.FC = () => {
                   <Route element={<ProtectedRoute />}>
                     <Route element={
                       <RbacProvider>
-                        <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
-                          <AppRoutes />
-                        </MainLayout>
+                        <BusinessProvider>
+                          <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
+                            <AppRoutes />
+                          </MainLayout>
+                        </BusinessProvider>
                       </RbacProvider>
                     }>
                       <Route path="/*" element={null} />

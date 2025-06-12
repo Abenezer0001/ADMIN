@@ -7,7 +7,7 @@ export interface Venue {
   description?: string;
   capacity: number;
   isActive: boolean;
-  restaurantId: string; // Added restaurantId
+  restaurantId: string | { _id: string; name: string }; // Can be populated or not
 }
 
 class VenueService {
@@ -95,7 +95,7 @@ class VenueService {
   }
 
   /**
-   * Get all venues
+   * Get all venues (global)
    * @returns Promise with all venues data
    */
   async getAllVenues() {
