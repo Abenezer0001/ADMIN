@@ -1,20 +1,13 @@
-import { API_BASE_URL } from '../utils/config';
 import axios from 'axios';
-import { 
-  Business, 
-  CreateBusinessData, 
-  UpdateBusinessData,
-  BusinessListResponse,
-  BusinessResponse 
-} from '../types/business';
+import { Business, CreateBusinessRequest, UpdateBusinessRequest, BusinessUser, CreateBusinessUserRequest, BusinessListResponse } from '../types/business';
+
+// API configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export class BusinessService {
-  private baseUrl: string;    // This is the base URL for the business service  
   private static instance: BusinessService;
  
-  constructor() {
-    this.baseUrl = API_BASE_URL;
-  }
+  private constructor() {}
 
   public static getInstance(): BusinessService {
     if (!BusinessService.instance) {
@@ -24,337 +17,515 @@ export class BusinessService {
   }
 
   /**
-   * Get all businesses (SuperAdmin only)
-   */
-  static async getAllBusinesses(): Promise<BusinessListResponse> {
-    try {
-    // Use the correct admin business endpoint
-    const response = await axios.get(`${API_BASE_URL}/admin/businesses`, {
-      withCredentials: true
-    });
-    return response.data as BusinessListResponse;
-    } catch (error: any) {
-      console.error('getAllBusinesses error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Test authentication by checking if we can access a simple endpoint
+   * Test authentication endpoint
    */
   static async testAuthentication(): Promise<any> {
     try {
-      console.log('Testing authentication...');
-      console.log('Current cookies:', document.cookie);
-      
-      // Use the correct authentication endpoint
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('Auth test successful:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Auth test failed:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Test system admin debug endpoint
-   */
-  static async testSystemAdminAuth(): Promise<any> {
-    try {
-      console.log('Testing system admin authentication...');
-      
-      // Use the correct authentication endpoint to check user role
-      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('System admin auth test successful:', response.data);
-      
-      // Check if user has system admin role
-      const user = response.data.user || response.data;
-      if (user.role !== 'system_admin' && !user.roles?.includes('system_admin')) {
-        throw new Error('User does not have system admin privileges');
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('System admin auth test failed:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get business by ID (SuperAdmin or Owner) - try test endpoint first
-   */
-  static async getBusinessById(businessId: string): Promise<Business> {
-    try {
-      console.log('Attempting to fetch business by ID:', businessId);
-      console.log('Request URL:', `${API_BASE_URL}/admin/businesses/${businessId}`);
-      
-      // Check if we have authentication cookies
-      console.log('Current cookies:', document.cookie);
-      
-      // First try the authentication endpoint to check if auth is working
-      try {
-        console.log('Testing authentication with auth endpoint...');
-        const authTest = await axios.get(`${API_BASE_URL}/auth/me`, {
-          withCredentials: true
-        });
-        console.log('Authentication test passed:', authTest.data);
-      } catch (authError: any) {
-        console.error('Authentication test failed:', authError.response?.data);
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      
-      const response = await axios.get(`${API_BASE_URL}/admin/businesses/${businessId}`, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
-      
-      console.log('getBusinessById response:', response.data);
-      return response.data as Business;
+      return response.data;
     } catch (error: any) {
-      console.error('getBusinessById error:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      });
-      
-      // Provide more descriptive error messages
-      if (error.response?.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      } else if (error.response?.status === 403) {
-        throw new Error('Access denied. You don\'t have permission to view this business.');
-      } else if (error.response?.status === 404) {
-        throw new Error('Business not found.');
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  /**
-   * Create a new business (SuperAdmin only)
-   */
-  static async createBusiness(businessData: CreateBusinessData): Promise<BusinessResponse> {
-    try {
-    // Use the correct admin business endpoint
-    const response = await axios.post(`${API_BASE_URL}/admin/businesses`, businessData, {
-      withCredentials: true
-    });
-    return response.data as BusinessResponse;
-    } catch (error: any) {
-      console.error('createBusiness error:', error.response?.data || error.message);
+      console.error('Authentication test failed:', error);
       throw error;
     }
   }
 
   /**
-   * Update business (SuperAdmin or Owner)
+   * Helper method to get user role from API (recommended) or localStorage as fallback
    */
-  static async updateBusiness(businessId: string, updateData: UpdateBusinessData): Promise<BusinessResponse> {
+  private async getUserRole(): Promise<string | null> {
     try {
-    const response = await axios.put(`${API_BASE_URL}/admin/businesses/${businessId}`, updateData, {
-      withCredentials: true
-    });
-    return response.data as BusinessResponse;
-    } catch (error: any) {
-      console.error('updateBusiness error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Deactivate business (SuperAdmin only)
-   */
-  static async deactivateBusiness(businessId: string): Promise<{ message: string }> {
-    try {
-    const response = await axios.delete(`${API_BASE_URL}/admin/businesses/${businessId}`, {
-      withCredentials: true
-    });
-    return response.data as { message: string };
-    } catch (error: any) {
-      console.error('deactivateBusiness error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Activate business (SuperAdmin only)
-   */
-  static async activateBusiness(businessId: string): Promise<{ message: string }> {
-    try {
-    const response = await axios.put(`${API_BASE_URL}/admin/businesses/${businessId}/activate`, null, {
-      withCredentials: true
-    });
-    return response.data as { message: string };
-    } catch (error: any) {
-      console.error('activateBusiness error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Get current user's business (Business Owner)
-   */
-  static async getMyBusiness(): Promise<Business> {
-    try {
-      console.log('Attempting to get my business from:', `${API_BASE_URL}/businesses/my-business`);
-    const response = await axios.get(`${API_BASE_URL}/businesses/my-business`, {
-      withCredentials: true
-    });
-      console.log('getMyBusiness response:', response.data);
-    return response.data as Business;
-    } catch (error: any) {
-      console.error('getMyBusiness error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Get business users
-   */
-  static async getBusinessUsers(): Promise<{ users: any[], count: number }> {
-    try {
-    const response = await axios.get(`${API_BASE_URL}/auth/users/business-users`, {
-      withCredentials: true
-    });
-    return response.data as { users: any[], count: number };
-    } catch (error: any) {
-      console.error('getBusinessUsers error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Create business user
-   */
-  static async createBusinessUser(userData: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    roleIds?: string[];
-  }): Promise<{ message: string; user: any }> {
-    try {
-    const response = await axios.post(`${API_BASE_URL}/auth/users/create-business-user`, userData, {
-      withCredentials: true
-    });
-    return response.data as { message: string; user: any };
-    } catch (error: any) {
-      console.error('createBusinessUser error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Assign role to user
-   */
-  static async assignRoleToUser(userId: string, roleId: string): Promise<{ message: string }> {
-    try {
-    const response = await axios.post(`${API_BASE_URL}/auth/users/${userId}/assign-role`, {
-      roleId
-    }, {
-      withCredentials: true
-    });
-    return response.data as { message: string };
-    } catch (error: any) {
-      console.error('assignRoleToUser error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Assign business to user
-   */
-  static async assignBusinessToUser(userId: string, businessId: string): Promise<{ message: string }> {
-    try {
-    const response = await axios.post(`${API_BASE_URL}/auth/users/${userId}/assign-business`, {
-      businessId
-    }, {
-      withCredentials: true
-    });
-    return response.data as { message: string };
-    } catch (error: any) {
-      console.error('assignBusinessToUser error:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Update current user's business (Business Owner)
-   */
-  static async updateMyBusiness(updateData: UpdateBusinessData): Promise<BusinessResponse> {
-    try {
-      // Get the current business first to get the business ID
-      const currentBusiness = await this.getMyBusiness();
-      const response = await axios.put(`${API_BASE_URL}/admin/businesses/${currentBusiness._id}`, updateData, {
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         withCredentials: true
       });
-      console.log('updateMyBusiness response:', response.data);
-      return response.data as BusinessResponse;
-    } catch (error: any) {
-      console.error('updateMyBusiness error:', error.response?.data || error.message);
-      throw error;
+      const data = response.data as any;
+      return data?.user?.role || data?.role || null;
+    } catch (error) {
+      console.error('BusinessService - Failed to get user role from API:', error);
+      // Fallback to localStorage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          return user.role || null;
+        } catch (localError) {
+          console.error('Error parsing user from localStorage:', localError);
+          return null;
+        }
+      }
+      return null;
     }
   }
 
-  async fetchBusinesses(): Promise<Business[]> {
+  /**
+   * Helper method to get business ID from API (recommended) or localStorage as fallback
+   */
+  private async getBusinessId(): Promise<string | null> {
     try {
-      console.log('BusinessService: Fetching businesses...');
-      
-      // Use the correct admin business endpoint
-      const response = await fetch(`${API_BASE_URL}/admin/businesses`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+        withCredentials: true
       });
-
-      console.log('BusinessService: Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('BusinessService: Error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('BusinessService: Response data:', data);
-
-      // Handle both array response and object with businesses property
-      const businesses = Array.isArray(data) ? data : (data.businesses || []);
-      console.log('BusinessService: Parsed businesses:', businesses);
-      
-      return businesses;
+      const data = response.data as any;
+      return data?.user?.businessId || data?.businessId || null;
     } catch (error) {
-      console.error('BusinessService: Error fetching businesses:', error);
-      throw error;
+      console.error('BusinessService - Failed to get business ID from API:', error);
+      // Fallback to localStorage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          return user.businessId || null;
+        } catch (localError) {
+          console.error('Error parsing user from localStorage:', localError);
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+      
+  /**
+   * Get all businesses (system admin only) with multi-endpoint fallback
+   */
+  async getAllBusinesses(): Promise<BusinessListResponse> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        // Try multiple endpoints based on role
+        const endpoints = [
+          `${API_BASE_URL}/restaurant-service/businesses/admin/businesses`,
+          `${API_BASE_URL}/businesses-admin`,
+          `${API_BASE_URL}/admin/businesses`
+        ];
+        
+        let lastError: any = null;
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`BusinessService - Trying endpoint: ${endpoint}`);
+            const response = await axios.get(endpoint, {
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            console.log(`BusinessService - Success with endpoint: ${endpoint}`, response.data);
+            
+            // Handle different response formats
+            const data = response.data as any;
+            let businesses = [];
+            let count = 0;
+            
+            if (Array.isArray(data)) {
+              businesses = data;
+              count = data.length;
+            } else if (data.businesses && Array.isArray(data.businesses)) {
+              businesses = data.businesses;
+              count = data.count || data.businesses.length;
+            } else if (data.data && Array.isArray(data.data)) {
+              businesses = data.data;
+              count = data.count || data.data.length;
+            }
+            
+            return {
+              businesses: businesses || [],
+              count: count || 0
+            };
+          } catch (error: any) {
+            console.log(`BusinessService - Failed with endpoint: ${endpoint}`, error.response?.status, error.message);
+            lastError = error;
+            continue;
+          }
+        }
+        
+        throw lastError || new Error('All business endpoints failed');
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error fetching businesses:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch businesses');
+    }
+  }
+
+  /**
+   * Get current user's business (restaurant admin only) with multi-endpoint fallback
+   */
+  async getMyBusiness(): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'restaurant_admin') {
+        // Try multiple endpoints based on role
+        const endpoints = [
+          `${API_BASE_URL}/restaurant-service/businesses/businesses/my-business`,
+          `${API_BASE_URL}/businesses/my-business`
+        ];
+        
+        let lastError: any = null;
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`BusinessService - Trying endpoint: ${endpoint}`);
+            const response = await axios.get(endpoint, {
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            console.log(`BusinessService - Success with endpoint: ${endpoint}`, response.data);
+            return response.data as Business;
+          } catch (error: any) {
+            console.log(`BusinessService - Failed with endpoint: ${endpoint}`, error.response?.status, error.message);
+            lastError = error;
+            continue;
+          }
+        }
+        
+        throw lastError || new Error('All my-business endpoints failed');
+      } else {
+        throw new Error('Unauthorized: Restaurant admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error fetching my business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch business');
+    }
+  }
+
+  /**
+   * Get business by ID (system admin only)
+   */
+  async getBusinessById(businessId: string): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        // Use the working businesses-admin route
+        const response = await axios.get(`${API_BASE_URL}/businesses-admin/${businessId}`, {
+        withCredentials: true,
+        });
+        
+      return response.data as Business;
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error fetching business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch business');
+    }
+  }
+
+  /**
+   * Create a new business (system admin only)
+   */
+  async createBusiness(businessData: CreateBusinessRequest): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        // Use the working businesses-admin route
+        const response = await axios.post(`${API_BASE_URL}/businesses-admin`, businessData, {
+          withCredentials: true,
+        });
+        
+        // Handle the response format: {message: string, business: Business, owner: {...}, emailSent: boolean}
+        const data = response.data as { message: string; business: Business; owner: any; emailSent: boolean };
+        return data.business;
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error creating business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to create business');
+    }
+  }
+
+  /**
+   * Update a business
+   */
+  async updateBusiness(businessId: string, updateData: UpdateBusinessRequest): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      const userBusinessId = await this.getBusinessId();
+      
+      if (role === 'system_admin') {
+        // System admin can update any business
+        const response = await axios.put(`${API_BASE_URL}/businesses-admin/${businessId}`, updateData, {
+          withCredentials: true,
+        });
+        return response.data as Business;
+      } else if (role === 'restaurant_admin' && userBusinessId === businessId) {
+        // Restaurant admin can only update their own business
+        const response = await axios.put(`${API_BASE_URL}/businesses/my-business`, updateData, {
+          withCredentials: true,
+    });
+        return response.data as Business;
+      } else {
+        throw new Error('Unauthorized: You can only update your own business');
+      }
+    } catch (error: any) {
+      console.error('Error updating business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to update business');
+    }
+  }
+
+  /**
+   * Delete a business (system admin only)
+   */
+  async deleteBusiness(businessId: string): Promise<void> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        await axios.delete(`${API_BASE_URL}/businesses-admin/${businessId}`, {
+          withCredentials: true,
+        });
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error deleting business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to delete business');
+    }
+  }
+
+  /**
+   * Activate a business (system admin only)
+   */
+  async activateBusiness(businessId: string): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        const response = await axios.post(`${API_BASE_URL}/businesses-admin/${businessId}/activate`, {}, {
+          withCredentials: true,
+    });
+        
+        return response.data as Business;
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error activating business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to activate business');
+    }
+  }
+
+  /**
+   * Deactivate a business (system admin only)
+   */
+  async deactivateBusiness(businessId: string): Promise<Business> {
+    try {
+      const role = await this.getUserRole();
+      
+      if (role === 'system_admin') {
+        const response = await axios.post(`${API_BASE_URL}/businesses-admin/${businessId}/deactivate`, {}, {
+          withCredentials: true,
+    });
+        
+    return response.data as Business;
+      } else {
+        throw new Error('Unauthorized: System admin role required');
+      }
+    } catch (error: any) {
+      console.error('Error deactivating business:', error);
+      throw new Error(error.response?.data?.message || 'Failed to deactivate business');
+    }
+  }
+
+  /**
+   * Get business users with multi-endpoint fallback
+   */
+  async getBusinessUsers(businessId?: string): Promise<{ users: BusinessUser[]; count: number }> {
+    try {
+      const role = await this.getUserRole();
+      const userBusinessId = await this.getBusinessId();
+      
+      let targetBusinessId = businessId;
+      
+      if (!targetBusinessId && role === 'restaurant_admin') {
+        targetBusinessId = userBusinessId;
+      }
+      
+      if (!targetBusinessId) {
+        throw new Error('Business ID not found');
+      }
+      
+      // Try multiple endpoints based on role
+      let endpoints: string[] = [];
+      if (role === 'system_admin') {
+        endpoints = [
+          `${API_BASE_URL}/restaurant-service/businesses/admin/businesses/${targetBusinessId}/users`,
+          `${API_BASE_URL}/businesses-admin/${targetBusinessId}/users`,
+          `${API_BASE_URL}/admin/businesses/${targetBusinessId}/users`
+        ];
+      } else if (role === 'restaurant_admin') {
+        endpoints = [
+          `${API_BASE_URL}/business-admin/admins`,
+          `${API_BASE_URL}/restaurant-service/businesses/admin/businesses/${targetBusinessId}/users`,
+          `${API_BASE_URL}/businesses-admin/${targetBusinessId}/users`,
+          `${API_BASE_URL}/admin/businesses/${targetBusinessId}/users`
+        ];
+      } else {
+        throw new Error('Unauthorized: Insufficient permissions');
+      }
+      
+      let lastError: any = null;
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`BusinessService - Trying endpoint: ${endpoint}`);
+          const response = await axios.get(endpoint, {
+            withCredentials: true,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+          
+          console.log(`BusinessService - Success with endpoint: ${endpoint}`, response.data);
+          
+          // Handle different response formats
+          const data = response.data as any;
+          let users = [];
+          let count = 0;
+          
+          if (Array.isArray(data)) {
+            users = data;
+            count = data.length;
+          } else if (data.users && Array.isArray(data.users)) {
+            users = data.users;
+            count = data.count || data.users.length;
+          } else if (data.admins && Array.isArray(data.admins)) {
+            users = data.admins;
+            count = data.count || data.admins.length;
+          }
+          
+          return {
+            users: users || [],
+            count: count || 0
+          };
+        } catch (error: any) {
+          console.log(`BusinessService - Failed with endpoint: ${endpoint}`, error.response?.status, error.message);
+          lastError = error;
+          continue;
+        }
+      }
+      
+      throw lastError || new Error('All business users endpoints failed');
+    } catch (error: any) {
+      console.error('Error fetching business users:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch business users');
+    }
+  }
+
+  /**
+   * Create a business user
+   */
+  async createBusinessUser(userData: CreateBusinessUserRequest & { businessId: string }): Promise<{ user: BusinessUser; message: string; emailSent: boolean }> {
+    try {
+      const role = await this.getUserRole();
+      const userBusinessId = await this.getBusinessId();
+      const { businessId, ...userDataWithoutBusinessId } = userData;
+      
+      if (role === 'system_admin') {
+        // System admin can create users for any business
+        const response = await axios.post(`${API_BASE_URL}/businesses-admin/${businessId}/users`, userDataWithoutBusinessId, {
+          withCredentials: true,
+        });
+        
+        // Handle the correct response format: {message: string, user: BusinessUser, emailSent: boolean}
+        const data = response.data as { message: string; user: BusinessUser; emailSent: boolean };
+        return {
+          user: data.user,
+          message: data.message,
+          emailSent: data.emailSent
+        };
+      } else if (role === 'restaurant_admin' && userBusinessId === businessId) {
+        // Restaurant admin can create users for their own business
+        const response = await axios.post(`${API_BASE_URL}/businesses-admin/${businessId}/users`, userDataWithoutBusinessId, {
+          withCredentials: true,
+    });
+        
+        // Handle the correct response format: {message: string, user: BusinessUser, emailSent: boolean}
+        const data = response.data as { message: string; user: BusinessUser; emailSent: boolean };
+        return {
+          user: data.user,
+          message: data.message,
+          emailSent: data.emailSent
+        };
+      } else {
+        throw new Error('Unauthorized: You can only create users for your own business');
+      }
+    } catch (error: any) {
+      console.error('Error creating business user:', error);
+      throw new Error(error.response?.data?.message || 'Failed to create business user');
+    }
+  }
+
+  /**
+   * Update a business user
+   */
+  async updateBusinessUser(businessId: string, userId: string, userData: Partial<BusinessUser>): Promise<BusinessUser> {
+    try {
+      const role = await this.getUserRole();
+      const userBusinessId = await this.getBusinessId();
+      
+      if (role === 'system_admin') {
+        // System admin can update users for any business
+        const response = await axios.put(`${API_BASE_URL}/businesses-admin/${businessId}/users/${userId}`, userData, {
+          withCredentials: true,
+        });
+        return response.data as BusinessUser;
+      } else if (role === 'restaurant_admin' && userBusinessId === businessId) {
+        // Restaurant admin can update users for their own business
+        const response = await axios.put(`${API_BASE_URL}/businesses-admin/${businessId}/users/${userId}`, userData, {
+          withCredentials: true,
+    });
+        return response.data as BusinessUser;
+      } else {
+        throw new Error('Unauthorized: You can only update users for your own business');
+      }
+    } catch (error: any) {
+      console.error('Error updating business user:', error);
+      throw new Error(error.response?.data?.message || 'Failed to update business user');
+    }
+  }
+
+  /**
+   * Delete a business user
+   */
+  async deleteBusinessUser(businessId: string, userId: string): Promise<void> {
+    try {
+      const role = await this.getUserRole();
+      const userBusinessId = await this.getBusinessId();
+      
+      if (role === 'system_admin') {
+        // System admin can delete users for any business
+        await axios.delete(`${API_BASE_URL}/businesses-admin/${businessId}/users/${userId}`, {
+          withCredentials: true,
+        });
+      } else if (role === 'restaurant_admin' && userBusinessId === businessId) {
+        // Restaurant admin can delete users for their own business
+        await axios.delete(`${API_BASE_URL}/businesses-admin/${businessId}/users/${userId}`, {
+          withCredentials: true,
+        });
+      } else {
+        throw new Error('Unauthorized: You can only delete users for your own business');
+      }
+    } catch (error: any) {
+      console.error('Error deleting business user:', error);
+      throw new Error(error.response?.data?.message || 'Failed to delete business user');
     }
   }
 }
 
+// Export both named and default export for compatibility
 export default BusinessService; 

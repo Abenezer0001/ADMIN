@@ -81,14 +81,8 @@ const BusinessDashboard: React.FC = () => {
         console.log('401 error detected, testing authentication...');
         try {
           await BusinessService.testAuthentication();
-          console.log('Basic auth test passed, trying system admin debug endpoint...');
-          try {
-            await BusinessService.testSystemAdminAuth();
-            setSpecificBusinessError('Both authentication tests passed but business endpoint failed. There may be a specific issue with the business endpoint permissions.');
-          } catch (adminError: any) {
-            console.error('System admin test failed:', adminError);
-            setSpecificBusinessError('Authentication works but system admin role check failed. Please check if your account has system admin privileges.');
-          }
+          console.log('Basic auth test passed, business endpoint failed with 401');
+          setSpecificBusinessError('Authentication works but business endpoint failed. This may be a permission issue with the business endpoint.');
         } catch (authError: any) {
           console.error('Authentication test also failed:', authError);
           setSpecificBusinessError('Authentication failed. Please log in again.');
@@ -141,29 +135,35 @@ const BusinessDashboard: React.FC = () => {
             fetchBusinessData();
             return;
           } else {
-            // Redirect restaurant admin to their own business
-            console.log('Restaurant admin trying to access different business, redirecting to their own:', user.businessId);
-            if (user.businessId) {
-              navigate(`/business/dashboard/${user.businessId}`, { replace: true });
-              return;
-            } else {
-              setSpecificBusinessError('No business associated with your account. Please contact an administrator.');
-              return;
-            }
+            // Allow restaurant admin to view the business if they have permission
+            console.log('Restaurant admin accessing business:', businessId);
+            fetchBusinessData();
+            return;
           }
         }
         
         // For other roles, deny access
         console.log('User role not authorized for direct business access:', user?.role);
         setSpecificBusinessError(`Access denied. You don't have permission to view this business. Your role: ${user?.role}`);
-      } else if (user?.businessId && (isBusinessOwner() || user?.role === 'restaurant_admin')) {
-        // Business owner or restaurant admin viewing their own business (no specific businessId in URL)
-        console.log('Business owner/restaurant admin loading their own business:', user.businessId);
-        // Redirect to their business URL
-        if (user?.role === 'restaurant_admin') {
+      } else if (user?.role === 'restaurant_admin') {
+        // Restaurant admin without specific businessId in URL
+        console.log('Restaurant admin without specific business ID, loading their business:', user?.businessId);
+        if (user?.businessId) {
+          // Redirect to their business URL
           console.log('Redirecting restaurant admin to their business dashboard');
           navigate(`/business/dashboard/${user.businessId}`, { replace: true });
+        } else {
+          // Load current business from context for restaurant admin
+          console.log('Loading current business from context for restaurant admin');
+          if (currentBusiness?._id) {
+            setSpecificBusiness(currentBusiness);
+          } else {
+            loadCurrentBusiness();
+          }
         }
+      } else if (isBusinessOwner() && user?.businessId) {
+        // Business owner viewing their own business (no specific businessId in URL)
+        console.log('Business owner loading their own business:', user.businessId);
         // This will be handled by the BusinessContext's loadCurrentBusiness for business owners
       } else if (isSuperAdmin()) {
         // System admin without specific business - show message

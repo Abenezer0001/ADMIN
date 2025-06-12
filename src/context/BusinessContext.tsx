@@ -49,7 +49,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      const business = await BusinessService.getMyBusiness();
+      const businessService = BusinessService.getInstance();
+      const business = await businessService.getMyBusiness();
       setCurrentBusiness(business);
       console.log('Loaded current business:', business.name);
     } catch (err: any) {
@@ -57,7 +58,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
       // Try to get business by ID if we have businessId
       if (user?.businessId) {
         try {
-          const business = await BusinessService.getBusinessById(user.businessId);
+          const businessService = BusinessService.getInstance();
+          const business = await businessService.getBusinessById(user.businessId);
           setCurrentBusiness(business);
           console.log('Loaded business by ID:', business.name);
         } catch (err2: any) {
@@ -80,7 +82,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      const response = await BusinessService.getAllBusinesses();
+      const businessService = BusinessService.getInstance();
+      const response = await businessService.getAllBusinesses();
       setBusinesses(response.businesses);
     } catch (err: any) {
       console.error('Failed to load businesses:', err);
@@ -96,7 +99,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      await BusinessService.createBusiness(businessData);
+      const businessService = BusinessService.getInstance();
+      await businessService.createBusiness(businessData);
       await loadAllBusinesses(); // Refresh the list
     } catch (err: any) {
       console.error('Failed to create business:', err);
@@ -113,7 +117,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      await BusinessService.updateBusiness(businessId, updateData);
+      const businessService = BusinessService.getInstance();
+      await businessService.updateBusiness(businessId, updateData);
       
       // Update current business if it's the one being updated
       if (currentBusiness?._id === businessId) {
@@ -139,7 +144,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      await BusinessService.deactivateBusiness(businessId);
+      const businessService = BusinessService.getInstance();
+      await businessService.deactivateBusiness(businessId);
       await loadAllBusinesses(); // Refresh the list
     } catch (err: any) {
       console.error('Failed to deactivate business:', err);
@@ -156,7 +162,8 @@ export const BusinessProvider: React.FC<BusinessProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      await BusinessService.activateBusiness(businessId);
+      const businessService = BusinessService.getInstance();
+      await businessService.activateBusiness(businessId);
       await loadAllBusinesses(); // Refresh the list
     } catch (err: any) {
       console.error('Failed to activate business:', err);

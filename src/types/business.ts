@@ -2,9 +2,7 @@ export interface BusinessContactInfo {
   email: string;
   phone?: string;
   address?: string;
-
 }
-
 
 export interface BusinessSettings {
   multiRestaurant?: boolean;
@@ -42,7 +40,52 @@ export interface Business {
   }[];
   createdAt: string;
   updatedAt: string;
-  
+}
+
+// Add missing types that BusinessService expects
+export interface CreateBusinessRequest {
+  name: string;
+  legalName?: string;
+  registrationNumber?: string;
+  contactInfo: BusinessContactInfo;
+  ownerEmail: string;
+  settings?: BusinessSettings;
+}
+
+export interface UpdateBusinessRequest {
+  name?: string;
+  legalName?: string;
+  registrationNumber?: string;
+  contactInfo?: BusinessContactInfo;
+  settings?: BusinessSettings;
+}
+
+export interface BusinessUser {
+  _id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  roles?: {
+    _id: string;
+    name: string;
+    description?: string;
+  }[];
+  businessId?: string | {
+    _id: string;
+    name: string;
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateBusinessUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  roleIds?: string[];
+  businessId?: string;
 }
 
 export interface CreateBusinessData {
