@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { showError } from './notificationUtils';
+import { API_BASE_URL } from './config';
 
-// API base URL from environment or default
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Re-export API_BASE_URL for backward compatibility
+export { API_BASE_URL };
 
 // Create axios instance with default config
 export const api = axios.create({

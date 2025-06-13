@@ -10,10 +10,12 @@ import {
 } from '../redux/orderSlice';
 import { Order, OrderStatus } from '../types/order';
 import axios from 'axios';
+import { API_BASE_URL } from '../utils/config';
+
 // Fetch all orders
 function* fetchOrdersSaga() {
   try {
-    const response = yield call(axios.get, `${import.meta.env.VITE_API_BASE_URL}/orders`);
+    const response = yield call(axios.get, `${API_BASE_URL}/orders`);
     yield put(fetchOrdersSuccess(response.data));
   } catch (error: any) {
     yield put(fetchOrdersFailure(error.message || 'Failed to fetch orders'));
@@ -26,7 +28,7 @@ function* updateOrderStatusSaga(action: PayloadAction<{ orderId: string, status:
     const { orderId, status } = action.payload;
     const response = yield call(
       axios.put, 
-      `${import.meta.env.VITE_API_BASE_URL}/orders/${orderId}/status`, 
+      `${API_BASE_URL}/orders/${orderId}/status`, 
       { status }
     );
     yield put(updateOrderStatusSuccess(response.data));
