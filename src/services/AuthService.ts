@@ -1,9 +1,10 @@
 import axios from 'axios';
 import api from '../utils/axiosConfig';
 import { isDemoMode, getDemoToken, cleanupAuthState } from './authHelpers';
+import { API_BASE_URL } from '../utils/config';
 
-// Use the environment variable for API URL
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+// Use the centralized configuration
+const API_URL = API_BASE_URL;
 
 export interface LoginCredentials {
   email: string;

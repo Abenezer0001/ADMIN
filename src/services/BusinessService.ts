@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { Business, CreateBusinessRequest, UpdateBusinessRequest, BusinessUser, CreateBusinessUserRequest, BusinessListResponse } from '../types/business';
-
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_BASE_URL } from '../utils/config';
 
 export class BusinessService {
   private static instance: BusinessService;
