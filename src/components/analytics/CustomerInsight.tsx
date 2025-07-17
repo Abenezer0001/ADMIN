@@ -64,7 +64,7 @@ const customerFeedback = [
 function CustomerInsight() {
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Customer Insights
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
@@ -88,7 +88,7 @@ function CustomerInsight() {
                   Total Customers
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {customerSummary.totalCustomers.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -112,7 +112,7 @@ function CustomerInsight() {
                   Repeat Rate
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {customerSummary.repeatRate}%
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -136,7 +136,7 @@ function CustomerInsight() {
                   Avg. Spend
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 ${customerSummary.averageSpend}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -160,7 +160,7 @@ function CustomerInsight() {
                   Growth Rate
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {customerSummary.growthRate}%
               </Typography>
               <Typography variant="body2" color="text.secondary">

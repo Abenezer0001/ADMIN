@@ -538,7 +538,7 @@ const Integration: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         <CloudIcon sx={{ mr: 1 }} /> Integrations
       </Typography>
       

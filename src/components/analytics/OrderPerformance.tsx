@@ -84,7 +84,7 @@ const orderTypeData = [
 function OrderPerformance() {
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Order Performance
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
@@ -104,7 +104,7 @@ function OrderPerformance() {
                   Total Orders
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {orderSummary.totalOrders.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -124,7 +124,7 @@ function OrderPerformance() {
                   Average Value
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 ${orderSummary.averageValue}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -144,7 +144,7 @@ function OrderPerformance() {
                   Completion Rate
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {orderSummary.completionRate}%
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -164,7 +164,7 @@ function OrderPerformance() {
                   Processing Time
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {orderSummary.processingTime} min
               </Typography>
               <Typography variant="body2" color="text.secondary">

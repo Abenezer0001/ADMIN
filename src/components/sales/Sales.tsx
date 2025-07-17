@@ -58,7 +58,7 @@ const Sales = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Sales Dashboard
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
@@ -88,7 +88,7 @@ const Sales = () => {
                   Total Sales
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 $6,000
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -112,7 +112,7 @@ const Sales = () => {
                   Avg. Sales
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 $2,000
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -136,7 +136,7 @@ const Sales = () => {
                   Top Performer
                 </Typography>
               </Stack>
-              <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h5" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 The Bistro
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -160,7 +160,7 @@ const Sales = () => {
                   Lowest Performer
                 </Typography>
               </Stack>
-              <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h5" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 Tasty Bites
               </Typography>
               <Typography variant="body2" color="text.secondary">

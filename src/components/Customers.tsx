@@ -230,9 +230,9 @@ function CustomersComponent() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Customer Management
-          </Typography>
+      </Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

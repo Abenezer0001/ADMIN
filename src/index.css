@@ -1,12 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f7f8fa;
-  color: #333;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
+  background-color: inherit;
+  color: inherit;
 }
 
 code {
@@ -18,22 +20,28 @@ code {
   height: 100vh;
 }
 
-button, .MuiButton-root {
-  background-color: #ff6f61;
-  color: white;
-  border-radius: 8px;
-}
-
-.MuiTypography-h5 {
+/* Better typography for dashboard */
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4,
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 
-.MuiPaper-root {
-  padding: 10px;
-  border-radius: 10px;
+.MuiTypography-body1,
+.MuiTypography-body2 {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.6;
 }
 
-.MuiChip-root {
-  background-color: #ff6f61;
-  color: white;
+.MuiButton-root {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: none;
 }

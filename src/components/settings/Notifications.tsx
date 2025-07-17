@@ -103,7 +103,7 @@ const NotificationSettings: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 3, fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         <NotificationsIcon sx={{ mr: 1 }} /> Notification Settings
       </Typography>
       

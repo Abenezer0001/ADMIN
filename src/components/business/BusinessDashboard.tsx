@@ -263,8 +263,8 @@ const BusinessDashboard: React.FC = () => {
           </Button>
         )}
         <BusinessIcon sx={{ fontSize: 32 }} />
-        <Typography variant="h4" component="h1">
-          {businessId ? 'Business Details' : 'Business Dashboard'}
+        <Typography variant="h5" component="h1" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
+          {businessId ? 'Business Details' : 'My Business'}
         </Typography>
       </Box>
 

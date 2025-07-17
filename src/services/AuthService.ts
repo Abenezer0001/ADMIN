@@ -25,6 +25,8 @@ export interface User {
   lastName: string;
   role: string;
   permissions?: string[];
+  profileImage?: string;
+  phoneNumber?: string;
 }
 
 export interface JwtPayload {

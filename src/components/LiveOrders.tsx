@@ -1,6 +1,46 @@
+<<<<<<< Updated upstream
 import React from 'react';
 import { Spin, Tag, Input, Button, Typography, Badge, Space, message, notification, Drawer, Descriptions, List, Avatar, Divider, Empty, Select, Card, Row, Col, Pagination } from 'antd';
 import { SearchOutlined, ReloadOutlined, BellOutlined, InfoCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined, TableOutlined, DollarOutlined } from '@ant-design/icons';
+=======
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Card, 
+  Button, 
+  message, 
+  notification, 
+  Row, 
+  Col, 
+  Empty, 
+  Pagination, 
+  Input, 
+  Dropdown, 
+  Select, 
+  Space, 
+  Tag, 
+  Drawer, 
+  Descriptions, 
+  List, 
+  Avatar, 
+  Divider, 
+  Typography, 
+  Badge,
+  Alert,
+  Modal,
+  Spin
+} from 'antd';
+import { 
+  SearchOutlined, 
+  ReloadOutlined, 
+  FilterOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  TableOutlined,
+  InfoCircleOutlined,
+  ExclamationCircleOutlined
+} from '@ant-design/icons';
+import { useTheme } from '@mui/material/styles';
+>>>>>>> Stashed changes
 import OrderService from '../services/OrderService';
 import WebSocketService, { WebSocketEventType } from '../services/websocketService';
 import { Order, OrderStatus } from '../types/order';
@@ -19,6 +59,9 @@ interface OrderWithMeta extends Order {
 }
 
 const LiveOrders: React.FC = () => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+  
   const [orders, setOrders] = React.useState<OrderWithMeta[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
@@ -400,24 +443,99 @@ const LiveOrders: React.FC = () => {
 
   // Update order status
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    console.log('🔄 Updating order status:', { orderId, status, currentTime: new Date().toISOString() });
     try {
+<<<<<<< Updated upstream
       await OrderService.updateOrderStatus(orderId, status);
+=======
+      console.log('📞 Making API call to update order status...');
+      const result = await OrderService.updateOrderStatus(orderId, status);
+      console.log('✅ API call successful:', result);
+>>>>>>> Stashed changes
       
       // Update local state
       setOrders((prevOrders: OrderWithMeta[]) => prevOrders.map((order: OrderWithMeta) => 
         order._id === orderId ? { ...order, status } : order
       ));
+<<<<<<< Updated upstream
+=======
+      console.log('🔄 Local state updated');
+>>>>>>> Stashed changes
       
       // Close drawer if open with this order
       if (selectedOrder && selectedOrder._id === orderId) {
         setSelectedOrder((prev: OrderWithMeta | null) => prev ? { ...prev, status } : null);
+        console.log('🔄 Selected order updated in drawer');
       }
       
       notification.success({ 
         message: `Order status updated to ${getStatusDisplayName(status)}` 
       });
+      console.log('✅ Status update completed successfully');
     } catch (error) {
+<<<<<<< Updated upstream
       console.error('Error updating order status:', error);
+=======
+      console.error('❌ Error updating order status:', error);
+      message.error('Failed to update order status. Please try again.');
+    }
+  };
+
+  // Update individual order item status
+  const updateOrderItemStatus = async (orderId: string, itemId: string, status: string) => {
+    try {
+      const updatedOrder = await OrderService.updateOrderItemStatus(orderId, itemId, status);
+      
+      // Update local state
+      setOrders((prevOrders: OrderWithMeta[]) => {
+        return prevOrders.map((order: OrderWithMeta) => {
+          if (order._id === orderId) {
+            const orderWithUpdatedItems = { ...order, items: updatedOrder.items };
+            
+            // Check if all items are ready and order is still preparing
+            const allItemsReady = updatedOrder.items.every((item: any) => 
+              item.status === 'ready' || item.status === 'served'
+            );
+            
+            // Auto-update order status to READY if all items are ready and order is still PREPARING
+            if (allItemsReady && order.status === OrderStatus.PREPARING) {
+              updateOrderStatus(orderId, OrderStatus.READY);
+              notification.success({ 
+                message: 'All items ready! Order marked as READY' 
+              });
+            }
+            
+            return orderWithUpdatedItems;
+          }
+          return order;
+        });
+      });
+      
+      // Update drawer if this order is selected
+      if (selectedOrder && selectedOrder._id === orderId) {
+        setSelectedOrder((prev: OrderWithMeta | null) => {
+          if (!prev) return null;
+          const updatedSelectedOrder = { ...prev, items: updatedOrder.items };
+          
+          // Check if all items are ready for selected order
+          const allItemsReady = updatedOrder.items.every((item: any) => 
+            item.status === 'ready' || item.status === 'served'
+          );
+          
+          if (allItemsReady && prev.status === OrderStatus.PREPARING) {
+            return { ...updatedSelectedOrder, status: OrderStatus.READY };
+          }
+          
+          return updatedSelectedOrder;
+        });
+      }
+      
+      notification.success({ 
+        message: `Item status updated to ${status}` 
+      });
+    } catch (error) {
+      console.error('Error updating item status:', error);
+>>>>>>> Stashed changes
       notification.error({ 
         message: 'Failed to update order status. Please try again later.'
       });
@@ -426,7 +544,287 @@ const LiveOrders: React.FC = () => {
 
   // OrderCard component for displaying individual orders
   const OrderCard: React.FC<{ order: OrderWithMeta }> = ({ order }: { order: OrderWithMeta }) => {
+<<<<<<< Updated upstream
     const getCardBorderColor = (status: string): string => {
+=======
+    const elapsedSeconds = getElapsedSeconds(order.createdAt ? String(order.createdAt) : '');
+    const waitTimeDisplay = formatWaitTime(elapsedSeconds);
+    const headerBgColor = getHeaderBackgroundColor(elapsedSeconds);
+    const headerTextColor = getHeaderTextColor(elapsedSeconds);
+    const isOverdue = elapsedSeconds > 20 * 60;
+
+    return (
+      <Card
+        style={{
+          borderRadius: '12px',
+          height: '100%',
+          minHeight: '350px',
+          border: '2px solid #e8e8e8',
+          overflow: 'visible',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+        bodyStyle={{ 
+          padding: '0', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: '100%',
+          backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
+        }}
+      >
+        {/* Header with timer and order info */}
+        <div style={{
+          backgroundColor: headerBgColor,
+          color: headerTextColor,
+          padding: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid #e8e8e8'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Text strong style={{ fontSize: '18px', color: headerTextColor }}>
+              #{order.orderNumber}
+            </Text>
+            {order.tableId?.number && (
+              <div style={{
+                backgroundColor: elapsedSeconds < 15 * 60 && elapsedSeconds >= 10 * 60 
+                  ? 'rgba(0,0,0,0.2)' // Dark background on orange
+                  : 'rgba(255,255,255,0.3)', // Light background on green/red
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: headerTextColor,
+                border: 'none'
+              }}>
+                {order.tableId.number}
+              </div>
+            )}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <Text strong style={{ 
+              fontSize: '20px', 
+              color: headerTextColor,
+              fontWeight: 'bold'
+            }}>
+              {waitTimeDisplay}
+            </Text>
+            <br />
+            <Text style={{ fontSize: '12px', color: headerTextColor, opacity: 0.9 }}>
+              {formatDate(order.createdAt ? String(order.createdAt) : null)?.split(' ')[1]}
+            </Text>
+          </div>
+        </div>
+
+        {/* Customer info */}
+        <div style={{
+          padding: '12px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f0f0f0'}`
+        }}>
+          <div>
+            <Text strong style={{ fontSize: '14px', color: isDarkMode ? '#f8fafc' : '#262626' }}>
+              {order.customerName || 'Walk-in Customer'}
+            </Text>
+          </div>
+          <Text style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#8c8c8c' }}>
+            {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
+          </Text>
+        </div>
+
+        {/* Order items with individual status */}
+        <div style={{ 
+          padding: '0', 
+          flex: 1,
+          overflowY: 'auto' 
+        }}>
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item: any, index: number) => (
+              <div key={index} style={{
+                padding: '12px 16px',
+                borderBottom: index < order.items.length - 1 ? `1px solid ${isDarkMode ? '#334155' : '#f0f0f0'}` : 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <Text strong style={{ fontSize: '14px', color: isDarkMode ? '#f8fafc' : '#262626' }}>
+                    {item.name || item.menuItem?.name}
+                  </Text>
+                  <br />
+                  <Text style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#8c8c8c' }}>
+                    Qty: {item.quantity}
+                  </Text>
+                  
+                  {/* Modifiers Section */}
+                  <div style={{ 
+                    marginTop: '4px',
+                    fontSize: '11px',
+                    color: isDarkMode ? '#94a3b8' : '#595959'
+                  }}>
+                    <Text style={{ fontWeight: '500', color: isDarkMode ? '#f8fafc' : '#262626' }}>Modifiers:</Text>
+                    {item.modifiers && item.modifiers.length > 0 ? (
+                      <Text style={{ 
+                        color: isDarkMode ? '#94a3b8' : '#8c8c8c',
+                        fontStyle: 'italic',
+                        marginLeft: '4px'
+                      }}>
+                        {item.modifiers.map((mod: any) => 
+                          typeof mod === 'string' ? mod : mod.name || 'Unknown modifier'
+                        ).join(', ')}
+                      </Text>
+                    ) : (
+                      <Text style={{ 
+                        color: isDarkMode ? '#64748b' : '#bfbfbf',
+                        fontStyle: 'italic',
+                        marginLeft: '4px'
+                      }}>
+                        [empty section]
+                      </Text>
+                    )}
+                  </div>
+                  
+                  <Text style={{ 
+                    fontSize: '12px', 
+                    color: isDarkMode ? '#94a3b8' : '#8c8c8c',
+                    marginTop: '4px',
+                    display: 'block'
+                  }}>
+                    Status: 
+                    <span style={{ 
+                      color: getItemStatusColor(item.status || 'pending'),
+                      fontWeight: 'bold',
+                      marginLeft: '4px'
+                    }}>
+                      {getItemStatusDisplayName(item.status || 'pending')}
+                    </span>
+                  </Text>
+                  
+                  {item.specialInstructions && (
+                    <div style={{ 
+                      marginTop: '4px',
+                      fontSize: '11px',
+                      color: '#faad14',
+                      fontStyle: 'italic'
+                    }}>
+                      Note: {item.specialInstructions}
+                    </div>
+                  )}
+                </div>
+                {item.status !== 'served' && getNextItemStatus(item.status || 'pending') && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    style={{ 
+                      backgroundColor: getItemStatusColor(getNextItemStatus(item.status || 'pending') || 'pending'),
+                      borderColor: getItemStatusColor(getNextItemStatus(item.status || 'pending') || 'pending'),
+                      fontSize: '11px',
+                      height: '24px'
+                    }}
+                    onClick={() => {
+                      const nextStatus = getNextItemStatus(item.status || 'pending');
+                      if (nextStatus) {
+                        updateOrderItemStatus(order._id, item._id || item.id, nextStatus);
+                      }
+                    }}
+                  >
+                    {getItemStatusButtonText(item.status || 'pending')}
+                  </Button>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: '16px', textAlign: 'center' }}>
+              <Text style={{ color: isDarkMode ? '#94a3b8' : '#8c8c8c' }}>No items</Text>
+            </div>
+          )}
+        </div>
+
+        {/* Actions footer */}
+        <div 
+          style={{
+            padding: '16px',
+            borderTop: `1px solid ${isDarkMode ? '#334155' : '#f0f0f0'}`,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: 'auto',
+            position: 'relative'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            type="primary"
+            style={{ 
+              backgroundColor: '#722ed1', 
+              borderColor: '#722ed1',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginRight: '8px'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle print KOT
+              message.success(`Printing KOT for Order #${order.orderNumber}`);
+            }}
+          >
+            🖨️ Print KOT
+          </Button>
+          
+          {/* Status Dropdown - Native Select for Better Reliability */}
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ zIndex: 1000, position: 'relative' }}
+          >
+            <select
+              value={order.status}
+              style={{ 
+                minWidth: 140, 
+                padding: '6px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: '#fff',
+                cursor: 'pointer'
+              }}
+              onChange={(e) => {
+                const newStatus = e.target.value as OrderStatus;
+                console.log('🎯 Native dropdown onChange triggered:', { 
+                  orderId: order._id, 
+                  newStatus, 
+                  oldStatus: order.status,
+                  event: e.type 
+                });
+                updateOrderStatus(order._id, newStatus);
+              }}
+              onClick={(e) => {
+                console.log('🎯 Native dropdown clicked:', { orderId: order._id });
+                e.stopPropagation();
+              }}
+              disabled={order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED}
+            >
+              <option value={OrderStatus.PENDING}>🟡 Pending</option>
+              <option value={OrderStatus.PREPARING}>🔵 Preparing</option>
+              <option value={OrderStatus.READY}>🟢 Ready</option>
+              <option value={OrderStatus.DELIVERED}>✅ Delivered</option>
+              <option value={OrderStatus.COMPLETED}>✔️ Completed</option>
+              <option value={OrderStatus.CANCELLED}>❌ Cancelled</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+
+  const getCardBorderColor = (status: string): string => {
+>>>>>>> Stashed changes
     switch (status) {
       case OrderStatus.PENDING:
           return '#faad14'; // orange
@@ -633,6 +1031,7 @@ const LiveOrders: React.FC = () => {
     <div className="live-orders-container">
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+<<<<<<< Updated upstream
           <Title level={2}>
             Live Orders
             {newOrdersCount > 0 && (
@@ -642,6 +1041,19 @@ const LiveOrders: React.FC = () => {
               ({filteredOrders.length} total)
             </span>
           </Title>
+=======
+          <div>
+            <Title level={2} style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
+              Live Orders (Last 8)
+            </Title>
+            <Text style={{ fontSize: '14px', color: '#8c8c8c' }}>
+              {Math.min(filteredOrders.length, 8)} of 8 orders in progress
+              {newOrdersCount > 0 && (
+                <Badge count={newOrdersCount} style={{ marginLeft: 10 }} />
+              )}
+            </Text>
+          </div>
+>>>>>>> Stashed changes
           <Space>
             {selectedRestaurantId && (
               <Button 

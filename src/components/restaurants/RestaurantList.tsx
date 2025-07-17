@@ -10,6 +10,7 @@ import {
   DialogActions,
   DialogContentText,
   IconButton,
+  Typography,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -108,7 +109,23 @@ const RestaurantList: React.FC = () => {
 
   return (
     <Box>
+<<<<<<< Updated upstream
       <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+=======
+      <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem', mb: 3 }}>
+        Restaurants
+      </Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3} gap={2}>
+        <Button
+          variant="outlined"
+          startIcon={<FileDownloadIcon />}
+          onClick={handleExportCSV}
+          disabled={restaurants.length === 0}
+          sx={{ mt: 2, mb: 0 }}
+        >
+          Export CSV
+        </Button>
+>>>>>>> Stashed changes
         <Button
           variant="contained"
           color="primary"

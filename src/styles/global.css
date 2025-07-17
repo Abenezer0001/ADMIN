@@ -1,13 +1,17 @@
 :root {
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --mui-mode: light;
-  --background-light: #F9FAFB;
+  --background-light: #f8fafc;
   --background-dark: #111827;
-  --text-light: #111827;
-  --text-dark: #F9FAFB;
+  --text-light: #1e293b;
+  --text-dark: #f8fafc;
   --paper-light: #ffffff;
   --paper-dark: #1F2937;
-  --primary-color: #6366F1;
+  --sidebar-light: #f1f5f9;
+  --sidebar-dark: #1e293b;
+  --navbar-light: #f8fafc;
+  --navbar-dark: #1e293b;
+  --primary-color: #255ee3;
   --secondary-color: #10B981;
 }
 
@@ -61,9 +65,14 @@ body[data-theme='dark'] {
 }
 
 .ant-layout-sider {
-  background-color: var(--paper-dark) !important;
+  background-color: var(--sidebar-dark) !important;
   transition: all 0.2s ease-in-out !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='light'] .ant-layout-sider {
+  background-color: var(--sidebar-light) !important;
+  border-right: 1px solid #e2e8f0 !important;
 }
 
 .ant-menu {
@@ -145,10 +154,12 @@ body[data-theme='dark'] {
 
 [data-theme='light'] .MuiPaper-root {
   background-color: var(--paper-light);
+  border: 1px solid #e2e8f0;
 }
 
 [data-theme='dark'] .MuiPaper-root {
   background-color: var(--paper-dark);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .MuiSwitch-root {
@@ -191,6 +202,22 @@ body[data-theme='dark'] {
 /* Card styles */
 .MuiCard-root {
   backdrop-filter: blur(8px);
+  transition: all 0.2s ease-in-out;
+}
+
+[data-theme='light'] .MuiCard-root {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+[data-theme='light'] .MuiCard-root:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  border-color: #cbd5e1;
+}
+
+[data-theme='dark'] .MuiCard-root {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Button styles */
@@ -222,6 +249,25 @@ body[data-theme='dark'] {
 .dashboard-card-content {
   flex-grow: 1;
   padding: 20px;
+}
+
+/* Light mode specific enhancements */
+[data-theme='light'] {
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  --ring-offset-shadow: 0 0 0 var(--ring-offset-width) var(--ring-offset-color);
+  --ring-shadow: 0 0 0 calc(3px + var(--ring-offset-width)) var(--ring-color);
+}
+
+[data-theme='light'] .MuiAppBar-root {
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme='light'] .MuiDrawer-paper {
+  box-shadow: var(--shadow-md);
 }
 
 /* Chart containers */

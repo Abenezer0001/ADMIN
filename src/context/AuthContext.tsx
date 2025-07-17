@@ -56,6 +56,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   clearError: () => void;
   retryAuthCheck: () => Promise<boolean>;
+  updateUserProfile: (updatedUser: User) => void;
 }
 
 // Create the auth context with a default value
@@ -70,6 +71,7 @@ const AuthContext = React.createContext<AuthContextType>({
   logout: async () => {},
   clearError: () => {},
   retryAuthCheck: async () => false,
+  updateUserProfile: () => {},
 });
 
 // Define props for the AuthProvider component
@@ -526,6 +528,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
+  // Update user profile function
+  const updateUserProfile = (updatedUser: User): void => {
+    setUser(updatedUser);
+    // Also update session storage for consistency
+    sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -538,7 +547,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         register,
         logout,
         clearError,
-        retryAuthCheck
+        retryAuthCheck,
+        updateUserProfile
       }}
     >
       {children}

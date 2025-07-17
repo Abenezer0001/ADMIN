@@ -44,8 +44,35 @@ const initialSettings: LoyaltySettingsState = {
 const LoyaltySettings = () => {
 
   return (
+<<<<<<< Updated upstream
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Loyalty Program Settings</h1>
+=======
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
+        Loyalty Program Settings
+      </Typography>
+      
+      {/* Restaurant Selection */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <FormControl fullWidth>
+            <InputLabel>Select Restaurant</InputLabel>
+            <Select
+              value={selectedRestaurant}
+              onChange={(e) => setSelectedRestaurant(e.target.value)}
+              label="Select Restaurant"
+            >
+              {restaurants.map((restaurant) => (
+                <MenuItem key={restaurant._id} value={restaurant._id}>
+                  {restaurant.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </CardContent>
+      </Card>
+>>>>>>> Stashed changes
 
       {/* Form structure remains, but inputs are read-only or display initial values */}
       <form onSubmit={(e) => e.preventDefault()} > {/* Prevent default form submission */}

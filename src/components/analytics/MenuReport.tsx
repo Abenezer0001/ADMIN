@@ -66,7 +66,7 @@ const lowPerformingItems = [
 function MenuReport() {
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Menu Report
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
@@ -90,7 +90,7 @@ function MenuReport() {
                   Menu Items
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {menuSummary.totalItems}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -114,7 +114,7 @@ function MenuReport() {
                   Top Category
                 </Typography>
               </Stack>
-              <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h5" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {menuSummary.topSellingCategory}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -138,7 +138,7 @@ function MenuReport() {
                   Avg. Rating
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {menuSummary.averageRating}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -162,7 +162,7 @@ function MenuReport() {
                   Profit Margin
                 </Typography>
               </Stack>
-              <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
                 {menuSummary.profitMargin}%
               </Typography>
               <Typography variant="body2" color="text.secondary">

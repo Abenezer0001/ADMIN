@@ -141,7 +141,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && pr
   ...(collapsed && {
     marginLeft: `${collapsedDrawerWidth}px`,
   }),
-  backgroundColor: theme.palette.mode === 'dark' ? '#111827' : '#F5F7FA',
+  backgroundColor: theme.palette.mode === 'dark' ? '#111827' : '#f8fafc',
   minHeight: '100vh',
   width: '100%',
   maxWidth: '100%',
@@ -153,8 +153,11 @@ const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'ope
   collapsed?: boolean;
 }>(({ theme, open, collapsed }) => ({
   height: '90px',
-  backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f0f4f8',
+  backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
   color: theme.palette.mode === 'dark' ? '#ffffff' : '#1e293b',
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0'}`,
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
   boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
   transition: theme.transitions.create(['margin', 'width'], {
     easing: theme.transitions.easing.sharp,
@@ -649,7 +652,28 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                 onClick={(e: React.MouseEvent<HTMLElement>) => setMenuAnchorEl(e.currentTarget)}
                 color="inherit"
               >
+<<<<<<< Updated upstream
                 <Avatar sx={{ width: 32, height: 32 }} />
+=======
+                <Avatar 
+                  src={user?.profileImage || ''}
+                  sx={{ width: 32, height: 32 }}
+                  onError={(e) => {
+                    console.error('Navbar avatar image failed to load:', user?.profileImage);
+                    e.currentTarget.src = '';
+                  }}
+                >
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </Avatar>
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
+                  {/* <Typography variant="body2" sx={{ color: 'inherit', lineHeight: 1.2 }}>
+                    Welcome back
+                  </Typography> */}
+                  <Typography variant="subtitle2" sx={{ color: 'inherit', fontWeight: 600, lineHeight: 1.2 }}>
+                    {user?.firstName} {user?.lastName}!
+                  </Typography>
+                </Box>
+>>>>>>> Stashed changes
               </IconButton>
             </Tooltip>
           </Box>
@@ -777,8 +801,14 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           '& .MuiDrawer-paper': {
             width: open ? drawerWidth : collapsedDrawerWidth,
             boxSizing: 'border-box',
+<<<<<<< Updated upstream
             backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : (collapsed ? '#F5F7FA' : '#ffffff'),
             borderRight: '1px solid',
+=======
+            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f1f5f9',
+            borderRight: isRTL ? 'none' : '1px solid',
+            borderLeft: isRTL ? '1px solid' : 'none',
+>>>>>>> Stashed changes
             borderColor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
             overflowX: 'hidden',
             transition: theme.transitions.create('width', {
@@ -816,6 +846,9 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
             },
             '& .MuiListItemText-primary': {
               color: theme.palette.mode === 'dark' ? '#e2e8f0' : '#1e293b',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 500,
+              fontSize: 13,
               opacity: open ? 1 : 0,
               transition: theme.transitions.create(['opacity'], {
                 easing: theme.transitions.easing.sharp,
@@ -897,10 +930,10 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           {categories.map((category, index) => (
             <React.Fragment key={category.category}>
               <Typography variant="h6" className="category-title" sx={{ 
-                fontFamily: 'var(--font-inseat-logo)', 
+                fontFamily: 'Poppins, sans-serif', 
                 color: theme.palette.mode === 'light' ? '#64748B' : '#94a3b8', 
-                fontWeight: 'bold',
-                fontSize: 10,
+                fontWeight: 500,
+                fontSize: 13,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
                 pl: 2,

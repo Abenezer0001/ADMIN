@@ -506,7 +506,9 @@ const SystemSettings: React.FC = () => {
           <Box>
             <Typography variant="h5" component="h1" gutterBottom sx={{
               color: theme.palette.mode === 'dark' ? 'rgb(255, 255, 255)' : 'rgb(30, 41, 59)',
+              fontFamily: 'Poppins, sans-serif',
               fontWeight: 600,
+              fontSize: '1.5rem',
               transition: 'color 0.3s ease'
             }}>
               System Settings

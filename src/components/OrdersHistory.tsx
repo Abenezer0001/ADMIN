@@ -150,6 +150,7 @@ const OrdersHistory: React.FC = () => {
 
 
   return (
+<<<<<<< Updated upstream
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={2}>Order History</Title>
@@ -158,6 +159,44 @@ const OrdersHistory: React.FC = () => {
           icon={<ReloadOutlined />} 
           onClick={handleRefresh}
           loading={loading}
+=======
+    <Card 
+      title={<span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>Orders History</span>}
+      style={{ margin: '20px', borderRadius: '8px' }}
+      extra={
+        <Space>
+          <Button 
+            icon={<DownloadOutlined />}
+            onClick={handleExportCSV}
+            disabled={orders.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button 
+            type="primary" 
+            onClick={handleRefresh}
+            style={{ backgroundColor: '#1677ff', borderColor: '#1677ff' }}
+          >
+            Refresh
+          </Button>
+        </Space>
+      }
+    >
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Search
+          placeholder="Search orders..."
+          allowClear
+          enterButton={<SearchOutlined />}
+          style={{ width: 250 }}
+          onSearch={setSearchText}
+                     onChange={(e: any) => setSearchText(e.target.value)}
+        />
+        <Select
+          placeholder="Filter by status"
+          style={{ width: 200 }}
+          value={statusFilter}
+          onChange={setStatusFilter}
+>>>>>>> Stashed changes
         >
           Refresh
         </Button>
