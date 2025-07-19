@@ -59,14 +59,19 @@ import {
   Description as DescriptionIcon,
   Restaurant as RestaurantIcon,
   Business as BusinessIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Loyalty as LoyaltyIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
 import { useBusiness } from '../context/BusinessContext';
 import { useRbac } from '../context/RbacContext';
+import { usePreferences } from '../context/PreferenceContext';
+import { getTranslation, getCategoryTranslation } from '../utils/translations';
+import { availableLanguages } from '../types/preferenceTypes';
 
-const isRTL = false;  // Add RTL support later if needed
+// RTL support will be determined dynamically based on language
 const drawerWidth = 290;
 const collapsedDrawerWidth = 80;
 
@@ -116,26 +121,30 @@ const StyledListItemIcon = styled(ListItemIcon)(() => ({
   },
 }));
 
-const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed' })<{
+const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed' && prop !== 'isRTL' })<{
   open?: boolean;
   collapsed?: boolean;
-}>(({ theme, open, collapsed }) => ({
+  isRTL?: boolean;
+}>(({ theme, open, collapsed, isRTL }) => ({
   flexGrow: 1,
   padding: theme.spacing(3),
   transition: theme.transitions.create('margin', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  marginLeft: `-${drawerWidth}px`,
+  marginLeft: isRTL ? 0 : `-${drawerWidth}px`,
+  marginRight: isRTL ? `-${drawerWidth}px` : 0,
   ...(open && {
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
-    marginLeft: 0,
+    marginLeft: isRTL ? 0 : 0,
+    marginRight: isRTL ? 0 : 0,
   }),
   ...(collapsed && {
-    marginLeft: `${collapsedDrawerWidth}px`,
+    marginLeft: isRTL ? 0 : `${collapsedDrawerWidth}px`,
+    marginRight: isRTL ? `${collapsedDrawerWidth}px` : 0,
   }),
   backgroundColor: theme.palette.mode === 'dark' ? '#111827' : '#f8fafc',
   minHeight: '100vh',
@@ -144,10 +153,11 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && pr
   boxSizing: 'border-box',
 }));
 
-const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed' })<{
+const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'collapsed' && prop !== 'isRTL' })<{
   open?: boolean;
   collapsed?: boolean;
-}>(({ theme, open, collapsed }) => ({
+  isRTL?: boolean;
+}>(({ theme, open, collapsed, isRTL }) => ({
   height: '90px',
   backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
   color: theme.palette.mode === 'dark' ? '#ffffff' : '#1e293b',
@@ -161,7 +171,8 @@ const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'ope
   }),
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: `${drawerWidth}px`,
+    marginLeft: isRTL ? 0 : `${drawerWidth}px`,
+    marginRight: isRTL ? `${drawerWidth}px` : 0,
     transition: theme.transitions.create(['margin', 'width'], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
@@ -169,7 +180,8 @@ const AppBarStyled = styled(AppBar, { shouldForwardProp: (prop) => prop !== 'ope
   }),
   ...(collapsed && {
     width: `calc(100% - ${collapsedDrawerWidth}px)`,
-    marginLeft: `${collapsedDrawerWidth}px`,
+    marginLeft: isRTL ? 0 : `${collapsedDrawerWidth}px`,
+    marginRight: isRTL ? `${collapsedDrawerWidth}px` : 0,
     transition: theme.transitions.create(['margin', 'width'], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
@@ -211,7 +223,6 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
   const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
   const [expandedMenus, setExpandedMenus] = React.useState<{ [key: string]: boolean }>({});
   const [notifications, setNotifications] = React.useState<Array<{id: string, message: string, read: boolean, date: Date}>>([{id: '1', message: 'New order received', read: false, date: new Date()}]);
-  const [language, setLanguage] = React.useState('en');
   const [notificationAnchorEl, setNotificationAnchorEl] = React.useState<null | HTMLElement>(null);
   const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
   const [appsAnchorEl, setAppsAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -221,6 +232,10 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
   const { logout, user } = useAuth();
   const { isSuperAdmin, isBusinessOwner } = useBusiness();
   const { checkPermission } = useRbac();
+  const { preferences, updatePreferences } = usePreferences();
+  
+  const isRTL = preferences.secondaryLanguage?.direction === 'rtl';
+  const currentLanguage = preferences.secondaryLanguage?.code || 'en';
 
   const handleDrawerToggle = () => {
     if (open) {
@@ -270,8 +285,11 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
     setLanguageAnchorEl(null);
   };
 
-  const handleLanguageSelect = (lang: string) => {
-    setLanguage(lang);
+  const handleLanguageSelect = (langCode: string) => {
+    const selectedLanguage = availableLanguages.find(lang => lang.code === langCode);
+    if (selectedLanguage) {
+      updatePreferences({ secondaryLanguage: selectedLanguage });
+    }
     handleLanguageClose();
   };
 
@@ -312,6 +330,9 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
       'invoices': { resource: 'order', action: 'read' },
       'inventory': { resource: 'restaurant', action: 'read' },
       'customers': { resource: 'user', action: 'read' },
+      'loyalty': { resource: 'loyalty', action: 'read' },
+      'loyalty/analytics': { resource: 'loyalty', action: 'read' },
+      'loyalty/settings': { resource: 'loyalty', action: 'write' },
       'settings/admins': { resource: 'user', action: 'read' },
       'settings/rbac': { resource: 'user', action: 'read' },
       'settings/system': { resource: 'settings', action: 'read' },
@@ -337,6 +358,11 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
         return true;
       }
     }
+
+    // Temporarily allow everyone to access loyalty features
+    if (itemKey === 'loyalty' || itemKey === 'loyalty/analytics' || itemKey === 'loyalty/settings') {
+      return true;
+    }
     
     // Special handling for business management
     if (itemKey === 'business/list') {
@@ -357,70 +383,70 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
 
   const categories: CategoryType[] = [ // Use renamed type
     {
-      category: 'Overview',
+      category: getCategoryTranslation('Overview', currentLanguage),
       items: [
         {
           key: 'dashboard',
           icon: <DashboardIcon sx={{ fontSize: 24 }} />,
-          label: 'Dashboard',
+          label: getTranslation('dashboard', currentLanguage),
         },
         {
           key: 'analytics',
           icon: <InsightsIcon sx={{ fontSize: 24 }} />,
-          label: 'Analytics',
+          label: getTranslation('analytics', currentLanguage),
           children: [
             {
               key: 'analytics/menu-report',
               icon: <AssessmentIcon sx={{ fontSize: 24 }} />,
-              label: 'Menu Report',
+              label: getTranslation('analytics/menu-report', currentLanguage),
             },
             {
               key: 'analytics/order-performance',
               icon: <BarChartIcon sx={{ fontSize: 24 }} />,
-              label: 'Order Performance',
+              label: getTranslation('analytics/order-performance', currentLanguage),
             },
             {
               key: 'analytics/customer-insight',
               icon: <PeopleIcon sx={{ fontSize: 24 }} />,
-              label: 'Customer Insight',
+              label: getTranslation('analytics/customer-insight', currentLanguage),
             },
           ],
         },
         {
           key: 'sales',
           icon: <ReceiptIcon sx={{ fontSize: 24 }} />,
-          label: 'Sales',
+          label: getTranslation('sales', currentLanguage),
         },
       ],
     },
     // Business Management - Only show if user is SuperAdmin or Business Owner
     ...(isSuperAdmin() || isBusinessOwner() ? [{
-      category: 'Business Management',
+      category: getCategoryTranslation('Business Management', currentLanguage),
       items: [
         ...(isSuperAdmin() ? [{
           key: 'business/list',
           icon: <BusinessIcon sx={{ fontSize: 24 }} />,
-          label: 'All Businesses',
+          label: getTranslation('business/list', currentLanguage),
         }] : []),
         ...(isBusinessOwner() ? [{
           key: 'business/dashboard',
           icon: <BusinessIcon sx={{ fontSize: 24 }} />,
-          label: 'My Business',
+          label: getTranslation('business/dashboard', currentLanguage),
         }] : []),
       ],
     }] : []),
     {
-      category: 'Restaurant Management',
+      category: getCategoryTranslation('Restaurant Management', currentLanguage),
       items: [
         {
           key: 'restaurants/list',
           icon: <RestaurantIcon sx={{ fontSize: 24 }} />,
-          label: 'Restaurants',
+          label: getTranslation('restaurants/list', currentLanguage),
         },
         {
           key: 'tables/list',
           icon: <OrdersIcon sx={{ fontSize: 24 }} />,
-          label: 'Tables',
+          label: getTranslation('tables/list', currentLanguage),
         },
         // {
         //   key: 'zones/list',
@@ -431,47 +457,47 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
         {
           key: 'venues/list',
           icon: <CategoryIcon sx={{ fontSize: 24 }} />,
-          label: 'Venues',
+          label: getTranslation('venues/list', currentLanguage),
         },
         
         {
           key: 'menu',
           icon: <MenuIcon2 sx={{ fontSize: 24 }} />,
-          label: 'Menu & Categories',
+          label: getTranslation('menu', currentLanguage),
           children: [
             {
               key: 'menu/items',
               icon: <MenuBookIcon sx={{ fontSize: 24 }} />,
-              label: 'Menu Items',
+              label: getTranslation('menu/items', currentLanguage),
             },
             {
               key: 'modifiers',
               icon: <TuneIcon sx={{ fontSize: 24 }} />,
-              label: 'Modifiers',
+              label: getTranslation('modifiers', currentLanguage),
               path: '/menu/modifiers'
             },
             {
               key: 'categories',
               icon: <CategoryIcon sx={{ fontSize: 24 }} />,
-              label: 'Categories',
+              label: getTranslation('categories', currentLanguage),
               path: '/categories'
             },
              { // Added SubCategory Link
               key: 'subcategories/list',
               icon: <AccountTreeIcon sx={{ fontSize: 24 }} />, // Better hierarchy representation
-              label: 'Sub-Categories',
+              label: getTranslation('subcategories/list', currentLanguage),
                path: '/subcategories/list'
             },
             { // Added SubSubCategory Link
               key: 'subsubcategories/list',
               icon: <SubdirectoryArrowRightIcon sx={{ fontSize: 24 }} />, // Shows deeper hierarchy
-              label: 'Sub-Subcategories',
+              label: getTranslation('subsubcategories/list', currentLanguage),
               path: '/subsubcategories/list'
             },
              { // Added Menus Link
                key: 'menus/list',
                icon: <RestaurantMenuIcon sx={{ fontSize: 24 }} />,
-              label: 'Menus',
+              label: getTranslation('menus/list', currentLanguage),
               path: '/menus/list'
             },
           ],
@@ -479,59 +505,76 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
       ],
     },
     {
-      category: 'Order Management',
+      category: getCategoryTranslation('Order Management', currentLanguage),
       items: [
         {
           key: 'orders',
           icon: <OrdersIcon sx={{ fontSize: 24 }} />,
-          label: 'Orders',
+          label: getTranslation('orders', currentLanguage),
           children: [
             {
               key: 'orders/live',
               icon: <SyncIcon sx={{ fontSize: 24 }} />,
-              label: 'Live Orders',
+              label: getTranslation('orders/live', currentLanguage),
             },
             {
               key: 'orders/history',
               icon: <HistoryIcon sx={{ fontSize: 24 }} />,
-              label: 'Order History',
+              label: getTranslation('orders/history', currentLanguage),
             },
           ],
         },
         {
           key: 'invoices',
           icon: <DescriptionIcon sx={{ fontSize: 24 }} />,
-          label: 'Invoices',
+          label: getTranslation('invoices', currentLanguage),
         },
         {
           key: 'inventory',
           icon: <InventoryIcon sx={{ fontSize: 24 }} />,
-          label: 'Inventory Management',
+          label: getTranslation('inventory', currentLanguage),
         },
         {
           key: 'customers',
           icon: <PeopleIcon sx={{ fontSize: 24 }} />,
-          label: 'Customers',
+          label: getTranslation('customers', currentLanguage),
+        },
+        {
+          key: 'loyalty',
+          icon: <LoyaltyIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('loyalty', currentLanguage),
+          children: [
+            {
+              key: 'loyalty/analytics',
+              icon: <AnalyticsIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('loyalty/analytics', currentLanguage),
+            },
+            {
+              key: 'loyalty/settings',
+              icon: <SettingsIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('loyalty/settings', currentLanguage),
+            },
+          ],
         },
       ],
     },
     {
-      category: 'Settings & Administration',
+      category: getCategoryTranslation('Settings & Administration', currentLanguage),
       items: [
         {
           key: 'settings/admins',
           icon: <PeopleIcon sx={{ fontSize: 24 }} />,
-          label: 'Administrator Management',
+          label: getTranslation('settings/admins', currentLanguage),
         },
         {
           key: 'settings/rbac',
           icon: <SecurityIcon sx={{ fontSize: 24 }} />,
-          label: 'Access Control',
+          label: getTranslation('settings/rbac', currentLanguage),
         },
         {
           key: 'settings/system',
           icon: <SettingsIcon sx={{ fontSize: 24 }} />,
-          label: 'System Settings',
+          label: getTranslation('settings/system', currentLanguage),
         },
         // {
         //   key: 'settings/access-control',
@@ -541,12 +584,12 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
         {
           key: 'settings/integration',
           icon: <PowerIcon sx={{ fontSize: 24 }} />,
-          label: 'Integration',
+          label: getTranslation('settings/integration', currentLanguage),
         },
         {
           key: 'settings/notifications',
           icon: <NotificationsActiveIcon sx={{ fontSize: 24 }} />,
-          label: 'Notifications',
+          label: getTranslation('settings/notifications', currentLanguage),
         },
       ],
     },
@@ -554,7 +597,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBarStyled position="fixed" open={open} collapsed={collapsed}>
+      <AppBarStyled position="fixed" open={open} collapsed={collapsed} isRTL={isRTL}>
         <Toolbar sx={{ 
           minHeight: '70px !important', 
           height: '70px',
@@ -733,18 +776,20 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           },
         }}
       >
-        {[
-          { code: 'en', name: 'English' },
-          { code: 'am', name: 'አማርኛ' },
-          { code: 'or', name: 'Oromiffa' },
-        ].map((lang) => (
+        {availableLanguages.map((lang) => (
           <MenuItem 
             key={lang.code} 
             onClick={() => handleLanguageSelect(lang.code)}
-            selected={language === lang.code}
+            selected={currentLanguage === lang.code}
+            sx={{
+              ...(lang.direction === 'rtl' && {
+                direction: 'rtl',
+                fontFamily: 'var(--font-arabic), Arial, sans-serif',
+              }),
+            }}
           >
             <ListItemText>{lang.name}</ListItemText>
-            {language === lang.code && (
+            {currentLanguage === lang.code && (
               <CheckIcon fontSize="small" sx={{ ml: 1 }} />
             )}
           </MenuItem>
@@ -790,6 +835,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
       </Menu>
 
       <Drawer
+        anchor={isRTL ? 'right' : 'left'}
         sx={{
           width: open ? drawerWidth : collapsedDrawerWidth,
           flexShrink: 0,
@@ -800,6 +846,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
             borderRight: isRTL ? 'none' : '1px solid',
             borderLeft: isRTL ? '1px solid' : 'none',
             borderColor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+            direction: isRTL ? 'rtl' : 'ltr',
             overflowX: 'hidden',
             transition: theme.transitions.create('width', {
               easing: theme.transitions.easing.sharp,
@@ -836,10 +883,12 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
             },
             '& .MuiListItemText-primary': {
               color: theme.palette.mode === 'dark' ? '#e2e8f0' : '#1e293b',
-              fontFamily: 'Poppins, sans-serif',
+              fontFamily: isRTL ? 'var(--font-arabic), Arial, sans-serif' : 'Poppins, sans-serif',
               fontWeight: 500,
               fontSize: 13,
               opacity: open ? 1 : 0,
+              direction: isRTL ? 'rtl' : 'ltr',
+              textAlign: isRTL ? 'right' : 'left',
               transition: theme.transitions.create(['opacity'], {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,
@@ -920,15 +969,18 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           {categories.map((category) => (
             <React.Fragment key={category.category}>
               <Typography variant="h6" className="category-title" sx={{ 
-                fontFamily: 'Poppins, sans-serif', 
+                fontFamily: isRTL ? 'var(--font-arabic), Arial, sans-serif' : 'Poppins, sans-serif', 
                 color: theme.palette.mode === 'light' ? '#64748B' : '#94a3b8', 
                 fontWeight: 500,
                 fontSize: 13,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                pl: 2,
+                textTransform: isRTL ? 'none' : 'uppercase',
+                letterSpacing: isRTL ? 'normal' : '0.1em',
+                pl: isRTL ? 0 : 2,
+                pr: isRTL ? 2 : 0,
                 mb: open ? 1 : 0,
                 mt: 2,
+                direction: isRTL ? 'rtl' : 'ltr',
+                textAlign: isRTL ? 'right' : 'left',
               }}>
                 {category.category}
               </Typography>
@@ -989,7 +1041,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           ))}
         </List>
       </Drawer>
-      <Main open={open} collapsed={collapsed}>
+      <Main open={open} collapsed={collapsed} isRTL={isRTL}>
         <DrawerHeader />
         {children}
       </Main>

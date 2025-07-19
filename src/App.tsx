@@ -14,6 +14,7 @@ import { PreferenceProvider } from './context/PreferenceContext';
 import { AuthProvider } from './context/AuthContext';
 import { RbacProvider } from './context/RbacContext';
 import { BusinessProvider } from './context/BusinessContext';
+import RTLProvider from './components/RTLProvider';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PasswordSetup from './pages/PasswordSetup';
@@ -75,11 +76,12 @@ const App: React.FC = () => {
   return (
     <Provider store={store}>
       <PreferenceProvider>
-        <ConfigProvider theme={antdTheme}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Router>
-              <AuthProvider>
+        <RTLProvider>
+          <ConfigProvider theme={antdTheme}>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <Router>
+                <AuthProvider>
                 <Routes>
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
@@ -108,6 +110,7 @@ const App: React.FC = () => {
             </Router>
           </ThemeProvider>
         </ConfigProvider>
+        </RTLProvider>
       </PreferenceProvider>
     </Provider>
   );

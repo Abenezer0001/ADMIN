@@ -97,6 +97,26 @@ export class RestaurantService {
       throw error;
     }
   }
+
+  /**
+   * Get restaurants by business ID
+   */
+  static async getRestaurantsByBusiness(businessId: string): Promise<Restaurant[]> {
+    try {
+      console.log('Fetching restaurants by business ID:', businessId);
+      const response = await axiosInstance.get(`/restaurants/business/${businessId}`);
+      console.log('Restaurants by business response:', response.data);
+      return response.data as Restaurant[];
+    } catch (error: any) {
+      console.error('Error fetching restaurants by business:', error);
+      // Fallback to get all restaurants if business-specific endpoint doesn't exist
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        console.log('Falling back to getting all restaurants...');
+        return this.getAllRestaurants();
+      }
+      throw error;
+    }
+  }
 }
 
 // Export both default and named for backwards compatibility

@@ -51,9 +51,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // Temporarily allow everyone to access loyalty features
+  const isLoyaltyResource = resource === 'loyalty';
+  
   // Check resource permission if specified
   // System admins should have access to everything, even during permission loading
-  if (resource && user?.role !== 'system_admin' && !hasPermission(resource, action)) {
+  if (resource && user?.role !== 'system_admin' && !isLoyaltyResource && !hasPermission(resource, action)) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">

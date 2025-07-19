@@ -1,5 +1,6 @@
 :root {
   --font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-arabic: 'Amiri', 'Arial Unicode MS', 'Tahoma', 'DejaVu Sans', sans-serif;
   --mui-mode: light;
   --background-light: #f8fafc;
   --background-dark: #111827;
@@ -34,6 +35,21 @@ body[data-theme='light'] {
 body[data-theme='dark'] {
   background-color: var(--background-dark);
   color: var(--text-dark);
+}
+
+/* RTL support */
+body[dir='rtl'] {
+  direction: rtl;
+  text-align: right;
+}
+
+body[dir='rtl'] * {
+  text-align: inherit;
+}
+
+/* Arabic font support */
+.arabic-text, [dir='rtl'] {
+  font-family: var(--font-arabic);
 }
 
 /* Scrollbar styles */

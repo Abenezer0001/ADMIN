@@ -58,6 +58,7 @@ const Profile = lazy(() => import('./components/settings/Profile'));
 const ChangePassword = lazy(() => import('./components/settings/ChangePassword'));
 const MenuItemDetail = lazy(() => import('./pages/MenuItems/MenuItemDetail')); // Added import
 const LoyaltySettings = lazy(() => import('./components/loyalty/LoyaltySettings'));
+const LoyaltyAnalytics = lazy(() => import('./components/loyalty/LoyaltyAnalytics'));
 import Notifications from './components/settings/Notifications';
 
 // Existing components
@@ -549,6 +550,16 @@ const AppRoutes = () => {
           } />
           <Route path="/settings/loyalty" element={
             <ProtectedRoute resource="settings" action="update">
+              <LoyaltySettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/loyalty/analytics" element={
+            <ProtectedRoute resource="loyalty" action="read">
+              <LoyaltyAnalytics />
+            </ProtectedRoute>
+          } />
+          <Route path="/loyalty/settings" element={
+            <ProtectedRoute resource="loyalty" action="write">
               <LoyaltySettings />
             </ProtectedRoute>
           } />
