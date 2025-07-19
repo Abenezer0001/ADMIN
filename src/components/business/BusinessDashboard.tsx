@@ -175,7 +175,7 @@ const BusinessDashboard: React.FC = () => {
         setSpecificBusinessError(`This dashboard is only available for business owners, restaurant administrators, and system administrators. Your role: ${user?.role}`);
       }
     }
-  }, [isAuthenticated, authLoading, businessId, fetchBusinessData, user?.role, user?.roles, user?.businessId, isSuperAdmin, isBusinessOwner, navigate]);
+  }, [isAuthenticated, authLoading, businessId, user?.businessId, user?.role]);
 
   const formatAddress = (address?: any) => {
     if (!address) return 'No address provided';
@@ -191,6 +191,17 @@ const BusinessDashboard: React.FC = () => {
   const displayBusiness = specificBusiness || currentBusiness;
   const loading = specificBusinessLoading || isLoading;
   const displayError = specificBusinessError || error;
+
+  // Add debounced loading to prevent flickering
+  const [debouncedLoading, setDebouncedLoading] = React.useState(loading);
+  
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLoading(loading);
+    }, 100); // Small delay to prevent rapid flickering
+    
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Show loading while authentication is being determined
   if (authLoading) {
@@ -229,7 +240,7 @@ const BusinessDashboard: React.FC = () => {
   }
 
   // Show loading while business data is being fetched
-  if (loading) {
+  if (debouncedLoading) {
     console.log('Loading business data...');
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="200px">

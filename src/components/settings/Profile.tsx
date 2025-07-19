@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -27,8 +27,6 @@ const Profile: React.FC = () => {
     phone: '',
     position: 'Administrator',
   });
-<<<<<<< Updated upstream
-=======
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -46,7 +44,6 @@ const Profile: React.FC = () => {
       });
     }
   }, [user]);
->>>>>>> Stashed changes
 
   const handleChange = (field: keyof ProfileForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({
@@ -60,13 +57,8 @@ const Profile: React.FC = () => {
     console.log('Saving profile:', form);
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-<<<<<<< Updated upstream
-    if (file) {
-      // TODO: Implement image upload
-      console.log('Uploading image:', file);
-=======
     if (!file) return;
 
     // Validate file size (5MB)
@@ -114,7 +106,6 @@ const Profile: React.FC = () => {
       setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' });
     } finally {
       setUploading(false);
->>>>>>> Stashed changes
     }
   };
 
@@ -134,10 +125,7 @@ const Profile: React.FC = () => {
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Box sx={{ position: 'relative' }}>
               <Avatar
-<<<<<<< Updated upstream
-=======
                 src={form.profileImage || ''}
->>>>>>> Stashed changes
                 sx={{
                   width: 100,
                   height: 100,

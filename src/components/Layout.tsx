@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   useTheme, 
@@ -19,7 +19,6 @@ import {
   AppBar,
   Toolbar,
   List,
-  ListItem,
   ListItemButton,
   Collapse,
   InputBase,
@@ -31,7 +30,6 @@ import {
   LightMode as LightModeIcon,
   DarkMode as DarkModeIcon,
   Check as CheckIcon,
-  Translate as TranslateIcon,
   Power as PowerIcon,
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -40,13 +38,11 @@ import {
   Restaurant as MenuIcon2,
   Settings as SettingsIcon,
   MenuBook as MenuBookIcon,
-  Edit as EditIcon,
   Category as CategoryIcon,
   AccountTree as AccountTreeIcon,
   SubdirectoryArrowRight as SubdirectoryArrowRightIcon,
   RestaurantMenu as RestaurantMenuIcon,
   History as HistoryIcon,
-  AccountCircle as AccountCircleIcon,
   Tune as TuneIcon,
   ExpandLess,
   ExpandMore,
@@ -56,21 +52,21 @@ import {
   Sync as SyncIcon,
   Insights as InsightsIcon,
   Receipt as ReceiptIcon,
-  VpnKey as KeyIcon,
   Assessment as AssessmentIcon,
   BarChart as BarChartIcon,
   People as PeopleIcon,
   Inventory as InventoryIcon,
   Description as DescriptionIcon,
   Restaurant as RestaurantIcon,
-  Business as BusinessIcon
+  Business as BusinessIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
 import { useBusiness } from '../context/BusinessContext';
 import { useRbac } from '../context/RbacContext';
-import LogoutButton from './common/LogoutButton';
 
+const isRTL = false;  // Add RTL support later if needed
 const drawerWidth = 290;
 const collapsedDrawerWidth = 80;
 
@@ -113,7 +109,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   },
 }));
 
-const StyledListItemIcon = styled(ListItemIcon)(({ theme }) => ({
+const StyledListItemIcon = styled(ListItemIcon)(() => ({
   minWidth: 40,
   '& .MuiSvgIcon-root': {
     fontSize: '1.8rem',
@@ -209,21 +205,20 @@ interface CategoryType { // Renamed to avoid conflict
   items: MenuItemType[]; // Use renamed type
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => {
+const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) => {
   const [open, setOpen] = React.useState(true);
   const [collapsed, setCollapsed] = React.useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
   const [expandedMenus, setExpandedMenus] = React.useState<{ [key: string]: boolean }>({});
   const [notifications, setNotifications] = React.useState<Array<{id: string, message: string, read: boolean, date: Date}>>([{id: '1', message: 'New order received', read: false, date: new Date()}]);
   const [language, setLanguage] = React.useState('en');
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = React.useState<null | HTMLElement>(null);
   const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
   const [appsAnchorEl, setAppsAnchorEl] = React.useState<null | HTMLElement>(null);
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { isSuperAdmin, isBusinessOwner } = useBusiness();
   const { checkPermission } = useRbac();
 
@@ -259,7 +254,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchorEl(event.currentTarget);
     // Mark notifications as read when opening the menu
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    setNotifications(notifications.map((n: { id: string; message: string; read: boolean; date: Date }) => ({ ...n, read: true })));
   };
 
   const handleNotificationClose = () => {
@@ -620,7 +615,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                 color="inherit"
                 onClick={handleNotificationClick}
               >
-                <Badge badgeContent={notifications.filter(n => !n.read).length} color="error">
+                <Badge badgeContent={notifications.filter((n: { read: boolean }) => !n.read).length} color="error">
                   <NotificationsIcon />
                 </Badge>
               </IconButton>
@@ -652,15 +647,12 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                 onClick={(e: React.MouseEvent<HTMLElement>) => setMenuAnchorEl(e.currentTarget)}
                 color="inherit"
               >
-<<<<<<< Updated upstream
-                <Avatar sx={{ width: 32, height: 32 }} />
-=======
                 <Avatar 
                   src={user?.profileImage || ''}
                   sx={{ width: 32, height: 32 }}
-                  onError={(e) => {
+                  onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                     console.error('Navbar avatar image failed to load:', user?.profileImage);
-                    e.currentTarget.src = '';
+                    (e.currentTarget as HTMLImageElement).src = '';
                   }}
                 >
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
@@ -673,7 +665,6 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
                     {user?.firstName} {user?.lastName}!
                   </Typography>
                 </Box>
->>>>>>> Stashed changes
               </IconButton>
             </Tooltip>
           </Box>
@@ -701,7 +692,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           </Typography>
         </Box>
         {notifications.length > 0 ? (
-          notifications.map((notification) => (
+          notifications.map((notification: { id: string; message: string; read: boolean; date: Date }) => (
             <MenuItem key={notification.id} onClick={handleNotificationClose}>
               <ListItemIcon>
                 <NotificationsIcon fontSize="small" />
@@ -709,9 +700,13 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
               <ListItemText 
                 primary={notification.message} 
                 secondary={new Date(notification.date).toLocaleString()}
-                primaryTypographyProps={{
-                  color: notification.read ? 'textSecondary' : 'textPrimary',
-                  fontWeight: notification.read ? 'normal' : 'bold'
+                slotProps={{
+                  primary: {
+                    style: {
+                      color: notification.read ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.87)',
+                      fontWeight: notification.read ? 'normal' : 'bold'
+                    }
+                  }
                 }}
               />
             </MenuItem>
@@ -801,14 +796,9 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           '& .MuiDrawer-paper': {
             width: open ? drawerWidth : collapsedDrawerWidth,
             boxSizing: 'border-box',
-<<<<<<< Updated upstream
-            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : (collapsed ? '#F5F7FA' : '#ffffff'),
-            borderRight: '1px solid',
-=======
             backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f1f5f9',
             borderRight: isRTL ? 'none' : '1px solid',
             borderLeft: isRTL ? '1px solid' : 'none',
->>>>>>> Stashed changes
             borderColor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
             overflowX: 'hidden',
             transition: theme.transitions.create('width', {
@@ -927,7 +917,7 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
         </DrawerHeader>
         <Divider />
         <List component="nav" sx={{ px: 1, py: 2 }}>
-          {categories.map((category, index) => (
+          {categories.map((category) => (
             <React.Fragment key={category.category}>
               <Typography variant="h6" className="category-title" sx={{ 
                 fontFamily: 'Poppins, sans-serif', 
@@ -1015,6 +1005,15 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, themeMode }) => 
           },
         }}
       >
+        <MenuItem onClick={() => {
+          setMenuAnchorEl(null);
+          navigate('/settings/profile');
+        }}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

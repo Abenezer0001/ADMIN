@@ -7,7 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Import the PasswordSetup component
 import PasswordSetup from './pages/PasswordSetup';
-
+import RestaurantAnalyticsDashboard from './components/RestaurantAnalyticsDashboard';
 // Import ResourceDashboard
 const ResourceDashboard = lazy(() => import('./pages/ResourceDashboard'));
 
@@ -133,7 +133,7 @@ const AppRoutes = () => {
           {/* Dashboard */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <Dashboard />
+              <RestaurantAnalyticsDashboard />
             </ProtectedRoute>
           } />
           

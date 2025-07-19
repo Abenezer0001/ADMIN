@@ -1,8 +1,3 @@
-<<<<<<< Updated upstream
-import React from 'react';
-import { Spin, Tag, Input, Button, Typography, Badge, Space, message, notification, Drawer, Descriptions, List, Avatar, Divider, Empty, Select, Card, Row, Col, Pagination } from 'antd';
-import { SearchOutlined, ReloadOutlined, BellOutlined, InfoCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined, TableOutlined, DollarOutlined } from '@ant-design/icons';
-=======
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
@@ -40,7 +35,6 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useTheme } from '@mui/material/styles';
->>>>>>> Stashed changes
 import OrderService from '../services/OrderService';
 import WebSocketService, { WebSocketEventType } from '../services/websocketService';
 import { Order, OrderStatus } from '../types/order';
@@ -445,22 +439,15 @@ const LiveOrders: React.FC = () => {
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     console.log('🔄 Updating order status:', { orderId, status, currentTime: new Date().toISOString() });
     try {
-<<<<<<< Updated upstream
-      await OrderService.updateOrderStatus(orderId, status);
-=======
       console.log('📞 Making API call to update order status...');
       const result = await OrderService.updateOrderStatus(orderId, status);
       console.log('✅ API call successful:', result);
->>>>>>> Stashed changes
       
       // Update local state
       setOrders((prevOrders: OrderWithMeta[]) => prevOrders.map((order: OrderWithMeta) => 
         order._id === orderId ? { ...order, status } : order
       ));
-<<<<<<< Updated upstream
-=======
       console.log('🔄 Local state updated');
->>>>>>> Stashed changes
       
       // Close drawer if open with this order
       if (selectedOrder && selectedOrder._id === orderId) {
@@ -473,80 +460,78 @@ const LiveOrders: React.FC = () => {
       });
       console.log('✅ Status update completed successfully');
     } catch (error) {
-<<<<<<< Updated upstream
-      console.error('Error updating order status:', error);
-=======
       console.error('❌ Error updating order status:', error);
       message.error('Failed to update order status. Please try again.');
     }
   };
 
-  // Update individual order item status
-  const updateOrderItemStatus = async (orderId: string, itemId: string, status: string) => {
-    try {
-      const updatedOrder = await OrderService.updateOrderItemStatus(orderId, itemId, status);
-      
-      // Update local state
-      setOrders((prevOrders: OrderWithMeta[]) => {
-        return prevOrders.map((order: OrderWithMeta) => {
-          if (order._id === orderId) {
-            const orderWithUpdatedItems = { ...order, items: updatedOrder.items };
-            
-            // Check if all items are ready and order is still preparing
-            const allItemsReady = updatedOrder.items.every((item: any) => 
-              item.status === 'ready' || item.status === 'served'
-            );
-            
-            // Auto-update order status to READY if all items are ready and order is still PREPARING
-            if (allItemsReady && order.status === OrderStatus.PREPARING) {
-              updateOrderStatus(orderId, OrderStatus.READY);
-              notification.success({ 
-                message: 'All items ready! Order marked as READY' 
-              });
-            }
-            
-            return orderWithUpdatedItems;
-          }
-          return order;
-        });
-      });
-      
-      // Update drawer if this order is selected
-      if (selectedOrder && selectedOrder._id === orderId) {
-        setSelectedOrder((prev: OrderWithMeta | null) => {
-          if (!prev) return null;
-          const updatedSelectedOrder = { ...prev, items: updatedOrder.items };
-          
-          // Check if all items are ready for selected order
-          const allItemsReady = updatedOrder.items.every((item: any) => 
-            item.status === 'ready' || item.status === 'served'
-          );
-          
-          if (allItemsReady && prev.status === OrderStatus.PREPARING) {
-            return { ...updatedSelectedOrder, status: OrderStatus.READY };
-          }
-          
-          return updatedSelectedOrder;
-        });
-      }
-      
-      notification.success({ 
-        message: `Item status updated to ${status}` 
-      });
-    } catch (error) {
-      console.error('Error updating item status:', error);
->>>>>>> Stashed changes
-      notification.error({ 
-        message: 'Failed to update order status. Please try again later.'
-      });
+  // Note: Individual item status updates are not implemented in the backend yet
+
+  // Helper functions for item status handling
+  const getItemStatusColor = (status: string): string => {
+    switch (status) {
+      case 'pending': return '#faad14';
+      case 'preparing': return '#1890ff';
+      case 'ready': return '#52c41a';
+      case 'served': return '#8c8c8c';
+      default: return '#d9d9d9';
     }
+  };
+
+  const getItemStatusDisplayName = (status: string): string => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'preparing': return 'Preparing';
+      case 'ready': return 'Ready';
+      case 'served': return 'Served';
+      default: return 'Unknown';
+    }
+  };
+
+  const getNextItemStatus = (status: string): string | null => {
+    switch (status) {
+      case 'pending': return 'preparing';
+      case 'preparing': return 'ready';
+      case 'ready': return 'served';
+      default: return null;
+    }
+  };
+
+  const getItemStatusButtonText = (status: string): string => {
+    switch (status) {
+      case 'pending': return 'Start';
+      case 'preparing': return 'Ready';
+      case 'ready': return 'Serve';
+      default: return 'Update';
+    }
+  };
+
+  // Helper functions for wait time
+  const getElapsedSeconds = (createdAt: string): number => {
+    if (!createdAt) return 0;
+    const now = new Date();
+    const created = new Date(createdAt);
+    return Math.floor((now.getTime() - created.getTime()) / 1000);
+  };
+
+  const formatWaitTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getHeaderBackgroundColor = (elapsedSeconds: number): string => {
+    if (elapsedSeconds < 10 * 60) return '#52c41a'; // Green < 10 min
+    if (elapsedSeconds < 15 * 60) return '#faad14'; // Orange < 15 min
+    return '#ff4d4f'; // Red >= 15 min
+  };
+
+  const getHeaderTextColor = (elapsedSeconds: number): string => {
+    return '#ffffff'; // White text for all backgrounds
   };
 
   // OrderCard component for displaying individual orders
   const OrderCard: React.FC<{ order: OrderWithMeta }> = ({ order }: { order: OrderWithMeta }) => {
-<<<<<<< Updated upstream
-    const getCardBorderColor = (status: string): string => {
-=======
     const elapsedSeconds = getElapsedSeconds(order.createdAt ? String(order.createdAt) : '');
     const waitTimeDisplay = formatWaitTime(elapsedSeconds);
     const headerBgColor = getHeaderBackgroundColor(elapsedSeconds);
@@ -715,26 +700,7 @@ const LiveOrders: React.FC = () => {
                     </div>
                   )}
                 </div>
-                {item.status !== 'served' && getNextItemStatus(item.status || 'pending') && (
-                  <Button
-                    size="small"
-                    type="primary"
-                    style={{ 
-                      backgroundColor: getItemStatusColor(getNextItemStatus(item.status || 'pending') || 'pending'),
-                      borderColor: getItemStatusColor(getNextItemStatus(item.status || 'pending') || 'pending'),
-                      fontSize: '11px',
-                      height: '24px'
-                    }}
-                    onClick={() => {
-                      const nextStatus = getNextItemStatus(item.status || 'pending');
-                      if (nextStatus) {
-                        updateOrderItemStatus(order._id, item._id || item.id, nextStatus);
-                      }
-                    }}
-                  >
-                    {getItemStatusButtonText(item.status || 'pending')}
-                  </Button>
-                )}
+                {/* Individual item status updates not implemented yet */}
               </div>
             ))
           ) : (
@@ -823,237 +789,21 @@ const LiveOrders: React.FC = () => {
   };
 
 
-  const getCardBorderColor = (status: string): string => {
->>>>>>> Stashed changes
-    switch (status) {
-      case OrderStatus.PENDING:
-          return '#faad14'; // orange
-      case OrderStatus.PREPARING:
-          return '#1890ff'; // blue
-      case OrderStatus.READY:
-          return '#52c41a'; // green
-      case OrderStatus.DELIVERED:
-          return '#52c41a'; // green
-      case OrderStatus.COMPLETED:
-          return '#8c8c8c'; // gray
-      case OrderStatus.CANCELLED:
-          return '#ff4d4f'; // red
-      default:
-          return '#d9d9d9'; // default gray
-    }
-  };
-    
-    return (
-      <Card
-        hoverable
-        style={{
-          borderLeft: `4px solid ${getCardBorderColor(order.status as string)}`,
-          borderRadius: '12px',
-          height: '100%',
-          minHeight: '280px',
-          transition: 'all 0.3s ease',
-        }}
-        bodyStyle={{ 
-          padding: '20px',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Header */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start', 
-          marginBottom: '16px' 
-        }}>
-          <div>
-            <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-              #{order.orderNumber}
-            </Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: '13px' }}>
-              <ClockCircleOutlined style={{ marginRight: '4px' }} />
-              {formatRelativeTime(order.createdAt ? String(order.createdAt) : null)}
-            </Text>
-          </div>
-          <Tag 
-            color={getStatusTagColor(order.status as string)}
-            style={{ fontSize: '12px', fontWeight: '500' }}
-          >
-            {getStatusDisplayName(order.status as string)}
-          </Tag>
-        </div>
-        
-        {/* Order Details */}
-        <div style={{ marginBottom: '16px', flex: 1 }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '12px' 
-          }}>
-            <Space size="large">
-              {order.tableId?.number && (
-                <Text style={{ fontSize: '13px' }}>
-                  <TableOutlined style={{ marginRight: '4px' }} />
-                  {order.tableId.number}
-                </Text>
-              )}
-              {order.customerName && (
-                <Text style={{ fontSize: '13px' }}>
-                  <UserOutlined style={{ marginRight: '4px' }} />
-                  {order.customerName}
-                </Text>
-              )}
-            </Space>
-            <Text strong style={{ color: '#52c41a', fontSize: '16px' }}>
-              {formatCurrency(order.total || 0)}
-            </Text>
-          </div>
-          
-          {/* Order Items */}
-          <div style={{ 
-            backgroundColor: 'var(--ant-color-bg-container)', 
-            padding: '12px',
-            borderRadius: '8px',
-            border: '1px solid var(--ant-color-border)',
-            marginBottom: '12px'
-          }}>
-            <Text style={{ fontSize: '12px', fontWeight: '500', marginBottom: '8px', display: 'block' }}>
-              Order Items ({order.items?.length || 0}):
-            </Text>
-            {order.items && order.items.length > 0 ? (
-              <div style={{ maxHeight: '80px', overflowY: 'auto' }}>
-                {order.items.map((item: any, index: number) => (
-                  <div key={index} style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: index < order.items.length - 1 ? '6px' : '0',
-                    fontSize: '12px'
-                  }}>
-                    <Text style={{ fontSize: '12px' }}>
-                      <Badge count={item.quantity} size="small" style={{ marginRight: '8px' }} />
-                      {item.name}
-                    </Text>
-                    <Text style={{ fontSize: '12px', color: 'var(--ant-color-text-secondary)' }}>
-                      {formatCurrency(item.price * item.quantity)}
-                    </Text>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Text type="secondary" style={{ fontSize: '12px' }}>No items</Text>
-            )}
-            
-            {order.specialInstructions && (
-              <div style={{ 
-                marginTop: '8px', 
-                paddingTop: '8px', 
-                borderTop: '1px solid var(--ant-color-border)' 
-              }}>
-                <Text style={{ fontSize: '11px', fontStyle: 'italic', color: 'var(--ant-color-text-secondary)' }}>
-                  Note: {order.specialInstructions}
-                </Text>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          flexWrap: 'wrap',
-          marginTop: 'auto'
-        }}>
-        <Button 
-            type="text" 
-          icon={<InfoCircleOutlined />}
-            onClick={(e: React.MouseEvent<HTMLElement>) => {
-              e.stopPropagation();
-              showOrderDetails(order);
-            }}
-            style={{ 
-              padding: '4px 12px',
-              fontSize: '12px',
-              height: '32px'
-            }}
-        >
-          Details
-        </Button>
-        {order.status === OrderStatus.PENDING && (
-          <Button 
-            type="primary" 
-            size="small" 
-              onClick={(e: React.MouseEvent<HTMLElement>) => {
-                e.stopPropagation();
-                updateOrderStatus(order._id, OrderStatus.PREPARING);
-              }}
-              style={{ height: '32px' }}
-          >
-            Accept
-          </Button>
-        )}
-        {order.status === OrderStatus.PREPARING && (
-          <Button 
-            type="primary" 
-            size="small" 
-              onClick={(e: React.MouseEvent<HTMLElement>) => {
-                e.stopPropagation();
-                updateOrderStatus(order._id, OrderStatus.READY);
-              }}
-              style={{ height: '32px' }}
-          >
-            Mark Ready
-          </Button>
-        )}
-        {order.status === OrderStatus.READY && (
-          <Button 
-            type="primary" 
-            size="small" 
-              onClick={(e: React.MouseEvent<HTMLElement>) => {
-                e.stopPropagation();
-                updateOrderStatus(order._id, OrderStatus.DELIVERED);
-              }}
-              style={{ height: '32px' }}
-          >
-            Complete
-          </Button>
-        )}
-        </div>
-      </Card>
-    );
-  };
-
   return (
     <div className="live-orders-container">
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-<<<<<<< Updated upstream
-          <Title level={2}>
-            Live Orders
-            {newOrdersCount > 0 && (
-              <Badge count={newOrdersCount} style={{ marginLeft: 10 }} />
-            )}
-            <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '10px' }}>
-              ({filteredOrders.length} total)
-            </span>
-          </Title>
-=======
           <div>
             <Title level={2} style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
-              Live Orders (Last 8)
+              Live Orders
             </Title>
             <Text style={{ fontSize: '14px', color: '#8c8c8c' }}>
-              {Math.min(filteredOrders.length, 8)} of 8 orders in progress
+              {filteredOrders.length} orders in progress
               {newOrdersCount > 0 && (
                 <Badge count={newOrdersCount} style={{ marginLeft: 10 }} />
               )}
             </Text>
           </div>
->>>>>>> Stashed changes
           <Space>
             {selectedRestaurantId && (
               <Button 

@@ -125,7 +125,21 @@ const Login = () => {
         color: 'white',
       }}>
         <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 2 }}>
-          <RestaurantMenuIcon sx={{ fontSize: 40 }} />
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontFamily: 'var(--font-inseat-logo)', 
+              fontWeight: 'bold',
+              textAlign: 'center',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              background: 'linear-gradient(45deg, #255ee3 30%, #3b82f6 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              color: 'white',
+            }}>
+            INSEAT
+          </Typography>
         </Box>
         
         {/* Slides Container */}
@@ -287,12 +301,15 @@ const Login = () => {
             <Typography 
               variant="h3" 
               sx={{ 
+                fontFamily: 'var(--font-inseat-logo)', 
                 fontWeight: 'bold',
-                background: 'linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%)',
+                textAlign: 'center',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                background: 'linear-gradient(45deg, #255ee3 30%, #3b82f6 90%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 mb: 1,
-                letterSpacing: '-0.5px',
                 lineHeight: 1.2,
                 color: 'primary.main',
               }}

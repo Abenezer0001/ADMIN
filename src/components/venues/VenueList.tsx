@@ -21,6 +21,8 @@ import {
 import DataTable from '../common/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { venueService } from '../../services/VenueService';
+import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
+import { message } from 'antd';
 
 interface Venue {
   _id: string;
@@ -111,12 +113,34 @@ const VenueList: React.FC = () => {
     setVenueToDelete(null);
   };
 
+  const handleExportCSV = () => {
+    // Implement CSV export logic here
+    const headers = ['Name', 'Description', 'Capacity'];
+    const csvContent = [
+      headers.join(','),
+      ...venues.map((venue: Venue) => [
+        venue.name,
+        venue.description || '',
+        venue.capacity
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);  
+    link.setAttribute('href', url);
+    link.setAttribute('download', `venues_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success('CSV exported successfully');
+    
+  };
+
   return (
     <>
       <Box>
-<<<<<<< Updated upstream
-        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
-=======
         <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem', mb: 3 }}>
           Venues
         </Typography>
@@ -130,7 +154,6 @@ const VenueList: React.FC = () => {
           >
             Export CSV
           </Button>
->>>>>>> Stashed changes
           <Button
             variant="contained"
             color="primary"

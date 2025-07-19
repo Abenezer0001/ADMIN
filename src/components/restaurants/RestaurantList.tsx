@@ -21,6 +21,7 @@ import {
 import DataTable from '../common/DataTable';
 import RestaurantDetail from './RestaurantDetail';
 import { ColumnDef } from '@tanstack/react-table';
+import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
 
 // Using the Restaurant interface from RestaurantService
 
@@ -107,11 +108,31 @@ const RestaurantList: React.FC = () => {
     navigate('/restaurants/add');
   };
 
+  const handleExportCSV = () => {
+    // Implement CSV export logic here
+    const headers = ['Name', 'Address', 'Venues'];
+    const csvContent = [
+      headers.join(','),
+      ...restaurants.map((restaurant: Restaurant) => [
+        restaurant.name,
+        restaurant.locations[0]?.address || '',
+        restaurant.venues?.length || 0
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);  
+    link.setAttribute('href', url);
+    link.setAttribute('download', `restaurants_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Box>
-<<<<<<< Updated upstream
-      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
-=======
       <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem', mb: 3 }}>
         Restaurants
       </Typography>
@@ -125,7 +146,6 @@ const RestaurantList: React.FC = () => {
         >
           Export CSV
         </Button>
->>>>>>> Stashed changes
         <Button
           variant="contained"
           color="primary"

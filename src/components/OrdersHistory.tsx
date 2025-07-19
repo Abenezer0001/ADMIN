@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Typography, Tag, Space, Button, Spin, message } from 'antd';
-import { EyeOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Typography, Tag, Space, Button, Spin, message, Card, Input, Select } from 'antd';
+import { EyeOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import OrderService from '../services/OrderService';
 import { Order } from '../types/order';
 
 const { Title } = Typography;
+const { Search } = Input;
 
 // Component-specific interface extending the Order type
 interface OrderTableItem {
@@ -23,6 +24,8 @@ const OrdersHistory: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderTableItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchText, setSearchText] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   
   // Fetch orders when component mounts
   useEffect(() => {
@@ -69,6 +72,11 @@ const OrdersHistory: React.FC = () => {
   const handleRefresh = () => {
     fetchOrders();
     message.info('Refreshing orders...');
+  };
+
+  const handleExportCSV = () => {
+    // Export functionality would go here
+    message.success('Export functionality would be implemented here');
   };
   
   const columns = [
@@ -150,16 +158,6 @@ const OrdersHistory: React.FC = () => {
 
 
   return (
-<<<<<<< Updated upstream
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>Order History</Title>
-        <Button 
-          type="primary" 
-          icon={<ReloadOutlined />} 
-          onClick={handleRefresh}
-          loading={loading}
-=======
     <Card 
       title={<span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>Orders History</span>}
       style={{ margin: '20px', borderRadius: '8px' }}
@@ -189,18 +187,24 @@ const OrdersHistory: React.FC = () => {
           enterButton={<SearchOutlined />}
           style={{ width: 250 }}
           onSearch={setSearchText}
-                     onChange={(e: any) => setSearchText(e.target.value)}
+          onChange={(e: any) => setSearchText(e.target.value)}
         />
         <Select
           placeholder="Filter by status"
           style={{ width: 200 }}
           value={statusFilter}
           onChange={setStatusFilter}
->>>>>>> Stashed changes
         >
-          Refresh
-        </Button>
-      </div>
+          <Select.Option value="">All Statuses</Select.Option>
+          <Select.Option value="PENDING">Pending</Select.Option>
+          <Select.Option value="CONFIRMED">Confirmed</Select.Option>
+          <Select.Option value="IN_PREPARATION">In Preparation</Select.Option>
+          <Select.Option value="READY">Ready</Select.Option>
+          <Select.Option value="DELIVERED">Delivered</Select.Option>
+          <Select.Option value="COMPLETED">Completed</Select.Option>
+          <Select.Option value="CANCELLED">Cancelled</Select.Option>
+        </Select>
+      </Space>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '20px' }}>
@@ -215,7 +219,7 @@ const OrdersHistory: React.FC = () => {
           locale={{ emptyText: 'No orders found' }}
         />
       )}
-    </div>
+    </Card>
   );
 };
 
