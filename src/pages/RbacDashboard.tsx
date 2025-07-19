@@ -152,7 +152,7 @@ function RbacDashboard() {
       setRoles(rolesData);
       setPermissions(permissionsData);
       setResourceActions(resourceActionsData);
-      setUsers(usersData);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
     } catch (err: any) {
       console.error('Error loading RBAC data:', err);

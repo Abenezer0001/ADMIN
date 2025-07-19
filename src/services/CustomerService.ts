@@ -123,11 +123,11 @@ class CustomerService {
       }
       
       const url = params.toString() 
-        ? `${this.apiUrl}/analytics/customers?${params.toString()}` 
-        : `${this.apiUrl}/analytics/customers`;
+        ? `${this.apiUrl}/auth/analytics/customers?${params.toString()}` 
+        : `${this.apiUrl}/auth/analytics/customers`;
       
       const response = await axios.get(url, this.getAuthConfig());
-      return response.data;
+      return response.data.data || response.data;
     } catch (error: any) {
       console.error('Analytics endpoint not available, using customer data for analytics:', error);
       

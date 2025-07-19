@@ -100,7 +100,8 @@ const AdminManagement: React.FC = () => {
       
       // Use BusinessService with proper authentication and business ID
       const businessId = currentBusiness._id;
-      const response = await BusinessService.getBusinessUsers(businessId);
+      const businessService = BusinessService.getInstance();
+      const response = await businessService.getBusinessUsers(businessId);
       
       console.log('Business users response:', response);
       

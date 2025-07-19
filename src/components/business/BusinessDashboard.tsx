@@ -64,7 +64,8 @@ const BusinessDashboard: React.FC = () => {
     
     try {
       console.log('Fetching business data for ID:', businessId);
-      const business = await BusinessService.getBusinessById(businessId);
+      const businessService = BusinessService.getInstance();
+      const business = await businessService.getBusinessById(businessId);
       console.log('Business data received:', business);
       setSpecificBusiness(business);
       setSpecificBusinessError(null);
@@ -111,7 +112,8 @@ const BusinessDashboard: React.FC = () => {
       isBusinessOwnerResult: isBusinessOwner()
     });
 
-    if (!authLoading && isAuthenticated) {
+    // Prevent rapid re-renders by only executing when auth is stable
+    if (!authLoading && isAuthenticated && user) {
       if (businessId) {
         // Viewing specific business (from business list or direct URL)
         console.log('Attempting to view specific business:', businessId);
@@ -175,7 +177,7 @@ const BusinessDashboard: React.FC = () => {
         setSpecificBusinessError(`This dashboard is only available for business owners, restaurant administrators, and system administrators. Your role: ${user?.role}`);
       }
     }
-  }, [isAuthenticated, authLoading, businessId, user?.businessId, user?.role]);
+  }, [isAuthenticated, authLoading, businessId, user?.businessId, user?.role, user]);
 
   const formatAddress = (address?: any) => {
     if (!address) return 'No address provided';
@@ -187,21 +189,31 @@ const BusinessDashboard: React.FC = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Determine which business to display
-  const displayBusiness = specificBusiness || currentBusiness;
-  const loading = specificBusinessLoading || isLoading;
-  const displayError = specificBusinessError || error;
+  // Add stable loading state to prevent flickering
+  const [isStableLoading, setIsStableLoading] = React.useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = React.useState(false);
 
-  // Add debounced loading to prevent flickering
-  const [debouncedLoading, setDebouncedLoading] = React.useState(loading);
+  // Determine which business to display with stable data
+  const displayBusiness = specificBusiness || currentBusiness;
+  const actualLoading = specificBusinessLoading || isLoading;
+  const displayError = specificBusinessError || error;
+  
+  // Use stable loading state for rendering
+  const shouldShowLoading = isStableLoading || (actualLoading && !displayBusiness);
   
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedLoading(loading);
-    }, 100); // Small delay to prevent rapid flickering
-    
-    return () => clearTimeout(timer);
-  }, [loading]);
+    // Only show loading if we haven't completed initial load and are actually loading
+    if (!initialLoadComplete && !authLoading && isAuthenticated) {
+      const timer = setTimeout(() => {
+        setIsStableLoading(false);
+        setInitialLoadComplete(true);
+      }, 300); // Allow time for data to stabilize
+      
+      return () => clearTimeout(timer);
+    } else if (initialLoadComplete) {
+      setIsStableLoading(actualLoading);
+    }
+  }, [actualLoading, authLoading, isAuthenticated, initialLoadComplete]);
 
   // Show loading while authentication is being determined
   if (authLoading) {
@@ -239,8 +251,8 @@ const BusinessDashboard: React.FC = () => {
     );
   }
 
-  // Show loading while business data is being fetched
-  if (debouncedLoading) {
+  // Show loading while business data is being fetched (with stable loading state)
+  if (shouldShowLoading && !displayError) {
     console.log('Loading business data...');
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="200px">
@@ -250,13 +262,23 @@ const BusinessDashboard: React.FC = () => {
     );
   }
 
-  // Show message if no business data
-  if (!displayBusiness) {
+  // Show message if no business data and not loading
+  if (!displayBusiness && !shouldShowLoading) {
     console.log('No business data available');
     return (
       <Alert severity="info">
         No business data available. Business ID: {businessId}
       </Alert>
+    );
+  }
+
+  // Don't render main content if still in initial loading state
+  if (!displayBusiness && shouldShowLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+        <CircularProgress />
+        <Typography ml={2}>Loading business data...</Typography>
+      </Box>
     );
   }
 

@@ -52,7 +52,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check resource permission if specified
-  if (resource && !hasPermission(resource, action)) {
+  // System admins should have access to everything, even during permission loading
+  if (resource && user?.role !== 'system_admin' && !hasPermission(resource, action)) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">

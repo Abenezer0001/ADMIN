@@ -8,24 +8,29 @@ import {
   IconButton,
   Avatar,
   Grid,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { PhotoCamera as PhotoCameraIcon } from '@mui/icons-material';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../utils/apiUtils';
 
 interface ProfileForm {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-  position: string;
+  phoneNumber: string;
+  profileImage: string;
 }
 
 const Profile: React.FC = () => {
+  const { user, updateUserProfile } = useAuth();
   const [form, setForm] = useState<ProfileForm>({
-    firstName: 'Dharma',
-    lastName: 'RDJ',
-    email: 'dharmardj.b@cinemacity.ae',
-    phone: '',
-    position: 'Administrator',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    profileImage: '',
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -33,7 +38,7 @@ const Profile: React.FC = () => {
 
   // Load user data when component mounts or user changes
   useEffect(() => {
-    if (user) {
+    if (user) { 
       console.log('Loading user data:', user);
       setForm({
         firstName: user.firstName || '',
@@ -45,6 +50,16 @@ const Profile: React.FC = () => {
     }
   }, [user]);
 
+  // Clear message after 5 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   const handleChange = (field: keyof ProfileForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({
       ...prev,
@@ -52,9 +67,60 @@ const Profile: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving profile:', form);
+  const handleSave = async () => {
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await api.put('/auth/profile', {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phoneNumber: form.phoneNumber,
+      });
+
+      console.log('Raw API response:', response);
+
+      // The response is the actual data (not wrapped in a response object)
+      if (response && (response as any).success !== false) {
+        console.log('Profile updated successfully:', response);
+        
+        // Update form with the response data
+        if ((response as any).user) {
+          const userUpdate = (response as any).user;
+          setForm((prev: ProfileForm) => ({
+            ...prev,
+            firstName: userUpdate.firstName,
+            lastName: userUpdate.lastName,
+            phoneNumber: userUpdate.phoneNumber,
+          }));
+          
+          // Update user context with new data
+          if (updateUserProfile && user) {
+            updateUserProfile({ ...user, ...userUpdate });
+          }
+        } else {
+          // If no user object in response, update with current form data
+          if (updateUserProfile && user) {
+            updateUserProfile({ 
+              ...user, 
+              firstName: form.firstName,
+              lastName: form.lastName,
+              phoneNumber: form.phoneNumber
+            });
+          }
+        }
+        
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      } else {
+        setMessage({ type: 'error', text: (response as any)?.message || 'Failed to update profile.' });
+      }
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      // Don't show error message here since apiUtils already shows a toast
+      // setMessage({ type: 'error', text: error || 'Failed to update profile. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,22 +144,24 @@ const Profile: React.FC = () => {
       const formData = new FormData();
       formData.append('profileImage', file);
 
+
       const response = await api.post('/auth/profile/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      if (response.data.success) {
-        const imageUrl = response.data.imageUrl;
+      console.log('Image upload raw response:', response);
+      
+      if (response && (response as any).imageUrl) {
+        const imageUrl = (response as any).imageUrl;
         console.log('Profile image uploaded successfully:', imageUrl);
-        console.log('Full response:', response.data);
         
         // Ensure the image URL is properly formatted
         const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`;
         console.log('Full image URL:', fullImageUrl);
         
-        setForm(prev => ({ ...prev, profileImage: fullImageUrl }));
+        setForm((prev: ProfileForm) => ({ ...prev, profileImage: fullImageUrl }));
         
         // Update user context with new image
         if (updateUserProfile && user) {
@@ -103,7 +171,8 @@ const Profile: React.FC = () => {
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' });
+      // Don't show error message here since apiUtils already shows a toast
+      // setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' });
     } finally {
       setUploading(false);
     }
@@ -121,6 +190,14 @@ const Profile: React.FC = () => {
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>
+          {/* Message Alert */}
+          {message && (
+            <Grid item xs={12}>
+              <Alert severity={message.type} sx={{ mb: 2 }}>
+                {message.text}
+              </Alert>
+            </Grid>
+          )}
           {/* Profile Picture */}
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Box sx={{ position: 'relative' }}>
@@ -131,7 +208,7 @@ const Profile: React.FC = () => {
                   height: 100,
                   fontSize: '2rem',
                 }}
-                onError={(e) => {
+                onError={(e: any) => {
                   console.error('Avatar image failed to load:', form.profileImage);
                   e.currentTarget.src = '';
                 }}
@@ -185,27 +262,21 @@ const Profile: React.FC = () => {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Email"
-              value={form.email}
-              onChange={handleChange('email')}
-              type="email"
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Phone"
-              value={form.phone}
-              onChange={handleChange('phone')}
+              label="Phone Number"
+              value={form.phoneNumber}
+              onChange={handleChange('phoneNumber')}
               type="tel"
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Position"
-              value={form.position}
-              onChange={handleChange('position')}
+              label="Email"
+              value={form.email}
+              onChange={handleChange('email')}
+              type="email"
+              disabled
+              helperText="Email cannot be changed"
             />
           </Grid>
 
@@ -215,8 +286,13 @@ const Profile: React.FC = () => {
               <Button variant="outlined" onClick={() => window.history.back()}>
                 Cancel
               </Button>
-              <Button variant="contained" onClick={handleSave}>
-                Save Changes
+              <Button 
+                variant="contained" 
+                onClick={handleSave}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
               </Button>
             </Box>
           </Grid>
