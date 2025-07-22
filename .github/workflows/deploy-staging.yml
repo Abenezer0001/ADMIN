@@ -1,0 +1,75 @@
+name: Deploy Admin to Staging
+
+on:
+  push:
+    branches: [ staging ]
+
+jobs:
+  deploy:
+    name: Deploy Admin to Staging Server
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.STAGING_SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to staging server
+      run: |
+        # Upload dist folder to server
+        scp -r dist/ ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_HOST }}:/tmp/staging-admin-dist/
+        
+        # Execute deployment on server
+        ssh ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_HOST }} << 'EOF'
+          # Create backup
+          if [ -d "/var/www/staging-admin" ]; then
+            sudo cp -r /var/www/staging-admin /var/www/staging-admin.backup.$(date +%Y%m%d_%H%M%S)
+          fi
+          
+          # Create staging admin directory
+          sudo mkdir -p /var/www/staging-admin
+          
+          # Remove old files
+          sudo rm -rf /var/www/staging-admin/*
+          
+          # Copy new files
+          sudo cp -r /tmp/staging-admin-dist/* /var/www/staging-admin/
+          
+          # Set proper permissions
+          sudo chown -R www-data:www-data /var/www/staging-admin
+          sudo chmod -R 755 /var/www/staging-admin
+          
+          # Clean up temp files
+          rm -rf /tmp/staging-admin-dist/
+        EOF
+
+    - name: Verify staging deployment
+      run: |
+        ssh ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_HOST }} << 'EOF'
+          if [ -f "/var/www/staging-admin/index.html" ]; then
+            echo "✅ Staging Admin deployment successful!"
+          else
+            echo "❌ Deployment failed - index.html not found"
+            exit 1
+          fi
+        EOF

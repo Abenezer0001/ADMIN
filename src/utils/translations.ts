@@ -42,6 +42,12 @@ export const menuTranslations: Translations = {
   'loyalty/analytics': { en: 'Loyalty Analytics', ar: 'تحليلات الولاء' },
   'loyalty/settings': { en: 'Loyalty Settings', ar: 'إعدادات الولاء' },
   
+  // Staff Management
+  'promotions': { en: 'Promotions', ar: 'العروض الترويجية' },
+  'kitchen-management': { en: 'Kitchen Management', ar: 'إدارة المطبخ' },
+  'cashier-management': { en: 'Cashier Management', ar: 'إدارة الكاشير' },
+  'schedule-management': { en: 'Schedule Management', ar: 'إدارة الجدولة' },
+  
   // Settings & Administration
   'settings/admins': { en: 'Administrator Management', ar: 'إدارة المديرين' },
   'settings/rbac': { en: 'Access Control', ar: 'التحكم في الوصول' },
@@ -54,6 +60,7 @@ export const menuTranslations: Translations = {
   'business-management': { en: 'Business Management', ar: 'إدارة الأعمال' },
   'restaurant-management': { en: 'Restaurant Management', ar: 'إدارة المطعم' },
   'order-management': { en: 'Order Management', ar: 'إدارة الطلبات' },
+  'staff-management': { en: 'Staff Management', ar: 'إدارة الموظفين' },
   'settings-administration': { en: 'Settings & Administration', ar: 'الإعدادات والإدارة' }
 };
 
