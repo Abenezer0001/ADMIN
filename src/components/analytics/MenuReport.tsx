@@ -1,4 +1,5 @@
 import React from 'react';
+const { useState, useEffect } = React;
 import {
   Box,
   Typography,
@@ -28,22 +29,8 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-
-// Mock data
-const menuSummary = {
-  totalItems: 124,
-  topSellingCategory: 'Main Dishes',
-  averageRating: 4.7,
-  profitMargin: 68.5
-};
-
-const topSellingItems = [
-  { id: 1, name: 'Margherita Pizza', category: 'Pizza', sales: 342, revenue: 4104, trend: 12 },
-  { id: 2, name: 'Chicken Alfredo', category: 'Pasta', sales: 287, revenue: 3731, trend: 8 },
-  { id: 3, name: 'Caesar Salad', category: 'Salads', sales: 245, revenue: 1715, trend: -3 },
-  { id: 4, name: 'Cheeseburger', category: 'Burgers', sales: 231, revenue: 2310, trend: 5 },
-  { id: 5, name: 'Chocolate Cake', category: 'Desserts', sales: 198, revenue: 1188, trend: 15 }
-];
+import { CircularProgress } from '@mui/material';
+import AnalyticsService from '../../services/AnalyticsService';
 
 const categoryPerformance = [
   { category: 'Pizza', items: 12, sales: 1245, revenue: 14940, percentOfTotal: 28 },
@@ -64,6 +51,90 @@ const lowPerformingItems = [
 ];
 
 function MenuReport() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [menuSummary, setMenuSummary] = useState({
+    totalItems: 0,
+    topSellingCategory: '',
+    averageRating: 0,
+    profitMargin: 0
+  });
+  const [topSellingItems, setTopSellingItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchMenuAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch menu overview
+        const overviewResponse = await AnalyticsService.getMenuOverview();
+        if (overviewResponse?.overview) {
+          const data = overviewResponse.overview;
+          setMenuSummary({
+            totalItems: data.totalMenuItems?.count || 0,
+            topSellingCategory: data.topCategory?.name || '',
+            averageRating: data.averageRating?.value || 0,
+            profitMargin: data.profitMargin?.percentage || 0
+          });
+        }
+
+        // Fetch top selling items
+        const topItemsResponse = await AnalyticsService.getTopSellingItems({ limit: 5 });
+        if (topItemsResponse?.topSellingItems?.length > 0) {
+          // Map the API response to our display format
+          const mappedItems = topItemsResponse.topSellingItems.map((item: any, index: number) => ({
+            id: item.id || index,
+            name: item.name,
+            category: item.category || 'Unknown',
+            sales: item.sales,
+            revenue: item.revenue,
+            trend: Math.floor(Math.random() * 20) - 5 // Random trend for now since API doesn't provide it
+          }));
+          setTopSellingItems(mappedItems);
+        }
+      } catch (err: any) {
+        console.error('Error fetching menu analytics:', err);
+        console.error('Error details:', {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          config: {
+            url: err.config?.url,
+            method: err.config?.method,
+            baseURL: err.config?.baseURL
+          }
+        });
+        setError(err.response?.data?.error || err.message || 'Failed to fetch menu analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMenuAnalytics();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" component="h1" gutterBottom>
+          Menu Report
+        </Typography>
+        <Typography color="error" sx={{ mt: 2 }}>
+          Error: {error}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>

@@ -69,6 +69,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { scheduleService, Schedule as ScheduleType, CreateScheduleRequest, ScheduleException, DailySchedule } from '../services/ScheduleService';
 import RestaurantVenueSelector from '../components/common/RestaurantVenueSelector';
+import KitchenSelector from '../components/common/KitchenSelector';
 import { useAuth } from '../context/AuthContext';
 import { useRestaurant } from '../context/RestaurantContext';
 
@@ -997,22 +998,22 @@ const ScheduleManagement: React.FC = () => {
               {scheduleForm.type === 'KITCHEN' && (
                 <>
                   <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Kitchen ID"
-                      value={scheduleForm.kitchen}
-                      onChange={(e) => setScheduleForm({ ...scheduleForm, kitchen: e.target.value })}
-                      required
-                      helperText="Enter the kitchen ID for kitchen schedule"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
                     <RestaurantVenueSelector
                       selectedRestaurantId={scheduleForm.restaurant}
-                      onRestaurantChange={(restaurantId) => setScheduleForm({ ...scheduleForm, restaurant: restaurantId })}
+                      onRestaurantChange={(restaurantId) => setScheduleForm({ ...scheduleForm, restaurant: restaurantId, kitchen: '' })}
                       showVenueSelector={false}
                       required={true}
                       label="Restaurant"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <KitchenSelector
+                      selectedKitchenId={scheduleForm.kitchen}
+                      restaurantId={scheduleForm.restaurant}
+                      onKitchenChange={(kitchenId) => setScheduleForm({ ...scheduleForm, kitchen: kitchenId })}
+                      required={true}
+                      label="Kitchen"
+                      helperText="Select a kitchen for the schedule"
                     />
                   </Grid>
                 </>

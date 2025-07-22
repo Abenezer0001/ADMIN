@@ -14,6 +14,7 @@ import { PreferenceProvider } from './context/PreferenceContext';
 import { AuthProvider } from './context/AuthContext';
 import { RbacProvider } from './context/RbacContext';
 import { BusinessProvider } from './context/BusinessContext';
+import { RestaurantProvider } from './context/RestaurantContext';
 import RTLProvider from './components/RTLProvider';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -75,43 +76,45 @@ const App: React.FC = () => {
 
   return (
     <Provider store={store}>
-      <PreferenceProvider>
-        <RTLProvider>
-          <ConfigProvider theme={antdTheme}>
-            <ThemeProvider theme={theme}>
-              <CssBaseline />
-              <Router>
-                <AuthProvider>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/password-setup" element={<PasswordSetup />} />
-                  
-                  {/* Protected routes */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route element={
+      <ConfigProvider theme={antdTheme}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <AuthProvider>
+            <Routes>
+              {/* Public routes - Always English */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/password-setup" element={<PasswordSetup />} />
+              
+              {/* Protected routes - With language preferences */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={
+                  <PreferenceProvider>
+                    <RTLProvider>
                       <RbacProvider>
                         <BusinessProvider>
-                          <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
-                            <AppRoutes />
-                          </MainLayout>
+                          <RestaurantProvider>
+                            <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
+                              <AppRoutes />
+                            </MainLayout>
+                          </RestaurantProvider>
                         </BusinessProvider>
                       </RbacProvider>
-                    }>
-                      <Route path="/*" element={null} />
-                    </Route>
-                  </Route>
-                  
-                  {/* Redirect to login if no route matches */}
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </AuthProvider>
-            </Router>
-          </ThemeProvider>
-        </ConfigProvider>
-        </RTLProvider>
-      </PreferenceProvider>
+                    </RTLProvider>
+                  </PreferenceProvider>
+                }>
+                  <Route path="/*" element={null} />
+                </Route>
+              </Route>
+              
+              {/* Redirect to login if no route matches */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
+    </ConfigProvider>
     </Provider>
   );
 };

@@ -7,7 +7,7 @@ interface PreferenceContextType {
 }
 
 const defaultPreferences: PreferenceSettings = {
-  secondaryLanguage: availableLanguages[1], // Default to Arabic
+  secondaryLanguage: availableLanguages[0], // Default to English
 };
 
 const PreferenceContext = createContext<PreferenceContextType | undefined>(undefined);
