@@ -42,7 +42,7 @@ jobs:
       run: |
         # Debug DNS resolution
         echo "Attempting to connect to: ${{ secrets.SERVER_HOST }}"
-        nslookup ${{ secrets.SERVER_HOST } || echo "DNS lookup failed"
+        nslookup ${{ secrets.SERVER_HOST }} || echo "DNS lookup failed"
         
         # Create temporary directory for upload
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/staging-admin-dist"
