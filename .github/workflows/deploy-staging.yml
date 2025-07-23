@@ -22,10 +22,11 @@ jobs:
     - name: Install dependencies
       run: npm ci --legacy-peer-deps
 
-    - name: Copy staging environment file
-      run: cp .env.staging .env
-
-    - name: Build application
+    - name: Build application for staging
+      env:
+        VITE_API_BASE_URL: https://sandboxapi.inseat.achievengine.com/api
+        VITE_CUSTOMER_URL: https://staging-menu.inseat.achievengine.com
+        VITE_SOCKET_URL: https://sandboxapi.inseat.achievengine.com
       run: npm run build
 
     - name: Setup SSH
@@ -41,7 +42,7 @@ jobs:
       run: |
         # Debug DNS resolution
         echo "Attempting to connect to: ${{ secrets.SERVER_HOST }}"
-        nslookup ${{ secrets.SERVER_HOST }} || echo "DNS lookup failed"
+        nslookup ${{ secrets.SERVER_HOST } || echo "DNS lookup failed"
         
         # Create temporary directory for upload
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/staging-admin-dist"
