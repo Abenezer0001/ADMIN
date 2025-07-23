@@ -36,14 +36,18 @@ jobs:
 
     - name: Deploy to staging server
       run: |
+        # Debug DNS resolution
+        echo "Attempting to connect to: ${{ secrets.SERVER_HOST }}"
+        nslookup ${{ secrets.SERVER_HOST }} || echo "DNS lookup failed"
+        
         # Create temporary directory for upload
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/staging-admin-dist"
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/staging-admin-dist"
         
         # Upload new build
-        scp -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/staging-admin-dist/
+        scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/staging-admin-dist/
         
         # Move files to staging location
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           sudo rm -rf /var/www/staging-admin/*
           sudo cp -r /tmp/staging-admin-dist/* /var/www/staging-admin/
           sudo chown -R www-data:www-data /var/www/staging-admin
@@ -53,7 +57,7 @@ jobs:
 
     - name: Verify staging deployment
       run: |
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           if [ -f "/var/www/staging-admin/index.html" ]; then
             echo "✅ Admin Staging deployment successful!"
           else
