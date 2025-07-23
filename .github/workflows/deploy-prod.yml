@@ -1,0 +1,61 @@
+name: Deploy Admin to Production
+
+on:
+  push:
+    branches: [ prod ]
+
+jobs:
+  deploy:
+    name: Build and Deploy Admin to Production Server
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to server
+      run: |
+        # Create backup and deploy
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          sudo mkdir -p /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
+          sudo cp -r /var/www/admin/* /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+        EOF
+        
+        # Upload new build
+        scp -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/admin-dist/
+        
+        # Move files to production location
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          sudo rm -rf /var/www/admin/*
+          sudo cp -r /tmp/admin-dist/* /var/www/admin/
+          sudo chown -R www-data:www-data /var/www/admin
+          sudo chmod -R 755 /var/www/admin
+          rm -rf /tmp/admin-dist
+        EOF
+
+    - name: Verify deployment
+      run: |
+        sleep 10
+        curl -f https://cms.inseat.achievengine.com || exit 1
+        echo "✅ Admin Production deployment successful!"
