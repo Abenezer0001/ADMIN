@@ -76,21 +76,21 @@ const App: React.FC = () => {
   return (
     <Provider store={store}>
       <PreferenceProvider>
-        <RTLProvider>
-          <ConfigProvider theme={antdTheme}>
-            <ThemeProvider theme={theme}>
-              <CssBaseline />
-              <Router>
-                <AuthProvider>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/password-setup" element={<PasswordSetup />} />
-                  
-                  {/* Protected routes */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route element={
+        <ConfigProvider theme={antdTheme}>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Router>
+              <AuthProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/password-setup" element={<PasswordSetup />} />
+                
+                {/* Protected routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={
+                    <RTLProvider>
                       <RbacProvider>
                         <BusinessProvider>
                           <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
@@ -98,19 +98,19 @@ const App: React.FC = () => {
                           </MainLayout>
                         </BusinessProvider>
                       </RbacProvider>
-                    }>
-                      <Route path="/*" element={null} />
-                    </Route>
+                    </RTLProvider>
+                  }>
+                    <Route path="/*" element={null} />
                   </Route>
-                  
-                  {/* Redirect to login if no route matches */}
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </AuthProvider>
-            </Router>
-          </ThemeProvider>
-        </ConfigProvider>
-        </RTLProvider>
+                </Route>
+                
+                {/* Redirect to login if no route matches */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </AuthProvider>
+          </Router>
+        </ThemeProvider>
+      </ConfigProvider>
       </PreferenceProvider>
     </Provider>
   );
