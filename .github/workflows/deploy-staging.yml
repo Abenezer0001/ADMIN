@@ -48,10 +48,16 @@ jobs:
         
         # Move files to staging location
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          echo "Starting staging deployment..."
+          echo "Checking temp directory contents:"
+          ls -la /tmp/staging-admin-dist/
+          echo "Copying files to staging directory..."
           sudo rm -rf /var/www/staging-admin/*
           sudo cp -r /tmp/staging-admin-dist/* /var/www/staging-admin/
           sudo chown -R www-data:www-data /var/www/staging-admin
           sudo chmod -R 755 /var/www/staging-admin
+          echo "Final staging directory contents:"
+          ls -la /var/www/staging-admin/
           rm -rf /tmp/staging-admin-dist
         EOF
 
@@ -60,6 +66,7 @@ jobs:
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           if [ -f "/var/www/staging-admin/index.html" ]; then
             echo "✅ Admin Staging deployment successful!"
+            echo "Deployment timestamp: $(stat -c %y /var/www/staging-admin/index.html)"
           else
             echo "❌ Deployment failed - index.html not found"
             exit 1

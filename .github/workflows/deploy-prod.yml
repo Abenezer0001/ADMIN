@@ -48,12 +48,17 @@ jobs:
         
         # Deploy to production location
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          echo "Starting deployment to production..."
           sudo mkdir -p /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
           sudo cp -r /var/www/admin/* /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+          echo "Checking temp directory contents:"
+          ls -la /tmp/admin-dist/
           sudo rm -rf /var/www/admin/*
           sudo cp -r /tmp/admin-dist/* /var/www/admin/
           sudo chown -R www-data:www-data /var/www/admin
           sudo chmod -R 755 /var/www/admin
+          echo "Production deployment completed. Final directory contents:"
+          ls -la /var/www/admin/
           rm -rf /tmp/admin-dist
         EOF
 
@@ -62,6 +67,7 @@ jobs:
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           if [ -f "/var/www/admin/index.html" ]; then
             echo "✅ Admin Production deployment successful!"
+            echo "Deployment timestamp: $(stat -c %y /var/www/admin/index.html)"
           else
             echo "❌ Deployment failed - index.html not found"
             exit 1
