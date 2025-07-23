@@ -55,6 +55,11 @@ jobs:
 
     - name: Verify deployment
       run: |
-        sleep 10
-        curl -f https://cms.inseat.achievengine.com || exit 1
-        echo "✅ Admin Production deployment successful!"
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          if [ -f "/var/www/admin/index.html" ]; then
+            echo "✅ Admin Production deployment successful!"
+          else
+            echo "❌ Deployment failed - index.html not found"
+            exit 1
+          fi
+        EOF
