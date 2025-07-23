@@ -36,17 +36,16 @@ jobs:
 
     - name: Deploy to server
       run: |
-        # Create backup and deploy
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-          sudo mkdir -p /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
-          sudo cp -r /var/www/admin/* /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
-        EOF
+        # Create temporary directory for upload
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/admin-dist"
         
         # Upload new build
         scp -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/admin-dist/
         
-        # Move files to production location
+        # Deploy to production location
         ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          sudo mkdir -p /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
+          sudo cp -r /var/www/admin/* /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
           sudo rm -rf /var/www/admin/*
           sudo cp -r /tmp/admin-dist/* /var/www/admin/
           sudo chown -R www-data:www-data /var/www/admin
