@@ -40,8 +40,8 @@ jobs:
         echo "Attempting to connect to: ${{ secrets.SERVER_HOST }}"
         nslookup ${{ secrets.SERVER_HOST }} || echo "DNS lookup failed"
         
-        # Create temporary directory for upload
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/admin-dist"
+        # Create temporary directory for upload with proper structure
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/admin-dist/assets"
         
         # Upload new build
         scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/admin-dist/

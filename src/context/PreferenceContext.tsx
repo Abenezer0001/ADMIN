@@ -14,23 +14,8 @@ const PreferenceContext = createContext<PreferenceContextType | undefined>(undef
 
 export const PreferenceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [preferences, setPreferences] = useState<PreferenceSettings>(() => {
-    // Load preferences from localStorage during initialization
-    const savedPreferences = localStorage.getItem('preferences');
-    if (savedPreferences) {
-      try {
-        const parsed = JSON.parse(savedPreferences);
-        // Ensure the saved language exists in availableLanguages
-        const savedLanguage = availableLanguages.find(lang => lang.code === parsed.secondaryLanguage.code);
-        if (savedLanguage) {
-          return {
-            ...parsed,
-            secondaryLanguage: savedLanguage,
-          };
-        }
-      } catch (error) {
-        console.error('Error parsing saved preferences:', error);
-      }
-    }
+    // Always force English as default - clear any Arabic language preference
+    localStorage.removeItem('preferences');
     return defaultPreferences;
   });
 
