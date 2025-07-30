@@ -88,6 +88,15 @@ const InvoicesDetail = lazy(()=> import('./components/InvoicesDetail'));
 // Modifiers
 const ModifierList = lazy(() => import('./components/Modifier/ModifierList'));
 const ModifierDetail = lazy(() => import('./components/Modifier/ModifierDetail'));
+
+// Tipping System
+const TippingManagementDashboard = lazy(() => import('./components/tipping/TippingManagementDashboard'));
+
+// Stripe Connect
+const StripeConnectDashboard = lazy(() => import('./components/payments/StripeConnectDashboard'));
+
+// Group Ordering
+const GroupOrderingDashboard = lazy(() => import('./components/group-ordering/GroupOrderingDashboard'));
 const ModifierForm = lazy(() => import('./components/Modifier/ModifierForm'));
 
 // Categories
@@ -126,6 +135,12 @@ const PromotionList = lazy(() => import('./components/promotions/PromotionList')
 const KitchenManagement = lazy(() => import('./pages/KitchenManagement'));
 const CashierManagement = lazy(() => import('./pages/CashierManagement'));
 const ScheduleManagement = lazy(() => import('./pages/ScheduleManagement'));
+
+// Rating Management Components
+const RatingAnalyticsDashboard = lazy(() => import('./components/ratings/RatingAnalyticsDashboard'));
+const ReviewManagement = lazy(() => import('./components/ratings/ReviewManagement'));
+const MenuItemRatingPerformance = lazy(() => import('./components/ratings/MenuItemRatingPerformance'));
+const CustomerInsights = lazy(() => import('./components/ratings/CustomerInsights'));
 
 const LoadingScreen = () => (
   <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -576,6 +591,50 @@ const AppRoutes = () => {
               <LoyaltySettings />
             </ProtectedRoute>
           } />
+
+          {/* Rating Management Routes */}
+          <Route path="/ratings/analytics" element={
+            <ProtectedRoute resource="rating" action="read">
+              <RatingAnalyticsDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/reviews" element={
+            <ProtectedRoute resource="rating" action="read">
+              <ReviewManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/menu-performance" element={
+            <ProtectedRoute resource="rating" action="read">
+              <MenuItemRatingPerformance />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/customer-insights" element={
+            <ProtectedRoute resource="rating" action="read">
+              <CustomerInsights />
+            </ProtectedRoute>
+          } />
+
+          {/* Tipping Management Routes */}
+          <Route path="/tipping/management" element={
+            <ProtectedRoute resource="payment" action="read">
+              <TippingManagementDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Stripe Connect Routes */}
+          <Route path="/payments/stripe-connect" element={
+            <ProtectedRoute resource="payment" action="read">
+              <StripeConnectDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Group Ordering Routes */}
+          <Route path="/group-ordering/dashboard" element={
+            <ProtectedRoute resource="order" action="read">
+              <GroupOrderingDashboard />
+            </ProtectedRoute>
+          } />
+
           <Route path="/settings/notifications" element={
             <ProtectedRoute>
               <Notifications />

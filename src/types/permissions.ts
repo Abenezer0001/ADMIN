@@ -20,7 +20,8 @@ export type ResourceType =
   | 'inventory'
   | 'invoice'
   | 'analytics'
-  | 'settings';
+  | 'settings'
+  | 'rating';
 
 // Permission interface
 export interface Permission {

@@ -62,6 +62,7 @@ const LiveOrders: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = React.useState<OrderWithMeta | null>(null);
   const [orderDetailsVisible, setOrderDetailsVisible] = React.useState<boolean>(false);
   const [newOrdersCount, setNewOrdersCount] = React.useState<number>(0);
+  const [currentTime, setCurrentTime] = React.useState<number>(Date.now());
   
   // Restaurant selection state
   const [restaurants, setRestaurants] = React.useState<any[]>([]);
@@ -87,11 +88,27 @@ const LiveOrders: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  // Format relative time helper function
+  // Format relative time helper function with real-time updates
   const formatRelativeTime = (dateString: string | null): string => {
     if (!dateString) return 'Unknown time';
     try {
-      return formatDistanceToNow(parseISO(dateString), { addSuffix: true });
+      // Use current time state to ensure updates
+      const now = new Date(currentTime);
+      const orderTime = parseISO(dateString);
+      const diffInSeconds = Math.floor((now.getTime() - orderTime.getTime()) / 1000);
+      
+      if (diffInSeconds < 60) {
+        return 'Just now';
+      } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+      } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+      } else {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days} day${days !== 1 ? 's' : ''} ago`;
+      }
     } catch (error) {
       return 'Unknown time';
     }
@@ -250,6 +267,15 @@ const LiveOrders: React.FC = () => {
     }
   }, [selectedRestaurantId]);  // Re-run this effect when the selected restaurant changes
   
+  // Set up real-time timer for duration updates
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000); // Update every second
+    
+    return () => clearInterval(timer);
+  }, []);
+  
   // Set up WebSocket event listeners
   const setupWebSocketListeners = () => {
     try {
@@ -400,11 +426,6 @@ const LiveOrders: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handlePageSizeChange = (size: number) => {
-    setCurrentPage(1);
-    setPageSize(size);
-  };
-
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -423,11 +444,6 @@ const LiveOrders: React.FC = () => {
   const endIndex = startIndex + pageSize;
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
-  // Open order details drawer
-  const showOrderDetails = (order: OrderWithMeta) => {
-    setSelectedOrder(order);
-    setOrderDetailsVisible(true);
-  };
 
   // Close order details drawer
   const closeOrderDetails = () => {
@@ -488,36 +504,25 @@ const LiveOrders: React.FC = () => {
     }
   };
 
-  const getNextItemStatus = (status: string): string | null => {
-    switch (status) {
-      case 'pending': return 'preparing';
-      case 'preparing': return 'ready';
-      case 'ready': return 'served';
-      default: return null;
-    }
-  };
 
-  const getItemStatusButtonText = (status: string): string => {
-    switch (status) {
-      case 'pending': return 'Start';
-      case 'preparing': return 'Ready';
-      case 'ready': return 'Serve';
-      default: return 'Update';
-    }
-  };
-
-  // Helper functions for wait time
+  // Helper functions for wait time with real-time updates
   const getElapsedSeconds = (createdAt: string): number => {
     if (!createdAt) return 0;
-    const now = new Date();
+    const now = new Date(currentTime); // Use current time state for real-time updates
     const created = new Date(createdAt);
     return Math.floor((now.getTime() - created.getTime()) / 1000);
   };
 
   const formatWaitTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
   };
 
   const getHeaderBackgroundColor = (elapsedSeconds: number): string => {
@@ -536,7 +541,6 @@ const LiveOrders: React.FC = () => {
     const waitTimeDisplay = formatWaitTime(elapsedSeconds);
     const headerBgColor = getHeaderBackgroundColor(elapsedSeconds);
     const headerTextColor = getHeaderTextColor(elapsedSeconds);
-    const isOverdue = elapsedSeconds > 20 * 60;
 
     return (
       <Card
@@ -723,25 +727,6 @@ const LiveOrders: React.FC = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <Button
-            type="primary"
-            style={{ 
-              backgroundColor: '#722ed1', 
-              borderColor: '#722ed1',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginRight: '8px'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle print KOT
-              message.success(`Printing KOT for Order #${order.orderNumber}`);
-            }}
-          >
-            🖨️ Print KOT
-          </Button>
-          
           {/* Status Dropdown - Native Select for Better Reliability */}
           <div 
             onClick={(e) => e.stopPropagation()} 
@@ -759,7 +744,7 @@ const LiveOrders: React.FC = () => {
                 backgroundColor: '#fff',
                 cursor: 'pointer'
               }}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                 const newStatus = e.target.value as OrderStatus;
                 console.log('🎯 Native dropdown onChange triggered:', { 
                   orderId: order._id, 
@@ -902,7 +887,7 @@ const LiveOrders: React.FC = () => {
                 pageSize={pageSize}
                 total={filteredOrders.length}
                 onChange={handlePageChange}
-                onShowSizeChange={(current: number, size: number) => {
+                onShowSizeChange={(_current: number, size: number) => {
                   setCurrentPage(1);
                   setPageSize(size);
                 }}

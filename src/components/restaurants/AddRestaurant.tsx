@@ -13,7 +13,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Switch,
+  FormControlLabel,
+  Slider,
+  Divider
 } from '@mui/material';
 import axiosInstance from '../../utils/axiosConfig';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -38,6 +42,10 @@ interface RestaurantFormData {
   isActive?: boolean;
   tables?: any[];
   venues?: any[];
+  service_charge?: {
+    enabled: boolean;
+    percentage: number;
+  };
 }
 
 interface Business {
@@ -52,7 +60,11 @@ function AddRestaurant() {
     locations: [{ address: '', coordinates: { latitude: 0, longitude: 0 } }],
     isActive: true,
     tables: [],
-    venues: []
+    venues: [],
+    service_charge: {
+      enabled: false,
+      percentage: 15
+    }
   });
   
   const [loading, setLoading] = React.useState<boolean>(false);
@@ -136,6 +148,15 @@ function AddRestaurant() {
       setError(null);
       const response = await axiosInstance.get(`/restaurants/${id}`);
       const restaurantData = response.data as RestaurantFormData;
+      
+      // Ensure service_charge has default values if not present
+      if (!restaurantData.service_charge) {
+        restaurantData.service_charge = {
+          enabled: false,
+          percentage: 15
+        };
+      }
+      
       setFormData(restaurantData);
       
       // If we have location data, set up the map
@@ -417,6 +438,70 @@ function AddRestaurant() {
                 isDisabled={false} // Enable map when city is selected
               />
             </Grid>
+
+            {/* Service Charge Section */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Service Charge Settings
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Configure automatic service charge for orders at this restaurant
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.service_charge?.enabled || false}
+                    onChange={(e) => 
+                      setFormData({
+                        ...formData,
+                        service_charge: {
+                          enabled: e.target.checked,
+                          percentage: formData.service_charge?.percentage || 15
+                        }
+                      })
+                    }
+                  />
+                }
+                label="Enable Service Charge"
+              />
+            </Grid>
+
+            {formData.service_charge?.enabled && (
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" gutterBottom>
+                  Service Charge Percentage: {formData.service_charge?.percentage || 15}%
+                </Typography>
+                <Slider
+                  value={formData.service_charge?.percentage || 15}
+                  onChange={(_, newValue) =>
+                    setFormData({
+                      ...formData,
+                      service_charge: {
+                        enabled: formData.service_charge?.enabled || false,
+                        percentage: newValue as number
+                      }
+                    })
+                  }
+                  min={10}
+                  max={20}
+                  step={0.5}
+                  marks={[
+                    { value: 10, label: '10%' },
+                    { value: 15, label: '15%' },
+                    { value: 20, label: '20%' }
+                  ]}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => `${value}%`}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Service charge will be automatically applied to all orders (10-20% range)
+                </Typography>
+              </Grid>
+            )}
 
             <Grid item xs={12}>
               <Box display="flex" gap={2}>

@@ -67,7 +67,14 @@ import {
   LocalOffer as PromotionIcon,
   Kitchen as KitchenIcon,
   PointOfSale as CashierIcon,
-  Schedule as ScheduleIconMenu
+  Schedule as ScheduleIconMenu,
+  Star as StarIcon,
+  Reviews as ReviewsIcon,
+  Timeline as TimelineIcon,
+  Groups as GroupsIcon,
+  AttachMoney as TipIcon,
+  Payment as PaymentIcon,
+  CreditCard as StripeIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
@@ -349,6 +356,14 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
       'kitchen-management': { resource: 'kitchen', action: 'read' },
       'cashier-management': { resource: 'cashier', action: 'read' },
       'schedule-management': { resource: 'schedule', action: 'read' },
+      'ratings': { resource: 'rating', action: 'read' },
+      'ratings/analytics': { resource: 'rating', action: 'read' },
+      'ratings/reviews': { resource: 'rating', action: 'read' },
+      'ratings/menu-performance': { resource: 'rating', action: 'read' },
+      'ratings/customer-insights': { resource: 'rating', action: 'read' },
+      'group-ordering/dashboard': { resource: 'order', action: 'read' },
+      'tipping/management': { resource: 'payment', action: 'read' },
+      'payments/stripe-connect': { resource: 'payment', action: 'read' },
       'settings/admins': { resource: 'user', action: 'read' },
       'settings/rbac': { resource: 'user', action: 'read' },
       'settings/system': { resource: 'settings', action: 'read' },
@@ -378,6 +393,17 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
     // Temporarily allow everyone to access loyalty features
     if (itemKey === 'loyalty' || itemKey === 'loyalty/analytics' || itemKey === 'loyalty/settings') {
       return true;
+    }
+    
+    // Allow access to rating management for restaurant admins and super admins
+    if (itemKey === 'ratings' || itemKey === 'ratings/analytics' || itemKey === 'ratings/reviews' || 
+        itemKey === 'ratings/menu-performance' || itemKey === 'ratings/customer-insights') {
+      return isBusinessOwner() || isSuperAdmin();
+    }
+    
+    // Allow access to group ordering, tipping, and payment management for restaurant admins and super admins
+    if (itemKey === 'group-ordering/dashboard' || itemKey === 'tipping/management' || itemKey === 'payments/stripe-connect') {
+      return isBusinessOwner() || isSuperAdmin();
     }
     
     // Allow access to management pages for business owners and super admins (temporarily allow all for testing)
@@ -622,6 +648,33 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           ],
         },
         {
+          key: 'ratings',
+          icon: <StarIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('ratings', currentLanguage),
+          children: [
+            {
+              key: 'ratings/analytics',
+              icon: <AssessmentIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/analytics', currentLanguage),
+            },
+            {
+              key: 'ratings/reviews',
+              icon: <ReviewsIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/reviews', currentLanguage),
+            },
+            {
+              key: 'ratings/menu-performance',
+              icon: <TimelineIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/menu-performance', currentLanguage),
+            },
+            {
+              key: 'ratings/customer-insights',
+              icon: <PeopleIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/customer-insights', currentLanguage),
+            },
+          ],
+        },
+        {
           key: 'promotions',
           icon: <PromotionIcon sx={{ fontSize: 24 }} />,
           label: getTranslation('promotions', currentLanguage),
@@ -644,6 +697,24 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           icon: <ScheduleIconMenu sx={{ fontSize: 24 }} />,
           label: getTranslation('schedule-management', currentLanguage),
           path: '/schedule-management'
+        },
+        {
+          key: 'group-ordering/dashboard',
+          icon: <GroupsIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('group-ordering/dashboard', currentLanguage),
+          path: '/group-ordering/dashboard'
+        },
+        {
+          key: 'tipping/management',
+          icon: <TipIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('tipping/management', currentLanguage),
+          path: '/tipping/management'
+        },
+        {
+          key: 'payments/stripe-connect',
+          icon: <StripeIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('payments/stripe-connect', currentLanguage),
+          path: '/payments/stripe-connect'
         },
       ],
     },

@@ -197,7 +197,7 @@ const TableDetail = () => {
           <Button 
             variant="outlined"
             startIcon={<KeyboardBackspaceIcon />}
-            onClick={() => navigate('/tables')}
+            onClick={() => navigate('/tables/list')}
           >
             Back to Tables
           </Button>

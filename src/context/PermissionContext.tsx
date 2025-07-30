@@ -22,6 +22,7 @@ interface PermissionContextType {
   // Data management
   loadUserPermissions: () => Promise<void>;
   seedPermissions: () => Promise<void>;
+  refreshPermissions: () => Promise<void>;
   
   // Resource access helpers
   getAccessibleResources: () => ResourceType[];
@@ -68,6 +69,11 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       console.log('[PermissionContext] Starting to load user permissions...');
       setIsLoading(true);
       setError(null);
+      
+      // Clear caches when reloading permissions
+      setPermissionCache(new Map());
+      setResourcePermissionCache(new Map());
+      
       const permissions = await PermissionService.getUserPermissions();
       console.log('[PermissionContext] Loaded permissions:', {
         count: permissions.length,
@@ -97,6 +103,25 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshPermissions = async () => {
+    console.log('[PermissionContext] Force refreshing permissions...');
+    
+    // Clear all caches
+    setPermissionCache(new Map());
+    setResourcePermissionCache(new Map());
+    
+    // Clear any browser cache if applicable
+    try {
+      localStorage.removeItem('userPermissions');
+      sessionStorage.removeItem('userPermissions');
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+    
+    // Reload permissions from server
+    await loadUserPermissions();
   };
 
   const hasPermission = (resource: ResourceType, action: PermissionAction): boolean => {
@@ -201,7 +226,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
         'business', 'restaurant', 'user', 'menu', 'menuitem', 
         'category', 'subcategory', 'subsubcategory', 'modifier',
         'table', 'venue', 'zone', 'order', 'customer', 
-        'inventory', 'invoice', 'analytics', 'settings'
+        'inventory', 'invoice', 'analytics', 'settings', 'rating'
       ];
     }
 
@@ -210,7 +235,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       'business', 'restaurant', 'user', 'menu', 'menuitem',
       'category', 'subcategory', 'subsubcategory', 'modifier',
       'table', 'venue', 'zone', 'order', 'customer',
-      'inventory', 'invoice', 'analytics', 'settings'
+      'inventory', 'invoice', 'analytics', 'settings', 'rating'
     ];
 
     resources.forEach(resource => {
@@ -235,6 +260,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     canAccess,
     loadUserPermissions,
     seedPermissions,
+    refreshPermissions,
     getAccessibleResources,
     isResourceAccessible
   };
