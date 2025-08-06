@@ -18,10 +18,14 @@ import {
   Visibility as ViewIcon, 
   Add as AddIcon, 
 } from '@mui/icons-material';
+import {
+  FileDownload as FileDownloadIcon,
+  FileUpload as FileUploadIcon,
+} from '@mui/icons-material';
 import DataTable from '../common/DataTable';
+import CSVImportModal from '../common/CSVImportModal';
 import { ColumnDef } from '@tanstack/react-table';
 import { venueService } from '../../services/VenueService';
-import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
 import { message } from 'antd';
 
 interface Venue {
@@ -43,6 +47,7 @@ const VenueList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [venueToDelete, setVenueToDelete] = useState<Venue | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchVenues();
@@ -135,7 +140,63 @@ const VenueList: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     message.success('CSV exported successfully');
-    
+  };
+
+  const handleImportCSV = async (data: any[]) => {
+    try {
+      const importedVenues = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const venueData = {
+            name: row.name || '',
+            description: row.description || '',
+            capacity: Number(row.capacity) || 0,
+            isActive: row.is_active !== false,
+            // Add other required fields based on your Venue interface
+            zones: [],
+            restaurantId: '', // This should be set based on context
+          };
+
+          // Validate required fields
+          if (!venueData.name) {
+            errors.push(`Row missing required field: name`);
+            continue;
+          }
+
+          const result = await venueService.createVenue(venueData);
+          importedVenues.push(result);
+        } catch (error) {
+          console.error('Error importing venue row:', error);
+          errors.push(`Error importing venue "${row.name || 'Unknown'}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Refresh the list
+      await fetchVenues();
+
+      return {
+        success: importedVenues.length > 0,
+        message: `Successfully imported ${importedVenues.length} venues${errors.length > 0 ? ` with ${errors.length} errors` : ''}`,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (error) {
+      console.error('Import error:', error);
+      return {
+        success: false,
+        message: 'Failed to import venues',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
   };
 
   return (
@@ -145,6 +206,14 @@ const VenueList: React.FC = () => {
           Venues
         </Typography>
         <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3} gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={handleOpenImportModal}
+            sx={{ mt: 2, mb: 0 }}
+          >
+            Import CSV
+          </Button>
           <Button
             variant="outlined"
             startIcon={<FileDownloadIcon />}
@@ -203,6 +272,17 @@ const VenueList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <CSVImportModal
+        open={importModalOpen}
+        onClose={handleCloseImportModal}
+        title="Venues"
+        templateHeaders={['Name', 'Description', 'Capacity', 'Is Active']}
+        templateData={[
+          { name: 'Example Venue', description: 'A sample venue description', capacity: 100, is_active: 'true' }
+        ]}
+        onImport={handleImportCSV}
+      />
     </>
   );
 };

@@ -18,10 +18,14 @@ import {
   Visibility as ViewIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import {
+  FileDownload as FileDownloadIcon,
+  FileUpload as FileUploadIcon,
+} from '@mui/icons-material';
 import DataTable from '../common/DataTable';
 import RestaurantDetail from './RestaurantDetail';
+import CSVImportModal from '../common/CSVImportModal';
 import { ColumnDef } from '@tanstack/react-table';
-import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
 
 // Using the Restaurant interface from RestaurantService
 
@@ -34,6 +38,7 @@ const RestaurantList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [restaurantToDelete, setRestaurantToDelete] = useState<Restaurant | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchRestaurants();
@@ -131,12 +136,83 @@ const RestaurantList: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleImportCSV = async (data: any[]) => {
+    try {
+      const importedRestaurants = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const restaurantData = {
+            name: row.name || '',
+            address: row.address || '',
+            // Add other required fields based on your Restaurant interface
+            locations: row.address ? [{
+              address: row.address,
+              coordinates: { latitude: 0, longitude: 0 }
+            }] : [],
+            venues: [],
+            tables: [],
+            schedule: [],
+            adminIds: [],
+            menu: [],
+            isActive: row.is_active !== false, // default to true unless explicitly false
+          };
+
+          // Validate required fields
+          if (!restaurantData.name) {
+            errors.push(`Row missing required field: name`);
+            continue;
+          }
+
+          const result = await restaurantService.createRestaurant(restaurantData);
+          importedRestaurants.push(result);
+        } catch (error) {
+          console.error('Error importing restaurant row:', error);
+          errors.push(`Error importing restaurant "${row.name || 'Unknown'}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Refresh the list
+      await fetchRestaurants();
+
+      return {
+        success: importedRestaurants.length > 0,
+        message: `Successfully imported ${importedRestaurants.length} restaurants${errors.length > 0 ? ` with ${errors.length} errors` : ''}`,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (error) {
+      console.error('Import error:', error);
+      return {
+        success: false,
+        message: 'Failed to import restaurants',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+  };
+
   return (
     <Box>
       <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem', mb: 3 }}>
         Restaurants
       </Typography>
       <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3} gap={2}>
+        <Button
+          variant="outlined"
+          startIcon={<FileUploadIcon />}
+          onClick={handleOpenImportModal}
+          sx={{ mt: 2, mb: 0 }}
+        >
+          Import CSV
+        </Button>
         <Button
           variant="outlined"
           startIcon={<FileDownloadIcon />}
@@ -186,6 +262,17 @@ const RestaurantList: React.FC = () => {
           <Button onClick={confirmDelete} color="error">Delete</Button>
         </DialogActions>
       </Dialog>
+
+      <CSVImportModal
+        open={importModalOpen}
+        onClose={handleCloseImportModal}
+        title="Restaurants"
+        templateHeaders={['Name', 'Address', 'Is Active']}
+        templateData={[
+          { name: 'Example Restaurant', address: '123 Main St, City, State', is_active: 'true' }
+        ]}
+        onImport={handleImportCSV}
+      />
     </Box>
   );
 };

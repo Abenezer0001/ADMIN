@@ -16,25 +16,106 @@ import {
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Visibility as ViewIcon, // Removed DeleteIcon import
+  Visibility as ViewIcon,
   Add as AddIcon,
   Circle as CircleIcon,
+  FileDownload as FileDownloadIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import DataTable from '../common/DataTable'; // Assuming this uses material-react-table
+import CSVImportModal from '../common/CSVImportModal';
 import { MRT_ColumnDef, MRT_Cell, MRT_Row } from 'material-react-table'; // Import MRT types
 import { categoryService, Category } from '../../services/CategoryService';
 
 const CategoryList = () => {
   const navigate = useNavigate();
   // Removed unused state for dialogs and selected category
-  const [categories, setCategories] = useState<Category[]>([]); // Revert to useState
-  const [loading, setLoading] = useState(true); // Revert to useState
-  const [error, setError] = useState<string | null>(null); // Revert to useState
-  // Removed unused state for delete dialog
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => { // Revert to useEffect
     fetchCategories();
   }, []);
+
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Description', 'Display Order', 'Is Active'];
+    const csvContent = [
+      headers.join(','),
+      ...categories.map((category: Category) => [
+        category.name,
+        category.description || '',
+        category.order || 0,
+        category.isActive ? 'true' : 'false'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `categories_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (data: any[]) => {
+    try {
+      const importedCategories = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const categoryData = {
+            name: row.name || '',
+            description: row.description || '',
+            order: Number(row.display_order || row.order) || 0,
+            isActive: row.is_active !== false,
+            // Add other required fields based on your Category interface
+          };
+
+          // Validate required fields
+          if (!categoryData.name) {
+            errors.push(`Row missing required field: name`);
+            continue;
+          }
+
+          const result = await categoryService.createCategory(categoryData);
+          importedCategories.push(result);
+        } catch (error) {
+          console.error('Error importing category row:', error);
+          errors.push(`Error importing category "${row.name || 'Unknown'}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Refresh the list
+      await fetchCategories();
+
+      return {
+        success: importedCategories.length > 0,
+        message: `Successfully imported ${importedCategories.length} categories${errors.length > 0 ? ` with ${errors.length} errors` : ''}`,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (error) {
+      console.error('Import error:', error);
+      return {
+        success: false,
+        message: 'Failed to import categories',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -130,17 +211,34 @@ const CategoryList = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}> {/* Added alignItems, adjusted mb */}
-        <Typography variant="h5" component="h2"> {/* Changed h1 to Typography */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" component="h2">
           Categories
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/categories/add')}
-        >
-          Add Category
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={handleOpenImportModal}
+          >
+            Import CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExportCSV}
+            disabled={categories.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/categories/add')}
+          >
+            Add Category
+          </Button>
+        </Box>
       </Box>
 
       {error && <Box sx={{ color: 'error.main', mb: 2 }}>Error: {error}</Box>}
@@ -154,7 +252,17 @@ const CategoryList = () => {
           // Loading state is not directly supported by this DataTable wrapper
         />
       </TableContainer>
-      {/* Removed Delete and Detail Dialogs */}
+      
+      <CSVImportModal
+        open={importModalOpen}
+        onClose={handleCloseImportModal}
+        title="Categories"
+        templateHeaders={['Name', 'Description', 'Display Order', 'Is Active']}
+        templateData={[
+          { name: 'Example Category', description: 'A sample category description', display_order: 1, is_active: 'true' }
+        ]}
+        onImport={handleImportCSV}
+      />
     </Box>
   );
 };

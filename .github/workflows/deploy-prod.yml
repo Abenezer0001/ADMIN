@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy Admin to Production Server
+    name: Build and Deploy Admin to Production Server
     runs-on: ubuntu-latest
     
     steps:
@@ -20,7 +20,7 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --legacy-peer-deps
 
     - name: Build application
       run: npm run build
@@ -36,38 +36,38 @@ jobs:
 
     - name: Deploy to server
       run: |
-        # Upload dist folder to server
-        scp -r dist/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/admin-dist/
+        # Debug DNS resolution
+        echo "Attempting to connect to: ${{ secrets.SERVER_HOST }}"
+        nslookup ${{ secrets.SERVER_HOST }} || echo "DNS lookup failed"
         
-        # Execute deployment on server
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-          # Create backup
-          if [ -d "/var/www/admin" ]; then
-            sudo cp -r /var/www/admin /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
-          fi
-          
-          # Create admin directory
-          sudo mkdir -p /var/www/admin
-          
-          # Remove old files
+        # Create temporary directory for upload with proper structure
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /tmp/admin-dist/assets"
+        
+        # Upload new build
+        scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:/tmp/admin-dist/
+        
+        # Deploy to production location
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          echo "Starting deployment to production..."
+          sudo mkdir -p /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)
+          sudo cp -r /var/www/admin/* /var/www/admin.backup.$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+          echo "Checking temp directory contents:"
+          ls -la /tmp/admin-dist/
           sudo rm -rf /var/www/admin/*
-          
-          # Copy new files
           sudo cp -r /tmp/admin-dist/* /var/www/admin/
-          
-          # Set proper permissions
           sudo chown -R www-data:www-data /var/www/admin
           sudo chmod -R 755 /var/www/admin
-          
-          # Clean up temp files
-          rm -rf /tmp/admin-dist/
+          echo "Production deployment completed. Final directory contents:"
+          ls -la /var/www/admin/
+          rm -rf /tmp/admin-dist
         EOF
 
     - name: Verify deployment
       run: |
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           if [ -f "/var/www/admin/index.html" ]; then
-            echo "✅ Production Admin deployment successful!"
+            echo "✅ Admin Production deployment successful!"
+            echo "Deployment timestamp: $(stat -c %y /var/www/admin/index.html)"
           else
             echo "❌ Deployment failed - index.html not found"
             exit 1
