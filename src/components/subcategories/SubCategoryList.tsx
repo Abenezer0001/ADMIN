@@ -13,9 +13,12 @@ import CircleIcon from '@mui/icons-material/Circle';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ImageIcon from '@mui/icons-material/Image';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 
 import { subCategoryService, SubCategory } from '../../services/SubCategoryService';
 import { categoryService, Category } from '../../services/CategoryService'; // To filter by category
+import CSVImportModal from '../common/CSVImportModal';
 
 const SubCategoryList = () => {
   const navigate = useNavigate();
@@ -28,6 +31,7 @@ const SubCategoryList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subCategoryToDelete, setSubCategoryToDelete] = useState<SubCategory | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(''); // 'all' or category ID
   const [loadingCategories, setLoadingCategories] = useState(false);
 
@@ -145,6 +149,89 @@ const SubCategoryList = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Description', 'Category', 'Display Order', 'Is Active'];
+    const csvContent = [
+      headers.join(','),
+      ...subCategories.map((subCategory: SubCategory) => [
+        subCategory.name,
+        subCategory.description || '',
+        getCategoryName(subCategory.categoryId),
+        subCategory.order || 0,
+        subCategory.isActive ? 'true' : 'false'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `subcategories_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (data: any[]) => {
+    try {
+      const importedSubCategories = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const subCategoryData = {
+            name: row.name || '',
+            description: row.description || '',
+            categoryId: row.category_id || '',
+            order: Number(row.display_order || row.order) || 0,
+            isActive: row.is_active !== false,
+          };
+
+          // Validate required fields
+          if (!subCategoryData.name) {
+            errors.push(`Row missing required field: name`);
+            continue;
+          }
+
+          const result = await subCategoryService.createSubCategory(subCategoryData);
+          importedSubCategories.push(result);
+        } catch (error) {
+          console.error('Error importing subcategory row:', error);
+          errors.push(`Error importing subcategory "${row.name || 'Unknown'}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Refresh the list
+      await fetchSubCategories();
+
+      return {
+        success: importedSubCategories.length > 0,
+        message: `Successfully imported ${importedSubCategories.length} subcategories${errors.length > 0 ? ` with ${errors.length} errors` : ''}`,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (error) {
+      console.error('Import error:', error);
+      return {
+        success: false,
+        message: 'Failed to import subcategories',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+  };
+
+  const getCategoryName = (categoryId: string): string => {
+    const category = categories.find(cat => cat._id === categoryId);
+    return category ? category.name : 'Unknown';
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -152,13 +239,30 @@ const SubCategoryList = () => {
         <Typography variant="h5" component="h2">
           Sub-Categories
         </Typography>
-        <Button
-          startIcon={<AddIcon />}
-          variant="contained"
-          onClick={() => navigate('/subcategories/add')} // Adjust route as needed
-        >
-          Add Sub-Category
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={handleOpenImportModal}
+          >
+            Import CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExportCSV}
+            disabled={subCategories.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            startIcon={<AddIcon />}
+            variant="contained"
+            onClick={() => navigate('/subcategories/add')} // Adjust route as needed
+          >
+            Add Sub-Category
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
@@ -284,6 +388,23 @@ const SubCategoryList = () => {
           <Button onClick={confirmDelete} color="error">Delete</Button>
         </DialogActions>
       </Dialog>
+
+      <CSVImportModal
+        open={importModalOpen}
+        onClose={handleCloseImportModal}
+        title="Sub-Categories"
+        templateHeaders={['Name', 'Description', 'Category ID', 'Display Order', 'Is Active']}
+        templateData={[
+          { 
+            name: 'Example Subcategory', 
+            description: 'A sample subcategory description', 
+            category_id: '60f9b9b9b9b9b9b9b9b9b9b9', 
+            display_order: 1, 
+            is_active: 'true' 
+          }
+        ]}
+        onImport={handleImportCSV}
+      />
     </Box>
   );
 };

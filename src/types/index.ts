@@ -36,5 +36,46 @@ export interface Order {
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
 }
 
+// Rating and Review types
+export interface Rating {
+  id: string;
+  menuItemId: string;
+  restaurantId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  verifiedPurchase: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RatingStats {
+  average: number;
+  count: number;
+  distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+}
+
+export interface MenuItemRating extends Rating {
+  menuItem: {
+    name: string;
+    description: string;
+    price: number;
+  };
+}
+
+export interface ReviewFilter {
+  rating?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  verifiedOnly?: boolean;
+  sortBy?: 'date' | 'rating' | 'helpful';
+}
+
 // Export business types
 export * from './business';

@@ -4,7 +4,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Card,
   CardMedia, Switch, FormControlLabel, CircularProgress, FormControl,
   InputLabel, Select, MenuItem as MuiMenuItem, SelectChangeEvent,
-  Autocomplete, Chip
+  Autocomplete, Chip, Divider, CardHeader, CardContent
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon, Upload as UploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { categoryService, Category } from '../../services/CategoryService';
 import { subCategoryService, SubCategory } from '../../services/SubCategoryService';
 import { subSubCategoryService, SubSubCategory } from '../../services/SubSubCategoryService';
 import { venueService, Venue } from '../../services/VenueService';
+import { scheduleService, Schedule, DailySchedule, CreateScheduleRequest } from '../../services/ScheduleService';
 
 // Add Restaurant interface
 interface Restaurant {
@@ -89,6 +90,19 @@ const MenuItems = () => {
   const [filteredSubSubCategories, setFilteredSubSubCategories] = React.useState<SubSubCategory[]>([]); // Use React.useState
   const [loadingSubCategories, setLoadingSubCategories] = React.useState(false); // Use React.useState
   const [loadingSubSubCategories, setLoadingSubSubCategories] = React.useState(false); // Use React.useState
+
+  // Schedule state
+  const [enableSchedule, setEnableSchedule] = React.useState(false);
+  const [existingSchedule, setExistingSchedule] = React.useState<Schedule | null>(null);
+  const [scheduleData, setScheduleData] = React.useState<DailySchedule[]>([
+    { dayOfWeek: 0, isOpen: false, openTime: '09:00', closeTime: '22:00' }, // Sunday
+    { dayOfWeek: 1, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Monday
+    { dayOfWeek: 2, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Tuesday
+    { dayOfWeek: 3, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Wednesday
+    { dayOfWeek: 4, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Thursday
+    { dayOfWeek: 5, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Friday
+    { dayOfWeek: 6, isOpen: true, openTime: '09:00', closeTime: '23:00' },  // Saturday
+  ]);
 
   // Fetch restaurants
   React.useEffect(() => { // Use React.useEffect
@@ -291,6 +305,44 @@ const MenuItems = () => {
         });
         setImagePreview(data.image || '');
         setImageFile(null); // Reset file input on load
+
+        // Check for existing schedule
+        if (menuItemId) {
+          try {
+            const schedules = await scheduleService.getAllSchedules({
+              type: 'MENU_ITEM',
+              menuItem: menuItemId
+            });
+
+            console.log('Fetched menu item schedules:', schedules);
+
+            if (schedules && schedules.length > 0) {
+              const menuItemSchedule = schedules[0];
+              setExistingSchedule(menuItemSchedule);
+              setEnableSchedule(true);
+              
+              console.log('Found existing menu item schedule:', menuItemSchedule);
+              
+              // Convert backend schedule format to frontend format
+              // Backend uses 'dailySchedule' (singular), not 'dailySchedules' (plural)
+              const dailyScheduleData = (menuItemSchedule as any).dailySchedule || (menuItemSchedule as any).dailySchedules;
+              
+              if (dailyScheduleData && Array.isArray(dailyScheduleData)) {
+                console.log('Converting daily schedule data:', dailyScheduleData);
+                setScheduleData(dailyScheduleData.map((day: any) => ({
+                  dayOfWeek: day.dayOfWeek,
+                  isOpen: day.isOpen,
+                  openTime: day.openTime || day.startTime || '09:00',
+                  closeTime: day.closeTime || day.endTime || '22:00'
+                })));
+              }
+            }
+          } catch (scheduleErr) {
+            console.error('Error fetching menu item schedule:', scheduleErr);
+            // Don't fail the whole operation for schedule errors
+          }
+        }
+
         setError(null);
         console.log('Menu item form populated successfully');
       } catch (error) {
@@ -362,6 +414,27 @@ const MenuItems = () => {
     setRemoveCurrentImage(true); // Mark that the image should be removed on update
   };
 
+  // Schedule handlers
+  const handleScheduleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEnableSchedule(e.target.checked);
+  };
+
+  const handleScheduleDayChange = (dayIndex: number, field: keyof DailySchedule, value: any) => {
+    setScheduleData((prev: DailySchedule[]) => {
+      const newSchedule = [...prev];
+      newSchedule[dayIndex] = {
+        ...newSchedule[dayIndex],
+        [field]: value
+      };
+      return newSchedule;
+    });
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek];
+  };
+
   const handleDelete = async () => {
     if (!menuItemId) return;
     try {
@@ -379,24 +452,40 @@ const MenuItems = () => {
   const handleSave = async () => {
     setError(null);
     
-    // Basic Validation - SubSubCategory is now optional
-    if (!form.name.trim() || !form.restaurantId || !form.venueId || form.categories.length === 0 || form.subCategories.length === 0 ||
-        form.price === '' || form.preparationTime === '') {
-      setError('Please fill in all required fields (Name, Restaurant, Venue, Categories, Subcategories, Price, Prep Time).');
-      return;
+    // Basic Validation - Different requirements for edit vs create
+    if (menuItemId) {
+      // Edit mode - only validate essential fields that might be changed
+      if (!form.name.trim()) {
+        setError('Name is required.');
+        return;
+      }
+    } else {
+      // Create mode - validate all required fields
+      if (!form.name.trim() || !form.restaurantId || !form.venueId || form.categories.length === 0 || form.subCategories.length === 0 ||
+          form.price === '' || form.preparationTime === '') {
+        setError('Please fill in all required fields (Name, Restaurant, Venue, Categories, Subcategories, Price, Prep Time).');
+        return;
+      }
     }
     
-    const priceNum = parseFloat(String(form.price));
-    const prepTimeNum = parseInt(String(form.preparationTime), 10);
-
-    if (isNaN(priceNum) || priceNum < 0) {
-      setError('Please enter a valid non-negative price.');
-      return;
+    // Validate and parse numeric fields
+    let priceNum = 0;
+    let prepTimeNum = 0;
+    
+    if (form.price !== '') {
+      priceNum = parseFloat(String(form.price));
+      if (isNaN(priceNum) || priceNum < 0) {
+        setError('Please enter a valid non-negative price.');
+        return;
+      }
     }
     
-    if (isNaN(prepTimeNum) || prepTimeNum < 0) {
-      setError('Please enter a valid non-negative preparation time.');
-      return;
+    if (form.preparationTime !== '') {
+      prepTimeNum = parseInt(String(form.preparationTime), 10);
+      if (isNaN(prepTimeNum) || prepTimeNum < 0) {
+        setError('Please enter a valid non-negative preparation time.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -424,6 +513,8 @@ const MenuItems = () => {
       }
       // If !imageFile && !(isEditMode && removeCurrentImage), don't append 'image' - backend keeps existing one
 
+      let menuItemId_result = menuItemId;
+
       if (isEditMode && menuItemId) {
         // Update requires restaurantId in the payload for backend validation/association
         formData.append('restaurantId', form.restaurantId);
@@ -431,8 +522,47 @@ const MenuItems = () => {
       } else {
         // Create requires restaurantId
         formData.append('restaurantId', form.restaurantId);
-        await menuItemService.createMenuItem(formData); // Send FormData
+        const newMenuItem = await menuItemService.createMenuItem(formData); // Send FormData
+        menuItemId_result = (newMenuItem as any)._id || (newMenuItem as any).id;
       }
+
+      // Handle schedule if enabled
+      if (enableSchedule && menuItemId_result) {
+        try {
+          if (existingSchedule) {
+            // Update existing schedule
+            await scheduleService.updateSchedule(existingSchedule._id, {
+              dailySchedules: scheduleData,
+              isActive: true
+            });
+          } else {
+            // Create new schedule
+            const schedulePayload: CreateScheduleRequest = {
+              name: `${form.name} Availability`,
+              description: `Availability schedule for ${form.name}`,
+              type: 'MENU_ITEM',
+              restaurant: form.restaurantId,
+              menuItem: menuItemId_result,
+              dailySchedules: scheduleData,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              effectiveFrom: new Date()
+            };
+
+            await scheduleService.createSchedule(schedulePayload);
+          }
+        } catch (scheduleErr) {
+          console.error('Error managing schedule:', scheduleErr);
+          // Don't throw, just log - menu item was created/updated successfully
+        }
+      } else if (!enableSchedule && existingSchedule) {
+        // Deactivate existing schedule
+        try {
+          await scheduleService.deactivateSchedule(existingSchedule._id);
+        } catch (scheduleErr) {
+          console.error('Error deactivating schedule:', scheduleErr);
+        }
+      }
+
       navigate('/menu/items');
     } catch (error: any) {
       console.error('Error saving item:', error);
@@ -563,7 +693,7 @@ const MenuItems = () => {
                 
                 {/* Restaurant Selection */}
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required error={!form.restaurantId && !!error}>
+                  <FormControl fullWidth required={!menuItemId} error={!form.restaurantId && !!error && !menuItemId}>
                     <InputLabel>Restaurant</InputLabel>
                     <Select
                       name="restaurantId" 
@@ -581,7 +711,7 @@ const MenuItems = () => {
                 
                 {/* Venue Selection */}
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required error={!form.venueId && !!error}>
+                  <FormControl fullWidth required={!menuItemId} error={!form.venueId && !!error && !menuItemId}>
                     <InputLabel>Venue</InputLabel>
                     <Select
                       name="venueId" 
@@ -618,8 +748,8 @@ const MenuItems = () => {
                         {...params}
                         label="Categories"
                         placeholder={filteredCategories.length === 0 ? "Select restaurant first" : "Select categories"} 
-                        required
-                        error={form.categories.length === 0 && !!error}
+                        required={!menuItemId}
+                        error={form.categories.length === 0 && !!error && !menuItemId}
                       />
                     )}
                   />
@@ -659,8 +789,8 @@ const MenuItems = () => {
                             : filteredSubCategories.length === 0 
                               ? "No subcategories found" 
                               : "Select subcategories"} 
-                        required
-                        error={form.subCategories.length === 0 && !!error} // Keep validation for required field
+                        required={!menuItemId}
+                        error={form.subCategories.length === 0 && !!error && !menuItemId}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -712,26 +842,26 @@ const MenuItems = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth 
-                    required 
+                    required={!menuItemId}
                     label="Price (£)" 
                     name="price"
                     type="number"
                     value={form.price} 
                     onChange={handleInputChange}
-                    error={form.price === '' && !!error}
+                    error={form.price === '' && !!error && !menuItemId}
                     InputProps={{ inputProps: { min: 0, step: "0.01" } }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth 
-                    required 
+                    required={!menuItemId}
                     label="Prep Time (mins)" 
                     name="preparationTime"
                     type="number"
                     value={form.preparationTime} 
                     onChange={handleInputChange}
-                    error={form.preparationTime === '' && !!error}
+                    error={form.preparationTime === '' && !!error && !menuItemId}
                     InputProps={{ inputProps: { min: 0 } }}
                   />
                 </Grid>
@@ -816,6 +946,75 @@ const MenuItems = () => {
                       }}
                     />
                   </Box> */}
+                </Grid>
+
+                {/* Schedule Configuration */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Card>
+                    <CardHeader 
+                      title="Menu Item Schedule"
+                      subheader="Configure when this item is available for ordering"
+                      action={
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={enableSchedule}
+                              onChange={handleScheduleToggle}
+                            />
+                          }
+                          label="Enable Schedule"
+                        />
+                      }
+                    />
+                    {enableSchedule && (
+                      <CardContent>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          When this item is not available, it will be hidden from customers or shown as unavailable.
+                        </Typography>
+                        <Grid container spacing={2}>
+                          {scheduleData.map((day: DailySchedule, index: number) => (
+                            <Grid item xs={12} key={index}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Typography sx={{ width: 100 }}>{getDayName(day.dayOfWeek)}</Typography>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={day.isOpen}
+                                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'isOpen', e.target.checked)}
+                                    />
+                                  }
+                                  label="Available"
+                                  sx={{ mr: 2 }}
+                                />
+                                {day.isOpen && (
+                                  <>
+                                    <TextField
+                                      type="time"
+                                      label="From"
+                                      value={day.openTime}
+                                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'openTime', e.target.value)}
+                                      size="small"
+                                      sx={{ width: 150 }}
+                                    />
+                                    <TextField
+                                      type="time"
+                                      label="Until"
+                                      value={day.closeTime}
+                                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'closeTime', e.target.value)}
+                                      size="small"
+                                      sx={{ width: 150 }}
+                                    />
+                                  </>
+                                )}
+                              </Box>
+                              {index < scheduleData.length - 1 && <Divider sx={{ my: 1 }} />}
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </CardContent>
+                    )}
+                  </Card>
                 </Grid>
               </Grid>
             </Grid>

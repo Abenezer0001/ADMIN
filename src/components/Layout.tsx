@@ -61,7 +61,20 @@ import {
   Business as BusinessIcon,
   Person as PersonIcon,
   Loyalty as LoyaltyIcon,
-  Analytics as AnalyticsIcon
+  Analytics as AnalyticsIcon,
+  LocalShipping as LocalShippingIcon,
+  DeleteSweep as DeleteSweepIcon,
+  LocalOffer as PromotionIcon,
+  Kitchen as KitchenIcon,
+  PointOfSale as CashierIcon,
+  Schedule as ScheduleIconMenu,
+  Star as StarIcon,
+  Reviews as ReviewsIcon,
+  Timeline as TimelineIcon,
+  Groups as GroupsIcon,
+  AttachMoney as TipIcon,
+  Payment as PaymentIcon,
+  CreditCard as StripeIcon
 } from '@mui/icons-material';
 import SecurityIcon from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
@@ -329,10 +342,28 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
       'orders/history': { resource: 'order', action: 'read' },
       'invoices': { resource: 'order', action: 'read' },
       'inventory': { resource: 'restaurant', action: 'read' },
+      'inventory/items': { resource: 'restaurant', action: 'read' },
+      'inventory/recipes': { resource: 'restaurant', action: 'read' },
+      'inventory/suppliers': { resource: 'restaurant', action: 'read' },
+      'inventory/purchase-orders': { resource: 'restaurant', action: 'read' },
+      'inventory/analytics': { resource: 'restaurant', action: 'read' },
+      'inventory/waste-tracking': { resource: 'restaurant', action: 'read' },
       'customers': { resource: 'user', action: 'read' },
       'loyalty': { resource: 'loyalty', action: 'read' },
       'loyalty/analytics': { resource: 'loyalty', action: 'read' },
       'loyalty/settings': { resource: 'loyalty', action: 'write' },
+      'promotions': { resource: 'promotion', action: 'read' },
+      'kitchen-management': { resource: 'kitchen', action: 'read' },
+      'cashier-management': { resource: 'cashier', action: 'read' },
+      'schedule-management': { resource: 'schedule', action: 'read' },
+      'ratings': { resource: 'rating', action: 'read' },
+      'ratings/analytics': { resource: 'rating', action: 'read' },
+      'ratings/reviews': { resource: 'rating', action: 'read' },
+      'ratings/menu-performance': { resource: 'rating', action: 'read' },
+      'ratings/customer-insights': { resource: 'rating', action: 'read' },
+      'group-ordering/dashboard': { resource: 'order', action: 'read' },
+      'tipping/management': { resource: 'payment', action: 'read' },
+      'payments/stripe-connect': { resource: 'payment', action: 'read' },
       'settings/admins': { resource: 'user', action: 'read' },
       'settings/rbac': { resource: 'user', action: 'read' },
       'settings/system': { resource: 'settings', action: 'read' },
@@ -362,6 +393,22 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
     // Temporarily allow everyone to access loyalty features
     if (itemKey === 'loyalty' || itemKey === 'loyalty/analytics' || itemKey === 'loyalty/settings') {
       return true;
+    }
+    
+    // Allow access to rating management for restaurant admins and super admins
+    if (itemKey === 'ratings' || itemKey === 'ratings/analytics' || itemKey === 'ratings/reviews' || 
+        itemKey === 'ratings/menu-performance' || itemKey === 'ratings/customer-insights') {
+      return isBusinessOwner() || isSuperAdmin();
+    }
+    
+    // Allow access to group ordering, tipping, and payment management for restaurant admins and super admins
+    if (itemKey === 'group-ordering/dashboard' || itemKey === 'tipping/management' || itemKey === 'payments/stripe-connect') {
+      return isBusinessOwner() || isSuperAdmin();
+    }
+    
+    // Allow access to management pages for business owners and super admins (temporarily allow all for testing)
+    if (itemKey === 'promotions' || itemKey === 'kitchen-management' || itemKey === 'cashier-management' || itemKey === 'schedule-management') {
+      return true; // Temporarily allow access for all users while setting up permissions
     }
     
     // Special handling for business management
@@ -533,6 +580,50 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
           key: 'inventory',
           icon: <InventoryIcon sx={{ fontSize: 24 }} />,
           label: getTranslation('inventory', currentLanguage),
+          children: [
+            {
+              key: 'inventory/items',
+              icon: <InventoryIcon sx={{ fontSize: 24 }} />,
+              label: 'Inventory Items',
+              path: '/inventory'
+            },
+            {
+              key: 'inventory/recipes',
+              icon: <RestaurantMenuIcon sx={{ fontSize: 24 }} />,
+              label: 'Recipe Management',
+              path: '/inventory/recipes'
+            },
+            {
+              key: 'inventory/suppliers',
+              icon: <LocalShippingIcon sx={{ fontSize: 24 }} />,
+              label: 'Supplier Management',
+              path: '/inventory/suppliers'
+            },
+            {
+              key: 'inventory/purchase-orders',
+              icon: <ReceiptIcon sx={{ fontSize: 24 }} />,
+              label: 'Purchase Orders',
+              path: '/inventory/purchase-orders'
+            },
+            {
+              key: 'inventory/analytics',
+              icon: <AnalyticsIcon sx={{ fontSize: 24 }} />,
+              label: 'Analytics Dashboard',
+              path: '/inventory/analytics'
+            },
+            {
+              key: 'inventory/waste-tracking',
+              icon: <DeleteSweepIcon sx={{ fontSize: 24 }} />,
+              label: 'Waste Tracking',
+              path: '/inventory/waste-tracking'
+            },
+            {
+              key: 'inventory/api-test',
+              icon: <AnalyticsIcon sx={{ fontSize: 24 }} />,
+              label: '🧪 API Test',
+              path: '/inventory/api-test'
+            }
+          ]
         },
         {
           key: 'customers',
@@ -556,8 +647,83 @@ const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }: LayoutProps) =
             },
           ],
         },
+        {
+          key: 'ratings',
+          icon: <StarIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('ratings', currentLanguage),
+          children: [
+            {
+              key: 'ratings/analytics',
+              icon: <AssessmentIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/analytics', currentLanguage),
+            },
+            {
+              key: 'ratings/reviews',
+              icon: <ReviewsIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/reviews', currentLanguage),
+            },
+            {
+              key: 'ratings/menu-performance',
+              icon: <TimelineIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/menu-performance', currentLanguage),
+            },
+            {
+              key: 'ratings/customer-insights',
+              icon: <PeopleIcon sx={{ fontSize: 24 }} />,
+              label: getTranslation('ratings/customer-insights', currentLanguage),
+            },
+          ],
+        },
+        {
+          key: 'promotions',
+          icon: <PromotionIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('promotions', currentLanguage),
+          path: '/promotions'
+        },
+        {
+          key: 'kitchen-management',
+          icon: <KitchenIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('kitchen-management', currentLanguage),
+          path: '/kitchen-management'
+        },
+        {
+          key: 'cashier-management',
+          icon: <CashierIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('cashier-management', currentLanguage),
+          path: '/cashier-management'
+        },
+        {
+          key: 'schedule-management',
+          icon: <ScheduleIconMenu sx={{ fontSize: 24 }} />,
+          label: getTranslation('schedule-management', currentLanguage),
+          path: '/schedule-management'
+        },
+        {
+          key: 'group-ordering/dashboard',
+          icon: <GroupsIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('group-ordering/dashboard', currentLanguage),
+          path: '/group-ordering/dashboard'
+        },
+        {
+          key: 'tipping/management',
+          icon: <TipIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('tipping/management', currentLanguage),
+          path: '/tipping/management'
+        },
+        {
+          key: 'payments/stripe-connect',
+          icon: <StripeIcon sx={{ fontSize: 24 }} />,
+          label: getTranslation('payments/stripe-connect', currentLanguage),
+          path: '/payments/stripe-connect'
+        },
       ],
     },
+    // {
+    //   category: getCategoryTranslation('Staff Management', currentLanguage),
+    //   items: [
+       
+    //   ],
+    // },
     {
       category: getCategoryTranslation('Settings & Administration', currentLanguage),
       items: [

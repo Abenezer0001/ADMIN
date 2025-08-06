@@ -490,6 +490,24 @@ export const RESOURCE_DEFINITIONS: ResourceDefinition[] = [
     },
     icon: 'Settings',
     description: 'Manage system settings'
+  },
+  {
+    name: 'rating',
+    displayName: 'Rating & Reviews',
+    routes: {
+      list: '/ratings/analytics',
+      create: '/ratings/reviews',
+      edit: '/ratings/reviews',
+      detail: '/ratings/analytics'
+    },
+    permissions: {
+      create: 'rating:create',
+      read: 'rating:read',
+      update: 'rating:update',
+      delete: 'rating:delete'
+    },
+    icon: 'Star',
+    description: 'Manage ratings and reviews'
   }
 ];
 

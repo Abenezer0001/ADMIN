@@ -1,6 +1,14 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/config';
 
+export interface ServiceCharge {
+  type: 'percentage' | 'flat';
+  value: number;
+  minAmount?: number;
+  maxAmount?: number;
+  enabled: boolean;
+}
+
 export interface Venue {
   _id: string;
   name: string;
@@ -8,6 +16,7 @@ export interface Venue {
   capacity: number;
   isActive: boolean;
   restaurantId: string | { _id: string; name: string }; // Can be populated or not
+  serviceCharge?: ServiceCharge;
 }
 
 class VenueService {

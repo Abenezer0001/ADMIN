@@ -14,6 +14,7 @@ import { PreferenceProvider } from './context/PreferenceContext';
 import { AuthProvider } from './context/AuthContext';
 import { RbacProvider } from './context/RbacContext';
 import { BusinessProvider } from './context/BusinessContext';
+import { RestaurantProvider } from './context/RestaurantContext';
 import RTLProvider from './components/RTLProvider';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -82,20 +83,22 @@ const App: React.FC = () => {
             <Router>
               <AuthProvider>
               <Routes>
-                {/* Public routes */}
+                {/* Public routes - Always English */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/password-setup" element={<PasswordSetup />} />
                 
-                {/* Protected routes */}
+                {/* Protected routes - With language preferences */}
                 <Route element={<ProtectedRoute />}>
                   <Route element={
                     <RTLProvider>
                       <RbacProvider>
                         <BusinessProvider>
-                          <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
-                            <AppRoutes />
-                          </MainLayout>
+                          <RestaurantProvider>
+                            <MainLayout toggleTheme={toggleTheme} themeMode={mode}>
+                              <AppRoutes />
+                            </MainLayout>
+                          </RestaurantProvider>
                         </BusinessProvider>
                       </RbacProvider>
                     </RTLProvider>

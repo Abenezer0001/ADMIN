@@ -42,6 +42,22 @@ export const menuTranslations: Translations = {
   'loyalty/analytics': { en: 'Loyalty Analytics', ar: 'تحليلات الولاء' },
   'loyalty/settings': { en: 'Loyalty Settings', ar: 'إعدادات الولاء' },
   
+  // Rating Management
+  'ratings': { en: 'Rating & Reviews', ar: 'التقييم والمراجعات' },
+  'ratings/analytics': { en: 'Rating Analytics', ar: 'تحليلات التقييم' },
+  'ratings/reviews': { en: 'Review Management', ar: 'إدارة المراجعات' },
+  'ratings/menu-performance': { en: 'Menu Performance', ar: 'أداء القائمة' },
+  'ratings/customer-insights': { en: 'Customer Insights', ar: 'رؤى العملاء' },
+  
+  // Staff Management
+  'promotions': { en: 'Promotions', ar: 'العروض الترويجية' },
+  'kitchen-management': { en: 'Kitchen Management', ar: 'إدارة المطبخ' },
+  'cashier-management': { en: 'Cashier Management', ar: 'إدارة الكاشير' },
+  'schedule-management': { en: 'Schedule Management', ar: 'إدارة الجدولة' },
+  'group-ordering/dashboard': { en: 'Group Ordering', ar: 'الطلبات الجماعية' },
+  'tipping/management': { en: 'Tipping Management', ar: 'إدارة البقشيش' },
+  'payments/stripe-connect': { en: 'Stripe Connect', ar: 'ستريب كونكت' },
+  
   // Settings & Administration
   'settings/admins': { en: 'Administrator Management', ar: 'إدارة المديرين' },
   'settings/rbac': { en: 'Access Control', ar: 'التحكم في الوصول' },
@@ -54,6 +70,7 @@ export const menuTranslations: Translations = {
   'business-management': { en: 'Business Management', ar: 'إدارة الأعمال' },
   'restaurant-management': { en: 'Restaurant Management', ar: 'إدارة المطعم' },
   'order-management': { en: 'Order Management', ar: 'إدارة الطلبات' },
+  'staff-management': { en: 'Staff Management', ar: 'إدارة الموظفين' },
   'settings-administration': { en: 'Settings & Administration', ar: 'الإعدادات والإدارة' }
 };
 

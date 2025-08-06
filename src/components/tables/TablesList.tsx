@@ -40,11 +40,15 @@ import QrCodeIcon from '@mui/icons-material/QrCode';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CategoryIcon from '@mui/icons-material/Category';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 
 import { tableService, TableType, Table as TableData } from '../../services/TableService';
 import { restaurantService, Restaurant } from '../../services/RestaurantService';
 import { venueService, Venue } from '../../services/VenueService';
 import TableQRCode from './TableQRCode';
+import CSVImportModal from '../common/CSVImportModal';
 
 const TablesList = () => {
   const navigate = useNavigate();
@@ -56,6 +60,7 @@ const TablesList = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tableToDelete, setTableToDelete] = useState<TableData | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [qrCodeModalOpen, setQrCodeModalOpen] = useState(false);
   const [tableForQR, setTableForQR] = useState<TableData | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -256,6 +261,12 @@ const TablesList = () => {
     setQrCodeModalOpen(true);
   };
 
+  const handleOpenMenu = (table: TableData) => {
+    const tableId = table._id || table.id;
+    const menuUrl = `https://menu.inseat.achievengine.com/${tableId}`;
+    window.open(menuUrl, '_blank');
+  };
+
   const handleToggleStatus = async (tableId: string, isActive: boolean) => {
     try {
       await tableService.updateTableStatus(tableId, !isActive);
@@ -288,6 +299,89 @@ const TablesList = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = ['Number', 'Capacity', 'Table Type', 'Venue', 'Restaurant', 'Is Active', 'Is Occupied'];
+    const csvContent = [
+      headers.join(','),
+      ...tables.map((table: TableData) => [
+        table.number,
+        table.capacity,
+        getTableTypeName(table.tableTypeId),
+        getVenueName(table.venueId),
+        getRestaurantName(table.restaurantId),
+        table.isActive ? 'true' : 'false',
+        table.isOccupied ? 'true' : 'false'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tables_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (data: any[]) => {
+    try {
+      const importedTables = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const tableData = {
+            number: row.number || '',
+            capacity: Number(row.capacity) || 0,
+            tableTypeId: row.table_type_id || '', // This should be mapped to actual table type ID
+            venueId: row.venue_id || '', // This should be mapped to actual venue ID
+            restaurantId: row.restaurant_id || '', // This should be mapped to actual restaurant ID
+            isActive: row.is_active !== false,
+            isOccupied: row.is_occupied === true,
+          };
+
+          // Validate required fields
+          if (!tableData.number) {
+            errors.push(`Row missing required field: number`);
+            continue;
+          }
+
+          const result = await tableService.createTable(tableData);
+          importedTables.push(result);
+        } catch (error) {
+          console.error('Error importing table row:', error);
+          errors.push(`Error importing table "${row.number || 'Unknown'}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Refresh the list
+      await fetchTables();
+
+      return {
+        success: importedTables.length > 0,
+        message: `Successfully imported ${importedTables.length} tables${errors.length > 0 ? ` with ${errors.length} errors` : ''}`,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (error) {
+      console.error('Import error:', error);
+      return {
+        success: false,
+        message: 'Failed to import tables',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+  };
+
   const getTableTypeName = (tableTypeId: any) => {
     // Case 1: tableTypeId is a TableType object with name property
     if (tableTypeId && typeof tableTypeId === 'object' && tableTypeId.name) {
@@ -301,6 +395,28 @@ const TablesList = () => {
     }
     
     // Default case: can't determine table type
+    return 'Unknown';
+  };
+
+  const getVenueName = (venueId: any) => {
+    if (venueId && typeof venueId === 'object' && venueId.name) {
+      return venueId.name;
+    }
+    if (typeof venueId === 'string') {
+      const venue = venues.find(v => v._id === venueId);
+      return venue ? venue.name : 'Unknown';
+    }
+    return 'Unknown';
+  };
+
+  const getRestaurantName = (restaurantId: any) => {
+    if (restaurantId && typeof restaurantId === 'object' && restaurantId.name) {
+      return restaurantId.name;
+    }
+    if (typeof restaurantId === 'string') {
+      const restaurant = restaurants.find(r => r._id === restaurantId);
+      return restaurant ? restaurant.name : 'Unknown';
+    }
     return 'Unknown';
   };
 
@@ -324,14 +440,31 @@ const TablesList = () => {
         <Typography variant="h4" component="h1">
           Tables
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          color="primary"
-          onClick={() => navigate('/tables/new')}
-        >
-          Add Table
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={handleOpenImportModal}
+          >
+            Import CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExportCSV}
+            disabled={tables.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            color="primary"
+            onClick={() => navigate('/tables/new')}
+          >
+            Add Table
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
@@ -478,6 +611,15 @@ const TablesList = () => {
                               <VisibilityIcon />
                             </IconButton>
                           </Tooltip>
+                          <Tooltip title="Open Menu">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenMenu(table)}
+                              color="primary"
+                            >
+                              <OpenInNewIcon />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title="Edit">
                             <IconButton
                               size="small"
@@ -579,6 +721,25 @@ const TablesList = () => {
           )}
         </Box>
       </Modal>
+
+      <CSVImportModal
+        open={importModalOpen}
+        onClose={handleCloseImportModal}
+        title="Tables"
+        templateHeaders={['Number', 'Capacity', 'Table Type ID', 'Venue ID', 'Restaurant ID', 'Is Active', 'Is Occupied']}
+        templateData={[
+          { 
+            number: 'T001', 
+            capacity: 4, 
+            table_type_id: '60f9b9b9b9b9b9b9b9b9b9b9', 
+            venue_id: '60f9b9b9b9b9b9b9b9b9b9b9', 
+            restaurant_id: '60f9b9b9b9b9b9b9b9b9b9b9', 
+            is_active: 'true', 
+            is_occupied: 'false' 
+          }
+        ]}
+        onImport={handleImportCSV}
+      />
     </Box>
   );
 };

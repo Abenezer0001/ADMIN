@@ -88,6 +88,15 @@ const InvoicesDetail = lazy(()=> import('./components/InvoicesDetail'));
 // Modifiers
 const ModifierList = lazy(() => import('./components/Modifier/ModifierList'));
 const ModifierDetail = lazy(() => import('./components/Modifier/ModifierDetail'));
+
+// Tipping System
+const TippingManagementDashboard = lazy(() => import('./components/tipping/TippingManagementDashboard'));
+
+// Stripe Connect
+const StripeConnectDashboard = lazy(() => import('./components/payments/StripeConnectDashboard'));
+
+// Group Ordering
+const GroupOrderingDashboard = lazy(() => import('./components/group-ordering/GroupOrderingDashboard'));
 const ModifierForm = lazy(() => import('./components/Modifier/ModifierForm'));
 
 // Categories
@@ -113,6 +122,25 @@ const MenuForm = lazy(() => import('./components/menus/MenuForm'));
 // Business Management
 const BusinessList = lazy(() => import('./components/business/BusinessList'));
 const BusinessDashboard = lazy(() => import('./components/business/BusinessDashboard'));
+
+// Inventory Management
+const RecipeManagement = lazy(() => import('./pages/RecipeManagement'));
+const SupplierManagement = lazy(() => import('./components/inventory/SupplierManagement'));
+const PurchaseOrderManagement = lazy(() => import('./components/inventory/PurchaseOrderManagement'));
+const RecipeCostAnalysis = lazy(() => import('./components/inventory/RecipeCostAnalysis'));
+const ApiTest = lazy(() => import('./components/inventory/ApiTest'));
+
+// Management Pages
+const PromotionList = lazy(() => import('./components/promotions/PromotionList'));
+const KitchenManagement = lazy(() => import('./pages/KitchenManagement'));
+const CashierManagement = lazy(() => import('./pages/CashierManagement'));
+const ScheduleManagement = lazy(() => import('./pages/ScheduleManagement'));
+
+// Rating Management Components
+const RatingAnalyticsDashboard = lazy(() => import('./components/ratings/RatingAnalyticsDashboard'));
+const ReviewManagement = lazy(() => import('./components/ratings/ReviewManagement'));
+const MenuItemRatingPerformance = lazy(() => import('./components/ratings/MenuItemRatingPerformance'));
+const CustomerInsights = lazy(() => import('./components/ratings/CustomerInsights'));
 
 const LoadingScreen = () => (
   <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -309,17 +337,17 @@ const AppRoutes = () => {
 
           {/* Analytics Routes */}
           <Route path="/analytics/customer-insight" element={
-            <ProtectedRoute resource="analytics" action="read">
+            <ProtectedRoute>
               <CustomerInsight />
             </ProtectedRoute>
           } />
           <Route path="/analytics/menu-report" element={
-            <ProtectedRoute resource="analytics" action="read">
+            <ProtectedRoute>
               <MenuReport />
             </ProtectedRoute>
           } />
           <Route path="/analytics/order-performance" element={
-            <ProtectedRoute resource="analytics" action="read">
+            <ProtectedRoute>
               <OrderPerformance />
             </ProtectedRoute>
           } />
@@ -563,6 +591,50 @@ const AppRoutes = () => {
               <LoyaltySettings />
             </ProtectedRoute>
           } />
+
+          {/* Rating Management Routes */}
+          <Route path="/ratings/analytics" element={
+            <ProtectedRoute resource="rating" action="read">
+              <RatingAnalyticsDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/reviews" element={
+            <ProtectedRoute resource="rating" action="read">
+              <ReviewManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/menu-performance" element={
+            <ProtectedRoute resource="rating" action="read">
+              <MenuItemRatingPerformance />
+            </ProtectedRoute>
+          } />
+          <Route path="/ratings/customer-insights" element={
+            <ProtectedRoute resource="rating" action="read">
+              <CustomerInsights />
+            </ProtectedRoute>
+          } />
+
+          {/* Tipping Management Routes */}
+          <Route path="/tipping/management" element={
+            <ProtectedRoute resource="payment" action="read">
+              <TippingManagementDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Stripe Connect Routes */}
+          <Route path="/payments/stripe-connect" element={
+            <ProtectedRoute resource="payment" action="read">
+              <StripeConnectDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Group Ordering Routes */}
+          <Route path="/group-ordering/dashboard" element={
+            <ProtectedRoute resource="order" action="read">
+              <GroupOrderingDashboard />
+            </ProtectedRoute>
+          } />
+
           <Route path="/settings/notifications" element={
             <ProtectedRoute>
               <Notifications />
@@ -578,6 +650,38 @@ const AppRoutes = () => {
           <Route path="/inventory" element={
             <ProtectedRoute resource="restaurant" action="read">
               <Inventory />
+            </ProtectedRoute>
+          } />
+          
+          {/* Inventory Management Routes */}
+          <Route path="/inventory/recipes" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <RecipeManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/suppliers" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <SupplierManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/purchase-orders" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <PurchaseOrderManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/analytics" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <RecipeCostAnalysis />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/waste-tracking" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <InventoryManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/api-test" element={
+            <ProtectedRoute resource="restaurant" action="read">
+              <ApiTest />
             </ProtectedRoute>
           } />
           
@@ -622,6 +726,28 @@ const AppRoutes = () => {
           <Route path="/users/roles/:id" element={
             <ProtectedRoute resource="user" action="read">
               <UserDetail />
+            </ProtectedRoute>
+          } />
+
+          {/* Management Pages - Temporarily without specific resource checks */}
+          <Route path="/promotions" element={
+            <ProtectedRoute>
+              <PromotionList />
+            </ProtectedRoute>
+          } />
+          <Route path="/kitchen-management" element={
+            <ProtectedRoute>
+              <KitchenManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/cashier-management" element={
+            <ProtectedRoute>
+              <CashierManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/schedule-management" element={
+            <ProtectedRoute>
+              <ScheduleManagement />
             </ProtectedRoute>
           } />
         </Routes>

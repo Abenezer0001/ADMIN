@@ -3,7 +3,8 @@ import {
   Box, Button, TextField, Typography, Paper, FormControl, InputLabel,
   Select, MenuItem, FormControlLabel, Switch, CircularProgress, Dialog,
   DialogActions, DialogContent, DialogContentText, DialogTitle, SelectChangeEvent,
-  Autocomplete, List, ListItem, ListItemText, ListItemIcon, Collapse, IconButton, Chip, Divider
+  Autocomplete, List, ListItem, ListItemText, ListItemIcon, Collapse, IconButton, Chip, Divider,
+  Card, CardHeader, CardContent, Grid
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { menuService, CreateMenuDto, UpdateMenuDto, Menu } from '../../services/MenuService';
@@ -12,6 +13,7 @@ import { categoryService, Category } from '../../services/CategoryService';
 import { subCategoryService, SubCategory } from '../../services/SubCategoryService';
 import { subSubCategoryService, SubSubCategory } from '../../services/SubSubCategoryService';
 import { venueService, Venue } from '../../services/VenueService';
+import { scheduleService, Schedule, DailySchedule, CreateScheduleRequest } from '../../services/ScheduleService';
 // Import icons for expand/collapse functionality
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -83,6 +85,19 @@ const MenuForm = ({ title }: MenuFormProps) => {
   const [selectedCategoriesToAdd, setSelectedCategoriesToAdd] = React.useState<Category[]>([]); // Use React.useState
   const [selectedSubcategoriesToAdd, setSelectedSubcategoriesToAdd] = React.useState<SubCategory[]>([]); // Use React.useState
 
+  // Schedule state
+  const [enableSchedule, setEnableSchedule] = React.useState(false);
+  const [existingSchedule, setExistingSchedule] = React.useState<Schedule | null>(null);
+  const [scheduleData, setScheduleData] = React.useState<DailySchedule[]>([
+    { dayOfWeek: 0, isOpen: false, openTime: '09:00', closeTime: '22:00' }, // Sunday
+    { dayOfWeek: 1, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Monday
+    { dayOfWeek: 2, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Tuesday
+    { dayOfWeek: 3, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Wednesday
+    { dayOfWeek: 4, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Thursday
+    { dayOfWeek: 5, isOpen: true, openTime: '09:00', closeTime: '22:00' },  // Friday
+    { dayOfWeek: 6, isOpen: true, openTime: '09:00', closeTime: '23:00' },  // Saturday
+  ]);
+
   // Fetch restaurants for the dropdown
   React.useEffect(() => { // Use React.useEffect
     const fetchRestaurants = async () => {
@@ -125,6 +140,43 @@ const MenuForm = ({ title }: MenuFormProps) => {
             categories: categoryIds,
             subCategories: subCategoryIds,
           }));
+
+          // Check for existing schedule
+          if (menuId) {
+            try {
+              const schedules = await scheduleService.getAllSchedules({
+                type: 'MENU',
+                menu: menuId
+              });
+
+              console.log('Fetched menu schedules:', schedules);
+
+              if (schedules && schedules.length > 0) {
+                const menuSchedule = schedules[0];
+                setExistingSchedule(menuSchedule);
+                setEnableSchedule(true);
+                
+                console.log('Found existing menu schedule:', menuSchedule);
+                
+                // Convert backend schedule format to frontend format
+                // Backend uses 'dailySchedule' (singular), not 'dailySchedules' (plural)
+                const dailyScheduleData = (menuSchedule as any).dailySchedule || (menuSchedule as any).dailySchedules;
+                
+                if (dailyScheduleData && Array.isArray(dailyScheduleData)) {
+                  console.log('Converting daily schedule data:', dailyScheduleData);
+                  setScheduleData(dailyScheduleData.map((day: any) => ({
+                    dayOfWeek: day.dayOfWeek,
+                    isOpen: day.isOpen,
+                    openTime: day.openTime || day.startTime || '09:00',
+                    closeTime: day.closeTime || day.endTime || '22:00'
+                  })));
+                }
+              }
+            } catch (scheduleErr) {
+              console.error('Error fetching menu schedule:', scheduleErr);
+              // Don't fail the whole operation for schedule errors
+            }
+          }
         }
         setError(null);
       } catch (err) {
@@ -252,6 +304,27 @@ const MenuForm = ({ title }: MenuFormProps) => {
     setFormData((prev: MenuFormData) => ({ ...prev, isActive: event.target.checked }));
   };
 
+  // Schedule handlers
+  const handleScheduleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEnableSchedule(e.target.checked);
+  };
+
+  const handleScheduleDayChange = (dayIndex: number, field: keyof DailySchedule, value: any) => {
+    setScheduleData((prev: DailySchedule[]) => {
+      const newSchedule = [...prev];
+      newSchedule[dayIndex] = {
+        ...newSchedule[dayIndex],
+        [field]: value
+      };
+      return newSchedule;
+    });
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek];
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -277,6 +350,8 @@ const MenuForm = ({ title }: MenuFormProps) => {
         restaurantId: formData.restaurantId,
       };
 
+      let menuId_result = menuId;
+
       if (menuId) {
         const updatePayload: UpdateMenuDto = {
              name: formData.name,
@@ -288,8 +363,47 @@ const MenuForm = ({ title }: MenuFormProps) => {
         };
         await menuService.updateMenu(menuId, updatePayload);
       } else {
-        await menuService.createMenu(payload as CreateMenuDto);
+        const newMenu = await menuService.createMenu(payload as CreateMenuDto);
+        menuId_result = (newMenu as any)._id || (newMenu as any).id;
       }
+
+      // Handle schedule if enabled
+      if (enableSchedule && menuId_result) {
+        try {
+          if (existingSchedule) {
+            // Update existing schedule
+            await scheduleService.updateSchedule(existingSchedule._id, {
+              dailySchedules: scheduleData,
+              isActive: true
+            });
+          } else {
+            // Create new schedule
+            const schedulePayload: CreateScheduleRequest = {
+              name: `${formData.name} Availability`,
+              description: `Availability schedule for ${formData.name} menu`,
+              type: 'MENU',
+              restaurant: formData.restaurantId,
+              menu: menuId_result,
+              dailySchedules: scheduleData,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              effectiveFrom: new Date()
+            };
+
+            await scheduleService.createSchedule(schedulePayload);
+          }
+        } catch (scheduleErr) {
+          console.error('Error managing schedule:', scheduleErr);
+          // Don't throw, just log - menu was created/updated successfully
+        }
+      } else if (!enableSchedule && existingSchedule) {
+        // Deactivate existing schedule
+        try {
+          await scheduleService.deactivateSchedule(existingSchedule._id);
+        } catch (scheduleErr) {
+          console.error('Error deactivating schedule:', scheduleErr);
+        }
+      }
+
       navigate('/menus/list');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to save menu.');
@@ -622,6 +736,74 @@ const MenuForm = ({ title }: MenuFormProps) => {
               ) : (
                 renderCategoryHierarchy()
               )}
+            </Box>
+
+            {/* Schedule Configuration */}
+            <Box sx={{ mt: 3 }}>
+              <Card>
+                <CardHeader 
+                  title="Menu Schedule"
+                  subheader="Configure when this menu is available"
+                  action={
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={enableSchedule}
+                          onChange={handleScheduleToggle}
+                        />
+                      }
+                      label="Enable Schedule"
+                    />
+                  }
+                />
+                {enableSchedule && (
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      When this menu is not available, all items in this menu will be hidden from customers.
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {scheduleData.map((day: DailySchedule, index: number) => (
+                        <Grid item xs={12} key={index}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography sx={{ width: 100 }}>{getDayName(day.dayOfWeek)}</Typography>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={day.isOpen}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'isOpen', e.target.checked)}
+                                />
+                              }
+                              label="Available"
+                              sx={{ mr: 2 }}
+                            />
+                            {day.isOpen && (
+                              <>
+                                <TextField
+                                  type="time"
+                                  label="From"
+                                  value={day.openTime}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'openTime', e.target.value)}
+                                  size="small"
+                                  sx={{ width: 150 }}
+                                />
+                                <TextField
+                                  type="time"
+                                  label="Until"
+                                  value={day.closeTime}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleScheduleDayChange(index, 'closeTime', e.target.value)}
+                                  size="small"
+                                  sx={{ width: 150 }}
+                                />
+                              </>
+                            )}
+                          </Box>
+                          {index < scheduleData.length - 1 && <Divider sx={{ my: 1 }} />}
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </CardContent>
+                )}
+              </Card>
             </Box>
 
             {error && (

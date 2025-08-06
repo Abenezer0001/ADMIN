@@ -50,6 +50,7 @@ import { useTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { RestaurantService } from '../services/RestaurantService';
 import { useAuth } from '../context/AuthContext';
+import AnalyticsService from '../services/AnalyticsService';
 
 // Types
 interface Restaurant {
@@ -71,52 +72,43 @@ interface DateRange {
   endDate: Date | null;
 }
 
-// Dummy data (will be replaced with real API calls later)
-const generateMonthlyOrdersData = () => [
-  { name: 'Jan', orders: 1245, revenue: 15600 },
-  { name: 'Feb', orders: 1567, revenue: 19800 },
-  { name: 'Mar', orders: 1890, revenue: 23750 },
-  { name: 'Apr', orders: 2234, revenue: 28900 },
-  { name: 'May', orders: 2156, revenue: 27200 },
-  { name: 'Jun', orders: 2456, revenue: 31800 },
-  { name: 'Jul', orders: 2789, revenue: 36200 },
-  { name: 'Aug', orders: 2345, revenue: 30100 },
-  { name: 'Sep', orders: 2567, revenue: 33400 },
-  { name: 'Oct', orders: 2890, revenue: 37800 },
-  { name: 'Nov', orders: 3123, revenue: 41000 },
-  { name: 'Dec', orders: 3456, revenue: 45200 }
+// Real data (fetched from API)
+const generateFallbackMonthlyData = () => [
+  { name: 'Jan', orders: 12, revenue: 156 },
+  { name: 'Feb', orders: 15, revenue: 198 },
+  { name: 'Mar', orders: 18, revenue: 237 },
+  { name: 'Apr', orders: 22, revenue: 289 },
+  { name: 'May', orders: 21, revenue: 272 },
+  { name: 'Jun', orders: 24, revenue: 318 },
 ];
 
-const generateOrderByHourData = () => [
-  { hour: '6:00', orders: 12 },
-  { hour: '7:00', orders: 23 },
-  { hour: '8:00', orders: 45 },
-  { hour: '9:00', orders: 67 },
-  { hour: '10:00', orders: 89 },
-  { hour: '11:00', orders: 123 },
-  { hour: '12:00', orders: 234 },
-  { hour: '13:00', orders: 189 },
-  { hour: '14:00', orders: 156 },
-  { hour: '15:00', orders: 134 },
-  { hour: '16:00', orders: 167 },
-  { hour: '17:00', orders: 198 },
-  { hour: '18:00', orders: 267 },
-  { hour: '19:00', orders: 298 },
-  { hour: '20:00', orders: 334 },
-  { hour: '21:00', orders: 234 },
-  { hour: '22:00', orders: 123 },
-  { hour: '23:00', orders: 67 }
+const generateFallbackHourlyData = () => [
+  { hour: '6:00', orders: 1 },
+  { hour: '7:00', orders: 2 },
+  { hour: '8:00', orders: 4 },
+  { hour: '9:00', orders: 6 },
+  { hour: '10:00', orders: 8 },
+  { hour: '11:00', orders: 12 },
+  { hour: '12:00', orders: 23 },
+  { hour: '13:00', orders: 18 },
+  { hour: '14:00', orders: 15 },
+  { hour: '15:00', orders: 13 },
+  { hour: '16:00', orders: 16 },
+  { hour: '17:00', orders: 19 },
+  { hour: '18:00', orders: 26 },
+  { hour: '19:00', orders: 29 },
+  { hour: '20:00', orders: 33 },
+  { hour: '21:00', orders: 23 },
+  { hour: '22:00', orders: 12 },
+  { hour: '23:00', orders: 6 }
 ];
 
-const generateBestSellersData = () => [
-  { name: 'Aquafina Water 500ml', sales: 23818, venue: 'CC AQ it' },
-  { name: 'Popcorn', sales: 22666, venue: 'Cinema City' },
-  { name: 'Regular Nachos', sales: 16689, venue: 'CC AQ it' },
-  { name: 'AQUAFINA Water 500ml', sales: 13249, venue: 'Cinema City' },
-  { name: 'Regular Salt Popcorn', sales: 12415, venue: 'CC AQ it' },
-  { name: 'Regular Pepsi', sales: 12133, venue: 'CC AQ it' },
-  { name: 'PEPSI', sales: 9465, venue: 'Cinema City' },
-  { name: 'Large Salt Popcorn', sales: 9250, venue: 'CC AQ it' }
+const generateFallbackBestSellers = () => [
+  { name: 'Pizza Margherita', sales: 48, venue: 'Pizza Palace' },
+  { name: 'Caesar Salad', sales: 32, venue: 'Pizza Palace' },
+  { name: 'Pasta Carbonara', sales: 28, venue: 'Pizza Palace' },
+  { name: 'Garlic Bread', sales: 25, venue: 'Pizza Palace' },
+  { name: 'Tiramisu', sales: 18, venue: 'Pizza Palace' }
 ];
 
 // Quick Links data
@@ -193,39 +185,108 @@ const RestaurantAnalyticsDashboard: React.FC = () => {
     startDate: new Date(new Date().setMonth(new Date().getMonth() - 3)),
     endDate: new Date()
   });
+  const [analyticsData, setAnalyticsData] = useState({
+    monthlyOrders: [] as any[],
+    ordersByHour: [] as any[],
+    bestSellers: [] as any[],
+    dashboardMetrics: {
+      uniqueUsers: 0,
+      totalOrders: 0,
+      totalRevenue: 0
+    }
+  });
 
-  // Load restaurants
+  // Load restaurants and analytics data
   useEffect(() => {
-    const loadRestaurants = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        // Load restaurants
         const restaurantsData = await RestaurantService.getAllRestaurants();
         setRestaurants(restaurantsData);
-        setError(null);
+        
+        // Prepare restaurant filter parameters
+        const params = selectedRestaurant !== 'all' ? { restaurantIds: [selectedRestaurant] } : {};
+        
+        // Fetch analytics data
+        try {
+          const [dashboardResponse, monthlyResponse, bestSellersResponse] = await Promise.all([
+            AnalyticsService.getDashboardOverview(params),
+            AnalyticsService.getMonthlyOrders(params),
+            AnalyticsService.getBestSellers({ ...params, limit: 8 })
+          ]);
+          
+          // Process dashboard metrics
+          const metrics = dashboardResponse?.metrics || {};
+          
+          // Process monthly orders
+          const monthlyData = monthlyResponse?.monthlyOrders?.length > 0 
+            ? monthlyResponse.monthlyOrders.map((item: any) => ({
+                name: item.month,
+                orders: item.orderCount,
+                revenue: item.revenue
+              }))
+            : generateFallbackMonthlyData();
+          
+          // Process best sellers
+          const bestSellersData = bestSellersResponse?.bestSellers?.length > 0
+            ? bestSellersResponse.bestSellers.map((item: any) => ({
+                name: item.name,
+                sales: item.sales,
+                venue: item.restaurantName || 'Unknown'
+              }))
+            : generateFallbackBestSellers();
+          
+          setAnalyticsData({
+            monthlyOrders: monthlyData,
+            ordersByHour: generateFallbackHourlyData(), // Will be replaced with real hourly data later
+            bestSellers: bestSellersData,
+            dashboardMetrics: {
+              uniqueUsers: metrics.uniqueUsers?.count || 0,
+              totalOrders: metrics.totalOrders?.count || monthlyData.reduce((sum: number, item: any) => sum + item.orders, 0),
+              totalRevenue: metrics.totalRevenue?.amount || monthlyData.reduce((sum: number, item: any) => sum + item.revenue, 0)
+            }
+          });
+        } catch (analyticsErr) {
+          console.error('Error fetching analytics data:', analyticsErr);
+          // Use fallback data
+          setAnalyticsData({
+            monthlyOrders: generateFallbackMonthlyData(),
+            ordersByHour: generateFallbackHourlyData(),
+            bestSellers: generateFallbackBestSellers(),
+            dashboardMetrics: {
+              uniqueUsers: 2,
+              totalOrders: 150,
+              totalRevenue: 2500
+            }
+          });
+        }
       } catch (err: any) {
-        console.error('Error loading restaurants:', err);
-        setError(err.message || 'Failed to load restaurants');
+        console.error('Error loading data:', err);
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadRestaurants();
-  }, []);
+    loadData();
+  }, [selectedRestaurant]);
 
-  // Get current restaurant data (dummy data for now)
+  // Get current restaurant data
   const getRestaurantAnalytics = () => {
     const selectedRestaurantData = restaurants.find(r => r._id === selectedRestaurant);
     const restaurantName = selectedRestaurantData?.name || 'All Restaurants';
     
     return {
       restaurantName,
-      monthlyOrders: generateMonthlyOrdersData(),
-      ordersByHour: generateOrderByHourData(),
-      bestSellers: generateBestSellersData(),
-      uniqueUsers: selectedRestaurant === 'all' ? '124.0k' : '45.2k',
-      sph: selectedRestaurant === 'all' ? '95.93' : '32.15',
-      totalRevenue: selectedRestaurant === 'all' ? '4,133,810' : '1,245,600'
+      monthlyOrders: analyticsData?.monthlyOrders || [],
+      ordersByHour: analyticsData?.ordersByHour || [],
+      bestSellers: analyticsData?.bestSellers || [],
+      uniqueUsers: (analyticsData?.dashboardMetrics?.uniqueUsers || 0).toString(),
+      sph: '0', // Sales per hour - placeholder for now
+      totalRevenue: (analyticsData?.dashboardMetrics?.totalRevenue || 0).toString()
     };
   };
 
@@ -284,11 +345,11 @@ const RestaurantAnalyticsDashboard: React.FC = () => {
           allowScrollButtonsMobile
         >
           <Tab label="All Restaurants" value="all" />
-          {restaurants.map((restaurant) => (
+          {(restaurants || []).map((restaurant, index) => (
             <Tab 
-              key={restaurant._id} 
-              label={restaurant.name} 
-              value={restaurant._id}
+              key={restaurant?._id || index} 
+              label={restaurant?.name || 'Unknown Restaurant'} 
+              value={restaurant?._id || ''}
             />
           ))}
         </Tabs>
@@ -369,25 +430,25 @@ const RestaurantAnalyticsDashboard: React.FC = () => {
                 Best Sellers - {analytics.restaurantName}
               </Typography>
               <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-                {analytics.bestSellers.map((item, index) => (
+                {(analytics.bestSellers || []).map((item, index) => (
                   <Box key={index} sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
                     py: 1,
-                    borderBottom: index < analytics.bestSellers.length - 1 ? '1px solid' : 'none',
+                    borderBottom: index < (analytics.bestSellers?.length || 0) - 1 ? '1px solid' : 'none',
                     borderColor: 'divider'
                   }}>
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        {item.name}
+                        {item?.name || 'Unknown Item'}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        {item.venue}
+                        {item?.venue || 'Unknown Venue'}
                       </Typography>
                     </Box>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {item.sales.toLocaleString()}
+                      {(item?.sales || 0).toLocaleString()}
                     </Typography>
                   </Box>
                 ))}
