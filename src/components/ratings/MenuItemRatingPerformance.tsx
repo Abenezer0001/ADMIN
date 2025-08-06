@@ -64,7 +64,7 @@ type SortField = 'rating' | 'review_count' | 'recent_activity';
 type SortOrder = 'asc' | 'desc';
 
 const MenuItemRatingPerformance: React.FC = () => {
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   
   const [items, setItems] = useState<MenuItemPerformance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,12 +78,17 @@ const MenuItemRatingPerformance: React.FC = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const loadMenuItemsPerformance = async () => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) {
+      console.log('No restaurant selected for menu performance, waiting...');
+      return;
+    }
+    
+    console.log('Loading menu item performance for restaurant:', selectedRestaurantId);
+    setLoading(true);
     
     try {
-      setLoading(true);
       const response = await RatingService.getMenuItemsRatingPerformance(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         {
           sortBy,
           sortOrder,
@@ -94,8 +99,10 @@ const MenuItemRatingPerformance: React.FC = () => {
       );
       setItems(response.items);
       setTotalItems(response.pagination.totalItems);
+      console.log('Menu item performance loaded successfully');
     } catch (error) {
       console.error('Failed to load menu items performance:', error);
+      // Keep items array as is on error, don't reset it
     } finally {
       setLoading(false);
     }
@@ -154,12 +161,28 @@ const MenuItemRatingPerformance: React.FC = () => {
 
   useEffect(() => {
     loadMenuItemsPerformance();
-  }, [selectedRestaurant, page, rowsPerPage, sortBy, sortOrder, categoryFilter]);
+  }, [selectedRestaurantId, page, rowsPerPage, sortBy, sortOrder, categoryFilter]);
 
+  // Show loading state when data is loading and no items yet
   if (loading && items.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
         <CircularProgress />
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          Loading menu performance data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Show message when no restaurant is selected
+  if (!selectedRestaurantId) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
+        <AssessmentIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">
+          Please select a restaurant to view menu performance
+        </Typography>
       </Box>
     );
   }

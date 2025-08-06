@@ -29,11 +29,13 @@ export interface Schedule {
   _id: string;
   name: string;
   description?: string;
-  type: 'RESTAURANT' | 'MENU_ITEM' | 'KITCHEN' | 'VENUE';
+  type: 'RESTAURANT' | 'MENU_ITEM' | 'KITCHEN' | 'VENUE' | 'CATEGORY' | 'BUSINESS';
   restaurant: string;
   venue?: string;
   kitchen?: string;
   menuItems?: string[];
+  category?: string;
+  business?: string;
   dailySchedules: DailySchedule[];
   exceptions: ScheduleException[];
   timezone: string;
@@ -51,11 +53,13 @@ export interface Schedule {
 export interface CreateScheduleRequest {
   name: string;
   description?: string;
-  type: 'RESTAURANT' | 'MENU_ITEM' | 'KITCHEN' | 'VENUE';
+  type: 'RESTAURANT' | 'MENU_ITEM' | 'KITCHEN' | 'VENUE' | 'CATEGORY' | 'BUSINESS';
   restaurant: string;
   venue?: string;
   kitchen?: string;
   menuItems?: string[];
+  category?: string;
+  business?: string;
   dailySchedules: DailySchedule[];
   exceptions?: ScheduleException[];
   timezone: string;
@@ -79,6 +83,8 @@ export interface ScheduleFilters {
   restaurant?: string;
   venue?: string;
   kitchen?: string;
+  category?: string;
+  business?: string;
   approvalStatus?: string;
   isActive?: boolean;
   effectiveDate?: Date;
@@ -212,7 +218,41 @@ class ScheduleService {
   async updateSchedule(id: string, updateData: UpdateScheduleRequest): Promise<Schedule> {
     try {
       console.log('Updating schedule:', id, updateData);
-      const response = await axiosInstance.put(`/schedules/${id}`, updateData);
+      
+      // Map frontend field names to backend field names similar to createSchedule
+      const mappedData: any = { ...updateData };
+      
+      // Map dailySchedules if provided
+      if (updateData.dailySchedules) {
+        mappedData.dailySchedule = updateData.dailySchedules.map(day => ({
+          dayOfWeek: day.dayOfWeek,
+          isOpen: day.isOpen,
+          startTime: day.openTime, // Map openTime to startTime
+          endTime: day.closeTime,  // Map closeTime to endTime
+          breaks: day.breaks?.map(breakItem => ({
+            startTime: breakItem.startTime,
+            endTime: breakItem.endTime,
+            name: breakItem.name
+          })) || []
+        }));
+        // Remove the original dailySchedules field
+        delete mappedData.dailySchedules;
+      }
+      
+      // Map other fields if provided
+      if (updateData.effectiveFrom) {
+        mappedData.startDate = updateData.effectiveFrom;
+        delete mappedData.effectiveFrom;
+      }
+      
+      if (updateData.effectiveTo) {
+        mappedData.endDate = updateData.effectiveTo;
+        delete mappedData.effectiveTo;
+      }
+      
+      console.log('Mapped update data for backend:', mappedData);
+      
+      const response = await axiosInstance.put(`/schedules/${id}`, mappedData);
       console.log('Update schedule response:', response.data);
       return (response.data as any).data || response.data as Schedule;
     } catch (error: any) {

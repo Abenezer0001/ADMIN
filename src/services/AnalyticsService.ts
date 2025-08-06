@@ -166,6 +166,70 @@ export interface BestSellersData {
   }>;
 }
 
+export interface CustomerOverviewData {
+  overview: {
+    totalCustomers: {
+      count: number;
+      period: string;
+    };
+    newCustomers: {
+      count: number;
+      period: string;
+    };
+    retentionRate: {
+      percentage: number;
+      description: string;
+    };
+    averageOrderValue: {
+      amount: number;
+      currency: string;
+    };
+  };
+  segments: Array<{
+    segment: string;
+    count: number;
+    percentage: number;
+    averageSpend: number;
+    averageVisits: number;
+  }>;
+}
+
+export interface TopCustomersData {
+  topCustomers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    visits: number;
+    totalSpent: number;
+    averageOrderValue: number;
+    loyaltyStatus: string;
+    lastVisit: string;
+    favoriteItem?: string;
+  }>;
+}
+
+export interface CustomerFeedbackData {
+  feedback: Array<{
+    id: string;
+    customerName: string;
+    rating: number;
+    comment: string;
+    date: string;
+    restaurantName?: string;
+  }>;
+  summary: {
+    averageRating: number;
+    totalReviews: number;
+    ratingDistribution: {
+      '5': number;
+      '4': number;
+      '3': number;
+      '2': number;
+      '1': number;
+    };
+  };
+}
+
 class AnalyticsService {
   private baseUrl = `${API_BASE_URL}/analytics`;
 
@@ -347,6 +411,104 @@ class AnalyticsService {
 
     const response = await api.get(
       `${this.baseUrl}/dashboard/best-sellers${queryParams.toString() ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  }
+
+  // Customer Analytics APIs
+  async getCustomerOverview(params?: {
+    restaurantIds?: string[];
+    startDate?: string;
+    endDate?: string;
+  }): Promise<CustomerOverviewData> {
+    const queryParams = new URLSearchParams();
+    if (params?.restaurantIds) {
+      queryParams.append('restaurantIds', params.restaurantIds.join(','));
+    }
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+
+    const response = await api.get(
+      `${this.baseUrl}/customers/overview${queryParams.toString() ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  }
+
+  async getTopCustomers(params?: {
+    restaurantIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<TopCustomersData> {
+    const queryParams = new URLSearchParams();
+    if (params?.restaurantIds) {
+      queryParams.append('restaurantIds', params.restaurantIds.join(','));
+    }
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const response = await api.get(
+      `${this.baseUrl}/customers/top-customers${queryParams.toString() ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  }
+
+  async getCustomerFeedback(params?: {
+    restaurantIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<CustomerFeedbackData> {
+    const queryParams = new URLSearchParams();
+    if (params?.restaurantIds) {
+      queryParams.append('restaurantIds', params.restaurantIds.join(','));
+    }
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const response = await api.get(
+      `${this.baseUrl}/customers/feedback-analysis${queryParams.toString() ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  }
+
+  // Additional Menu Analytics APIs
+  async getCategoryPerformance(params?: {
+    restaurantIds?: string[];
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.restaurantIds) {
+      queryParams.append('restaurantIds', params.restaurantIds.join(','));
+    }
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+
+    const response = await api.get(
+      `${this.baseUrl}/menu/category-performance${queryParams.toString() ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  }
+
+  async getLowPerformingItems(params?: {
+    restaurantIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.restaurantIds) {
+      queryParams.append('restaurantIds', params.restaurantIds.join(','));
+    }
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const response = await api.get(
+      `${this.baseUrl}/menu/low-performing${queryParams.toString() ? `?${queryParams}` : ''}`
     );
     return response.data;
   }

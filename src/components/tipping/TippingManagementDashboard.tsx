@@ -110,7 +110,7 @@ function TabPanel(props: TabPanelProps) {
 
 const TippingManagementDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -129,43 +129,63 @@ const TippingManagementDashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) {
+      console.log('No restaurant selected, waiting...');
+      return;
+    }
     
+    console.log('Loading tipping data for restaurant:', selectedRestaurantId);
+    setLoading(true);
+    
+    // Load statistics with individual error handling
     try {
-      setLoading(true);
-      
-      // Load statistics
       const statsData = await TippingService.getTipStatistics({
-        restaurantId: selectedRestaurant._id,
+        restaurantId: selectedRestaurantId,
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString(),
         groupBy: 'day'
       });
       setStatistics(statsData);
+      console.log('Statistics loaded successfully');
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    }
 
-      // Load staff members for restaurant
-      const staffData = await TippingService.getRestaurantStaff(selectedRestaurant._id);
+    // Load staff members with individual error handling
+    try {
+      const staffData = await TippingService.getRestaurantStaff(selectedRestaurantId);
       setStaffMembers(staffData);
+      console.log('Staff data loaded successfully');
+    } catch (error) {
+      console.error('Failed to load staff data:', error);
+    }
 
-      // Load recent tips
-      const tipsData = await TippingService.getRecentTips(selectedRestaurant._id, {
+    // Load recent tips with individual error handling
+    try {
+      const tipsData = await TippingService.getRecentTips(selectedRestaurantId, {
         limit: 50,
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString()
       });
       setTips(tipsData);
+      console.log('Tips data loaded successfully');
+    } catch (error) {
+      console.error('Failed to load tips data:', error);
+    }
 
-      // Load recent payouts
-      const payoutsData = await TippingService.getPayoutHistory(selectedRestaurant._id, {
+    // Load recent payouts with individual error handling
+    try {
+      const payoutsData = await TippingService.getPayoutHistory(selectedRestaurantId, {
         limit: 20
       });
       setPayouts(payoutsData);
-
+      console.log('Payouts data loaded successfully');
     } catch (error) {
-      console.error('Failed to load tipping data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load payouts data:', error);
     }
+
+    console.log('Tipping data loading completed');
+    setLoading(false);
   };
 
   const refreshData = async () => {
@@ -198,11 +218,11 @@ const TippingManagementDashboard: React.FC = () => {
   };
 
   const handleExportData = async (type: 'tips' | 'payouts', format: 'csv' | 'pdf') => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) return;
     
     try {
       const blob = await TippingService.exportData(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         type,
         {
           startDate: dateRange.startDate.toISOString(),
@@ -214,7 +234,7 @@ const TippingManagementDashboard: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${type}-${selectedRestaurant.name}-${new Date().toISOString().split('T')[0]}.${format}`;
+      a.download = `${type}-${"restaurant"}-${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -227,7 +247,7 @@ const TippingManagementDashboard: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedRestaurant, dateRange]);
+  }, [selectedRestaurantId, dateRange]);
 
   const getStaffPerformanceChartData = () => {
     if (!statistics?.topRecipients) return { labels: [], datasets: [] };
@@ -289,10 +309,26 @@ const TippingManagementDashboard: React.FC = () => {
     }
   };
 
+  // Show loading state when data is loading
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
         <CircularProgress />
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          Loading tipping data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Show message when no restaurant is selected
+  if (!selectedRestaurantId) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
+        <InfoIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">
+          Please select a restaurant to view tipping data
+        </Typography>
       </Box>
     );
   }

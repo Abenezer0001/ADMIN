@@ -65,7 +65,7 @@ interface CustomerSegment {
 }
 
 const CustomerInsights: React.FC = () => {
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   
   const [loading, setLoading] = useState(true);
   const [topReviewers, setTopReviewers] = useState<TopReviewer[]>([]);
@@ -84,35 +84,45 @@ const CustomerInsights: React.FC = () => {
   }>>([]);
 
   const loadCustomerInsights = async () => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) {
+      console.log('No restaurant selected for customer insights, waiting...');
+      return;
+    }
+    
+    console.log('Loading customer insights for restaurant:', selectedRestaurantId);
+    setLoading(true);
     
     try {
-      setLoading(true);
-      
       // Load analytics data
       const analyticsData = await RatingService.getRestaurantRatingAnalytics(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         {
           startDate: new Date(Date.now() - getDateRangeMs(timeRange)).toISOString(),
           endDate: new Date().toISOString()
         }
       );
       
-      // Load review trends
+      // Load review trends  
       const trendsData = await RatingService.getRatingTrends(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         timeRange
       );
       
-      setTopReviewers(analyticsData.customerInsights.topReviewers);
-      setReviewFrequency(analyticsData.customerInsights.reviewFrequency);
-      setReviewTrends(trendsData);
+      setTopReviewers(analyticsData.customerInsights?.topReviewers || []);
+      setReviewFrequency(analyticsData.customerInsights?.reviewFrequency || {
+        daily: 0,
+        weekly: 0,
+        monthly: 0
+      });
+      setReviewTrends(trendsData || []);
       
       // Generate customer segments data
-      generateCustomerSegments(analyticsData.customerInsights.topReviewers);
+      generateCustomerSegments(analyticsData.customerInsights?.topReviewers || []);
       
+      console.log('Customer insights loaded successfully');
     } catch (error) {
       console.error('Failed to load customer insights:', error);
+      // Keep existing data on error
     } finally {
       setLoading(false);
     }
@@ -240,12 +250,28 @@ const CustomerInsights: React.FC = () => {
 
   useEffect(() => {
     loadCustomerInsights();
-  }, [selectedRestaurant, timeRange]);
+  }, [selectedRestaurantId, timeRange]);
 
+  // Show loading state when data is loading
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
         <CircularProgress />
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          Loading customer insights...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Show message when no restaurant is selected
+  if (!selectedRestaurantId) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
+        <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">
+          Please select a restaurant to view customer insights
+        </Typography>
       </Box>
     );
   }

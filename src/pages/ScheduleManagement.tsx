@@ -54,6 +54,7 @@ import {
   Restaurant,
   Kitchen,
   Business,
+  Category,
   ExpandMore,
   PlayArrow,
   Stop,
@@ -395,6 +396,8 @@ const ScheduleManagement: React.FC = () => {
       case 'KITCHEN': return <Kitchen />;
       case 'VENUE': return <Business />;
       case 'MENU_ITEM': return <Restaurant />;
+      case 'CATEGORY': return <Category />;
+      case 'BUSINESS': return <Business />;
       default: return <ScheduleIcon />;
     }
   };
@@ -545,6 +548,8 @@ const ScheduleManagement: React.FC = () => {
                   <MenuItem value="KITCHEN">Kitchen</MenuItem>
                   <MenuItem value="VENUE">Venue</MenuItem>
                   <MenuItem value="MENU_ITEM">Menu Item</MenuItem>
+                  <MenuItem value="CATEGORY">Category</MenuItem>
+                  <MenuItem value="BUSINESS">Business</MenuItem>
                 </Select>
               </FormControl>
 
@@ -969,6 +974,8 @@ const ScheduleManagement: React.FC = () => {
                     <MenuItem value="KITCHEN">Kitchen</MenuItem>
                     <MenuItem value="VENUE">Venue</MenuItem>
                     <MenuItem value="MENU_ITEM">Menu Item</MenuItem>
+                    <MenuItem value="CATEGORY">Category</MenuItem>
+                    <MenuItem value="BUSINESS">Business</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1069,6 +1076,43 @@ const ScheduleManagement: React.FC = () => {
                     />
                   </Grid>
                 </>
+              )}
+              
+              {scheduleForm.type === 'CATEGORY' && (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Category ID"
+                      value={scheduleForm.category || ''}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, category: e.target.value })}
+                      required
+                      helperText="Enter the category ID for category schedule"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <RestaurantVenueSelector
+                      selectedRestaurantId={scheduleForm.restaurant}
+                      onRestaurantChange={(restaurantId) => setScheduleForm({ ...scheduleForm, restaurant: restaurantId })}
+                      showVenueSelector={false}
+                      required={true}
+                      label="Restaurant"
+                    />
+                  </Grid>
+                </>
+              )}
+              
+              {scheduleForm.type === 'BUSINESS' && (
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Business ID"
+                    value={scheduleForm.business || ''}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, business: e.target.value })}
+                    required
+                    helperText="Enter the business ID for business schedule"
+                  />
+                </Grid>
               )}
               <Grid item xs={12} sm={6}>
                 <TextField

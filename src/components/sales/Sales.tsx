@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -8,7 +8,8 @@ import {
   CardContent,
   Stack,
   Avatar,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import StorefrontIcon from '@mui/icons-material/Storefront';
@@ -16,6 +17,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
 import DataTable from '../common/DataTable';
+import RestaurantVenueSelector from '../common/RestaurantVenueSelector';
+import { useRestaurant } from '../../context/RestaurantContext';
+import AnalyticsService from '../../services/AnalyticsService';
 
 const columns = [
   { 
@@ -24,14 +28,9 @@ const columns = [
   },
   { 
     header: 'Total Sales', 
-    accessorKey: 'totalSales' 
+    accessorKey: 'totalSales',
+    cell: ({ getValue }: any) => `$${getValue().toLocaleString()}`
   },
-];
-
-const data = [
-  { name: 'Tasty Bites', totalSales: 1000 },
-  { name: 'Spice Haven', totalSales: 2000 },
-  { name: 'The Bistro', totalSales: 3000 },
 ];
 
 const handleEdit = (restaurant: any) => {
@@ -47,6 +46,16 @@ const handleView = (restaurant: any) => {
 };
 
 const Sales = () => {
+  const { selectedRestaurantId } = useRestaurant();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [salesDashboard, setSalesDashboard] = useState({
+    totalSales: 0,
+    averageSales: 0,
+    topPerformer: null as any,
+    lowestPerformer: null as any
+  });
+  const [restaurantData, setRestaurantData] = useState<any[]>([]);
   const [selectionRange, setSelectionRange] = useState<[Date, Date]>([
     new Date(),
     new Date()
@@ -56,20 +65,88 @@ const Sales = () => {
     setSelectionRange([ranges.selection.startDate, ranges.selection.endDate]);
   };
 
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Prepare restaurant filter parameters
+        const params = selectedRestaurantId ? { restaurantIds: [selectedRestaurantId] } : {};
+
+        // Fetch sales dashboard data
+        const dashboardResponse = await AnalyticsService.getSalesDashboard(params);
+        if (dashboardResponse) {
+          setSalesDashboard({
+            totalSales: dashboardResponse.totalSales?.amount || 0,
+            averageSales: dashboardResponse.averageSales?.amount || 0,
+            topPerformer: dashboardResponse.topPerformer,
+            lowestPerformer: dashboardResponse.lowestPerformer
+          });
+        }
+
+        // Fetch restaurant sales data
+        const restaurantResponse = await AnalyticsService.getSalesRestaurants(params);
+        if (restaurantResponse?.restaurants) {
+          const mappedData = restaurantResponse.restaurants.map((restaurant: any) => ({
+            id: restaurant.id,
+            name: restaurant.name,
+            totalSales: restaurant.totalSales
+          }));
+          setRestaurantData(mappedData);
+        }
+      } catch (err: any) {
+        console.error('Error fetching sales data:', err);
+        setError(err.response?.data?.error || err.message || 'Failed to fetch sales data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesData();
+  }, [selectedRestaurantId]);
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" component="h1" gutterBottom>
+          Sales Dashboard
+        </Typography>
+        <Typography color="error" sx={{ mt: 2 }}>
+          Error: {error}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" component="h1" gutterBottom sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '1.5rem' }}>
         Sales Dashboard
       </Typography>
-      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
         Track and analyze your restaurant sales performance
       </Typography>
 
-      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        <IconButton aria-label="insights">
-          <InsightsOutlined />
-        </IconButton>
-      </Box> */}
+      {/* Restaurant Filter */}
+      <Paper sx={{ p: 3, mb: 4, borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+          Restaurant Filter
+        </Typography>
+        <RestaurantVenueSelector 
+          showVenueSelector={false}
+          showBusinessSelector={true}
+          size="small"
+        />
+      </Paper>
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -89,10 +166,10 @@ const Sales = () => {
                 </Typography>
               </Stack>
               <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
-                $6,000
+                ${salesDashboard.totalSales.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                All restaurants
+                {selectedRestaurantId ? 'Selected restaurant' : 'All restaurants'}
               </Typography>
             </CardContent>
           </Card>
@@ -113,10 +190,10 @@ const Sales = () => {
                 </Typography>
               </Stack>
               <Typography variant="h4" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
-                $2,000
+                ${salesDashboard.averageSales.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Per restaurant
+                Average sales
               </Typography>
             </CardContent>
           </Card>
@@ -137,10 +214,10 @@ const Sales = () => {
                 </Typography>
               </Stack>
               <Typography variant="h5" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
-                The Bistro
+                {salesDashboard.topPerformer?.name || 'N/A'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                $3,000 in sales
+                ${salesDashboard.topPerformer?.sales?.toLocaleString() || '0'} in sales
               </Typography>
             </CardContent>
           </Card>
@@ -161,10 +238,10 @@ const Sales = () => {
                 </Typography>
               </Stack>
               <Typography variant="h5" component="div" sx={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500, mb: 1 }}>
-                Tasty Bites
+                {salesDashboard.lowestPerformer?.name || 'N/A'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                $1,000 in sales
+                ${salesDashboard.lowestPerformer?.sales?.toLocaleString() || '0'} in sales
               </Typography>
             </CardContent>
           </Card>
@@ -173,7 +250,7 @@ const Sales = () => {
 
       <DataTable
         columns={columns}
-        data={data}
+        data={restaurantData}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}

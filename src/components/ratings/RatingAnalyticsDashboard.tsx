@@ -67,7 +67,7 @@ ChartJS.register(
 
 const RatingAnalyticsDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurantId } = useRestaurant();
   
   const [analytics, setAnalytics] = useState<RatingAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,20 +79,27 @@ const RatingAnalyticsDashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAnalytics = async () => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) {
+      console.log('No restaurant selected for rating analytics, waiting...');
+      return;
+    }
+    
+    console.log('Loading rating analytics for restaurant:', selectedRestaurantId);
+    setLoading(true);
     
     try {
-      setLoading(true);
       const data = await RatingService.getRestaurantRatingAnalytics(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         {
           startDate: dateRange.startDate.toISOString(),
           endDate: dateRange.endDate.toISOString()
         }
       );
       setAnalytics(data);
+      console.log('Rating analytics loaded successfully');
     } catch (error) {
       console.error('Failed to load rating analytics:', error);
+      // Set loading to false even on error so UI doesn't stay in loading state
     } finally {
       setLoading(false);
     }
@@ -105,11 +112,11 @@ const RatingAnalyticsDashboard: React.FC = () => {
   };
 
   const exportReviews = async (format: 'csv' | 'pdf') => {
-    if (!selectedRestaurant?._id) return;
+    if (!selectedRestaurantId) return;
     
     try {
       const blob = await RatingService.exportReviews(
-        selectedRestaurant._id,
+        selectedRestaurantId,
         {
           dateFrom: dateRange.startDate.toISOString(),
           dateTo: dateRange.endDate.toISOString()
@@ -132,7 +139,7 @@ const RatingAnalyticsDashboard: React.FC = () => {
 
   useEffect(() => {
     loadAnalytics();
-  }, [selectedRestaurant, dateRange]);
+  }, [selectedRestaurantId, dateRange]);
 
   const getTrendIcon = (trend: number) => {
     if (trend > 0.1) return <TrendingUpIcon color="success" />;
@@ -186,20 +193,47 @@ const RatingAnalyticsDashboard: React.FC = () => {
     };
   };
 
+  // Show loading state when data is loading
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
         <CircularProgress />
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          Loading rating analytics...
+        </Typography>
       </Box>
     );
   }
 
+  // Show message when no restaurant is selected
+  if (!selectedRestaurantId) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="400px">
+        <AssessmentIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">
+          Please select a restaurant to view rating analytics
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Show error state when analytics failed to load
   if (!analytics) {
     return (
-      <Alert severity="error">
-        <AlertTitle>Error</AlertTitle>
-        Failed to load rating analytics. Please try again.
-      </Alert>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          <AlertTitle>Error</AlertTitle>
+          Failed to load rating analytics. Please try refreshing the page or selecting a different restaurant.
+          <Button 
+            variant="outlined" 
+            onClick={loadAnalytics} 
+            sx={{ ml: 2 }}
+            size="small"
+          >
+            Retry
+          </Button>
+        </Alert>
+      </Box>
     );
   }
 
