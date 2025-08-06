@@ -228,11 +228,6 @@ const SubCategoryList = () => {
     setImportModalOpen(false);
   };
 
-  const getCategoryName = (categoryId: string): string => {
-    const category = categories.find(cat => cat._id === categoryId);
-    return category ? category.name : 'Unknown';
-  };
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
